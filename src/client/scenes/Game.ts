@@ -40,6 +40,14 @@ const PSPSPS_ELEMENT_DISPLAY_HEIGHT = 44;
 // resolves on the closer one without dead-zoning the gap.
 const LANE_TAP_TOLERANCE = LANE_SPACING / 2 + 4;
 
+// Per-lane color tints. Index 0 = bottom lane, last index = top lane.
+// 0xffffff means "no tint" (multiplies the texture by white = unchanged).
+const LANE_TINTS: number[] = [
+  0xb0d4ff, // bottom — light blue
+  0xffffff, // middle — original
+  0xffb0c8, // top — pink
+];
+
 // Temporarily off while we tune the rhythm bar in isolation.
 // When ready, flip this to true to re-enable the cat-petting mini-game.
 const INTERACTION_ENABLED = false;
@@ -52,6 +60,7 @@ interface PspspsLane {
   targetBaseScale: number;
   elementSprites: Map<string, GameObjects.Image>;
   centerY: number;
+  tint: number;
 }
 
 export class Game extends Scene {
@@ -158,15 +167,18 @@ export class Game extends Scene {
     for (let i = 0; i < LANE_COUNT; i++) {
       // i = 0 -> bottom lane, larger i -> higher up
       const centerY = h - BOTTOM_LANE_Y_FROM_BOTTOM - i * LANE_SPACING;
+      const tint = LANE_TINTS[i] ?? 0xffffff;
       const system = new RhythmSystem();
 
       const barBg = this.add.image(barX, centerY, AssetKeys.Image.RhythmBarBackground);
       barBg.displayWidth = barWidth;
       barBg.displayHeight = PSPSPS_BAR_HEIGHT;
+      barBg.setTint(tint);
 
       const targetX = barLeft + barWidth * system.getTargetFraction();
       const target = this.add.image(targetX, centerY, AssetKeys.Image.PspspsTarget);
       target.setDisplaySize(PSPSPS_TARGET_DISPLAY_SIZE, PSPSPS_TARGET_DISPLAY_SIZE);
+      target.setTint(tint);
       const targetBaseScale = target.scaleX;
 
       this.lanes.push({
@@ -177,6 +189,7 @@ export class Game extends Scene {
         targetBaseScale,
         elementSprites: new Map(),
         centerY,
+        tint,
       });
     }
   }
@@ -203,6 +216,7 @@ export class Game extends Scene {
       if (!sprite) {
         sprite = this.add.image(0, lane.centerY, AssetKeys.Image.PspspsElement);
         sprite.setDisplaySize(PSPSPS_ELEMENT_DISPLAY_WIDTH, PSPSPS_ELEMENT_DISPLAY_HEIGHT);
+        sprite.setTint(lane.tint);
         lane.elementSprites.set(el.id, sprite);
       }
       sprite.x = barLeft + barWidth * el.fraction;
@@ -344,7 +358,10 @@ export class Game extends Scene {
 
   private flashScore(lane: PspspsLane, points: number, isPerfect: boolean): void {
     const label = isPerfect ? `PERFECT +${points}` : `+${points}`;
-    const color = isPerfect ? '#00ff88' : '#ffffff';
+    // Perfect always reads green so the bonus is unmistakable; partial hits
+    // tint to match the lane that scored.
+    const laneHex = `#${lane.tint.toString(16).padStart(6, '0')}`;
+    const color = isPerfect ? '#00ff88' : laneHex;
     const text = this.add
       .text(lane.target.x, lane.centerY - 40, label, {
         fontFamily: 'sans-serif',
