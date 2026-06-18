@@ -93,7 +93,7 @@ export class Game extends Scene {
   // Meow bar
   private meowBarOutline!: GameObjects.Image;
   private meowBarFill!: GameObjects.Image;
-  private meowBarFillRect!: GameObjects.Rectangle;
+  private meowBarWidth = 0;
 
   // Interaction state
   private interactionActive = false;
@@ -266,33 +266,29 @@ export class Game extends Scene {
     const w = this.scale.width;
     const h = this.scale.height;
     const barWidth = w * 0.6;
+    this.meowBarWidth = barWidth;
     // Sit above the top-most rhythm lane with a bit of breathing room.
     const topLaneY = h - BOTTOM_LANE_Y_FROM_BOTTOM - (LANE_COUNT - 1) * LANE_SPACING;
     const barY = topLaneY - 50;
 
+    // Outline is the empty container — drawn first so the fill stacks on top.
     this.meowBarOutline = this.add.image(w / 2, barY, AssetKeys.Image.MeowBarOutline);
     this.meowBarOutline.displayWidth = barWidth;
     this.meowBarOutline.displayHeight = 32;
 
+    // Fill is anchored to the left edge of the bar and starts at width 0;
+    // we resize it directly each frame instead of using a geometry mask
+    // (Phaser 4's mask wasn't reliably clipping, leaving the fill full).
     this.meowBarFill = this.add.image(w / 2 - barWidth / 2, barY, AssetKeys.Image.MeowBarFill);
     this.meowBarFill.setOrigin(0, 0.5);
-    this.meowBarFill.displayWidth = barWidth;
-    this.meowBarFill.displayHeight = 32;
-
-    this.meowBarFillRect = this.add
-      .rectangle(w / 2 - barWidth / 2, barY, 0, 40, 0xffffff)
-      .setOrigin(0, 0.5);
-    this.meowBarFillRect.setVisible(false);
-    const mask = this.meowBarFillRect.createGeometryMask();
-    this.meowBarFill.setMask(mask);
+    this.meowBarFill.displayWidth = 0;
+    this.meowBarFill.displayHeight = 28;
   }
 
   private updateMeowBar(): void {
-    if (!this.meowBarFillRect) return;
-    const w = this.scale.width;
-    const barWidth = w * 0.6;
+    if (!this.meowBarFill) return;
     const pct = this.meow.getProgress() / Balance.meowBarMax;
-    this.meowBarFillRect.width = barWidth * pct;
+    this.meowBarFill.displayWidth = this.meowBarWidth * pct;
   }
 
   // -- HUD ----------------------------------------------------------------
