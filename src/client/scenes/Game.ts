@@ -108,7 +108,8 @@ export class Game extends Scene {
 
   // Meow bar
   private meowBarOutline!: GameObjects.Image;
-  private meowBarTrackAndFillGfx!: GameObjects.Graphics;
+  private meowBarBackdropGfx!: GameObjects.Graphics;
+  private meowBarFill!: GameObjects.Image;
   private meowBarBounds = { left: 0, top: 0, width: 0, height: 0, radius: 0 };
 
   // Interaction state
@@ -318,13 +319,36 @@ export class Game extends Scene {
       radius: interiorHeight / 2,
     };
 
-    // Both the white "empty" track and the orange "filled" portion are
-    // drawn together each frame so they perfectly tile across the interior
-    // with no overlap and no game-background visible between them. Orange
-    // sits on the left, white on the right, meeting at the current
-    // progress edge. The meowBarFill.png asset isn't used here — its
-    // transparent gaps were causing the white-track-bleeding-through look.
-    this.meowBarTrackAndFillGfx = this.add.graphics();
+    // Three layers stacked under the outline frame:
+    //   1) White track — full interior, always drawn. Visible in the empty
+    //      portion only because layers 2+3 cover it on the filled side.
+    //   2) Solid orange backdrop — drawn each frame to match the current
+    //      fill width. It covers the white track wherever the bar is
+    //      "filled" so the cat-tail asset's transparent rows above and
+    //      below the tail show orange, not white.
+    //   3) Cat tail fill asset — its displayWidth grows with progress so
+    //      the tail extends across the bar from the left as the meter
+    //      fills.
+    const track = this.add.graphics();
+    track.fillStyle(0xffffff, 0.95);
+    track.fillRoundedRect(
+      this.meowBarBounds.left,
+      this.meowBarBounds.top,
+      this.meowBarBounds.width,
+      this.meowBarBounds.height,
+      this.meowBarBounds.radius,
+    );
+
+    this.meowBarBackdropGfx = this.add.graphics();
+
+    this.meowBarFill = this.add.image(
+      this.meowBarBounds.left,
+      this.meowBarBounds.top + this.meowBarBounds.height / 2,
+      AssetKeys.Image.MeowBarFill,
+    );
+    this.meowBarFill.setOrigin(0, 0.5);
+    this.meowBarFill.displayWidth = 0;
+    this.meowBarFill.displayHeight = this.meowBarBounds.height;
 
     // Outline (rounded frame) drawn last so it crisps up the bar edges.
     this.meowBarOutline = this.add.image(w / 2, barY, AssetKeys.Image.MeowBarOutline);
@@ -333,32 +357,21 @@ export class Game extends Scene {
   }
 
   private updateMeowBar(): void {
-    if (!this.meowBarTrackAndFillGfx) return;
+    if (!this.meowBarFill || !this.meowBarBackdropGfx) return;
     const pct = this.meow.getProgress() / Balance.meowBarMax;
     const fillWidth = pct * this.meowBarBounds.width;
-    const emptyWidth = this.meowBarBounds.width - fillWidth;
     const { left, top, height, radius } = this.meowBarBounds;
 
-    this.meowBarTrackAndFillGfx.clear();
+    // Cat tail asset grows from the left.
+    this.meowBarFill.displayWidth = fillWidth;
 
-    // Empty portion (white pill on the right). Skipped if the bar is full.
-    if (emptyWidth > 0.5) {
-      this.meowBarTrackAndFillGfx.fillStyle(0xffffff, 0.95);
-      this.meowBarTrackAndFillGfx.fillRoundedRect(
-        left + fillWidth,
-        top,
-        emptyWidth,
-        height,
-        // Cap the right-side radius at half the empty segment's width so a
-        // nearly-full bar still draws a sensible pill instead of a circle.
-        Math.min(radius, emptyWidth / 2),
-      );
-    }
-
-    // Filled portion (orange pill on the left). Skipped if the bar is empty.
+    // Solid orange backdrop matches the cat tail's current width and covers
+    // the white track inside the filled portion so the asset's transparent
+    // top/bottom rows can't expose any white.
+    this.meowBarBackdropGfx.clear();
     if (fillWidth > 0.5) {
-      this.meowBarTrackAndFillGfx.fillStyle(0xf57c00, 1);
-      this.meowBarTrackAndFillGfx.fillRoundedRect(
+      this.meowBarBackdropGfx.fillStyle(0xf57c00, 1);
+      this.meowBarBackdropGfx.fillRoundedRect(
         left,
         top,
         fillWidth,
