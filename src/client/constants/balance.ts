@@ -7,7 +7,7 @@ export const Balance = {
   // them when they overlap the target.
   pspspsMaxElements: 3, // at most 3 on screen at once
   pspspsTargetXFraction: 0.85, // target sits at 85% of bar width
-  pspspsSpawnXFraction: -0.05, // elements appear just off the left edge
+  pspspsSpawnXFraction: 0, // elements appear right at the bar's left edge
   pspspsBaseSpeedFractionPerSecond: 0.2, // ~5 seconds to traverse the bar
   pspspsSpeedVariationPerSecond: 0.05, // ±0.05 = 0.15–0.25 per second
   pspspsBaseSpawnDelayTicks: 30, // spawn a new element every ~3s at 100ms/tick
