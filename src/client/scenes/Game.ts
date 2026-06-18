@@ -31,6 +31,10 @@ const PSPSPS_TARGET_DISPLAY_SIZE = 80;
 const PSPSPS_ELEMENT_DISPLAY_WIDTH = 64;
 const PSPSPS_ELEMENT_DISPLAY_HEIGHT = 56;
 
+// Temporarily off while we tune the rhythm bar in isolation.
+// When ready, flip this to true to re-enable the cat-petting mini-game.
+const INTERACTION_ENABLED = false;
+
 export class Game extends Scene {
   private cats: Cat[] = [];
   private score!: ScoreSystem;
@@ -272,7 +276,13 @@ export class Game extends Scene {
     }
 
     if (this.meow.isFull()) {
-      this.beginInteraction();
+      if (INTERACTION_ENABLED) {
+        this.beginInteraction();
+      } else {
+        // Cycle the meow bar so it keeps showing progress without triggering
+        // the (currently buggy) cat-petting handoff.
+        this.meow.reset();
+      }
     }
   }
 
