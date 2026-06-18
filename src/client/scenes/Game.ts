@@ -41,18 +41,26 @@ const PSPSPS_ELEMENT_DISPLAY_HEIGHT = 44;
 const LANE_TAP_TOLERANCE = LANE_SPACING / 2 + 4;
 
 // Per-lane color palette. Index 0 = bottom lane, last index = top lane.
-// Two tints per lane so the bars stay soft/pastel while the floating
-// pspsps elements pop with a more saturated version of the same color.
+// Three tints per lane:
+//   - bar: the soft pastel background tint of the rhythm bar
+//   - element: the body color of the floating pspsps balls (the letters
+//     stay white because they're a separate sprite layer)
+//   - target: the fuzzball catcher on the right — paler than the elements
+//     so it reads as a "brighter" sibling of the same color
 // 0xffffff means "no tint" (multiplies the texture by white = unchanged).
 interface LaneColor {
-  bar: number;     // bar background + target circle
-  element: number; // the floating pspsps balls
+  bar: number;
+  element: number;
+  target: number;
 }
 
 const LANE_COLORS: LaneColor[] = [
-  { bar: 0xfff3b0, element: 0xffd84a }, // bottom — soft yellow / saturated yellow
-  { bar: 0xffffff, element: 0xffffff }, // middle — original
-  { bar: 0xffb0c8, element: 0xff6b9d }, // top — soft pink / saturated pink
+  // bottom — yellow
+  { bar: 0xfff3b0, element: 0xffd84a, target: 0xfff5d0 },
+  // middle — original (natural orange)
+  { bar: 0xffffff, element: 0xffffff, target: 0xfff5d8 },
+  // top — pink
+  { bar: 0xffb0c8, element: 0xff6b9d, target: 0xffd6e2 },
 ];
 
 // Temporarily off while we tune the rhythm bar in isolation.
@@ -65,7 +73,9 @@ interface PspspsLane {
   barBg: GameObjects.Image;
   target: GameObjects.Image;
   targetBaseScale: number;
-  elementSprites: Map<string, GameObjects.Image>;
+  // Each floating element is a Container holding a tinted ball + a white-letters
+  // overlay so we can recolor the body without touching the "PS" text.
+  elementSprites: Map<string, GameObjects.Container>;
   centerY: number;
   color: LaneColor;
 }
@@ -174,7 +184,7 @@ export class Game extends Scene {
     for (let i = 0; i < LANE_COUNT; i++) {
       // i = 0 -> bottom lane, larger i -> higher up
       const centerY = h - BOTTOM_LANE_Y_FROM_BOTTOM - i * LANE_SPACING;
-      const color = LANE_COLORS[i] ?? { bar: 0xffffff, element: 0xffffff };
+      const color = LANE_COLORS[i] ?? { bar: 0xffffff, element: 0xffffff, target: 0xffffff };
       const system = new RhythmSystem();
 
       const barBg = this.add.image(barX, centerY, AssetKeys.Image.RhythmBarBackground);
@@ -185,7 +195,7 @@ export class Game extends Scene {
       const targetX = barLeft + barWidth * system.getTargetFraction();
       const target = this.add.image(targetX, centerY, AssetKeys.Image.PspspsTarget);
       target.setDisplaySize(PSPSPS_TARGET_DISPLAY_SIZE, PSPSPS_TARGET_DISPLAY_SIZE);
-      target.setTint(color.bar);
+      target.setTint(color.target);
       const targetBaseScale = target.scaleX;
 
       this.lanes.push({
@@ -221,9 +231,16 @@ export class Game extends Scene {
     for (const el of elements) {
       let sprite = lane.elementSprites.get(el.id);
       if (!sprite) {
-        sprite = this.add.image(0, lane.centerY, AssetKeys.Image.PspspsElement);
-        sprite.setDisplaySize(PSPSPS_ELEMENT_DISPLAY_WIDTH, PSPSPS_ELEMENT_DISPLAY_HEIGHT);
-        sprite.setTint(lane.color.element);
+        const ball = this.add.image(0, 0, AssetKeys.Image.PspspsElementBall);
+        ball.setDisplaySize(PSPSPS_ELEMENT_DISPLAY_WIDTH, PSPSPS_ELEMENT_DISPLAY_HEIGHT);
+        ball.setTint(lane.color.element);
+
+        const letters = this.add.image(0, 0, AssetKeys.Image.PspspsElementLetters);
+        letters.setDisplaySize(PSPSPS_ELEMENT_DISPLAY_WIDTH, PSPSPS_ELEMENT_DISPLAY_HEIGHT);
+        // Letters stay white — no tint applied so the PS reads cleanly over
+        // whatever color the ball ends up.
+
+        sprite = this.add.container(0, lane.centerY, [ball, letters]);
         lane.elementSprites.set(el.id, sprite);
       }
       sprite.x = barLeft + barWidth * el.fraction;

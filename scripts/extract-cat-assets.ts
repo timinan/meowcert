@@ -199,6 +199,60 @@ async function copyFile(srcAbs: string, dstAbs: string): Promise<void> {
   console.log(`[copy] ${path.basename(dstAbs)}`);
 }
 
+/**
+ * Splits PSElement.png (a fuzzy ball with white "PS" letters baked on top)
+ * into two derived sprites so we can recolor the ball without touching the
+ * letters:
+ *   - PSElement_ball.png    : ball-only (the white letter pixels are erased)
+ *   - PSElement_letters.png : letters-only (everything that wasn't whitish is erased)
+ */
+async function splitPsElementIntoBallAndLetters(): Promise<void> {
+  const srcPath = path.join(PROTOTYPE_ASSETS, 'PSElement.png');
+  const { data, info } = await sharp(srcPath)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const ballData = Buffer.from(data);
+  const lettersData = Buffer.alloc(data.length);
+
+  // Pixels that read clearly "white" — the PS letters. Threshold tuned to
+  // catch the letter centers without grabbing the lighter highlights on the
+  // ball edges.
+  const WHITISH = 220;
+
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i]!;
+    const g = data[i + 1]!;
+    const b = data[i + 2]!;
+    const a = data[i + 3]!;
+    const isLetter = a > 0 && r >= WHITISH && g >= WHITISH && b >= WHITISH;
+
+    if (isLetter) {
+      lettersData[i] = 255;
+      lettersData[i + 1] = 255;
+      lettersData[i + 2] = 255;
+      lettersData[i + 3] = a;
+      ballData[i + 3] = 0; // erase from ball
+    } else {
+      lettersData[i + 3] = 0; // erase from letters
+      // ball: leave unchanged
+    }
+  }
+
+  const sharpOpts = {
+    raw: { width: info.width, height: info.height, channels: 4 as const },
+  };
+  await sharp(ballData, sharpOpts)
+    .png()
+    .toFile(path.join(OUT_IMAGES, 'PSElement_ball.png'));
+  await sharp(lettersData, sharpOpts)
+    .png()
+    .toFile(path.join(OUT_IMAGES, 'PSElement_letters.png'));
+
+  console.log(`[ps-split] generated PSElement_ball.png + PSElement_letters.png`);
+}
+
 async function copyStaticAssets(): Promise<void> {
   // Sounds
   await copyFile(
@@ -229,6 +283,7 @@ async function main(): Promise<void> {
   const frames = await extractAllGifs();
   await packAtlas(frames);
   await copyStaticAssets();
+  await splitPsElementIntoBallAndLetters();
   console.log('done.');
 }
 
