@@ -92,8 +92,8 @@ export class Game extends Scene {
 
   // Meow bar
   private meowBarOutline!: GameObjects.Image;
-  private meowBarFill!: GameObjects.Image;
-  private meowBarWidth = 0;
+  private meowBarFillGfx!: GameObjects.Graphics;
+  private meowBarBounds = { left: 0, top: 0, width: 0, height: 0, radius: 0 };
 
   // Interaction state
   private interactionActive = false;
@@ -266,24 +266,39 @@ export class Game extends Scene {
     const w = this.scale.width;
     const h = this.scale.height;
     const barWidth = w * 0.6;
-    this.meowBarWidth = barWidth;
     // Sit above the top-most rhythm lane with a bit of breathing room.
     const topLaneY = h - BOTTOM_LANE_Y_FROM_BOTTOM - (LANE_COUNT - 1) * LANE_SPACING;
     const barY = topLaneY - 50;
 
-    // White track behind the fill so the empty portion of the bar reads as
-    // a real container, not the game background showing through the
-    // outline frame. The rectangle stays managed by the scene's display
-    // list, so we don't need to hold a reference.
-    this.add.rectangle(w / 2, barY, barWidth, 26, 0xffffff, 0.92);
+    // The bar's INNER pill, inset from the outline so the track + fill both
+    // sit comfortably inside the outline's rounded ends instead of poking
+    // past them.
+    const trackHeight = 22;
+    const trackInset = 6;
+    const trackWidth = barWidth - 2 * trackInset;
+    this.meowBarBounds = {
+      left: w / 2 - trackWidth / 2,
+      top: barY - trackHeight / 2,
+      width: trackWidth,
+      height: trackHeight,
+      radius: trackHeight / 2,
+    };
 
-    // Fill is anchored to the left edge of the bar and starts at width 0;
-    // we resize it directly each frame instead of using a geometry mask
-    // (Phaser 4's mask wasn't reliably clipping, leaving the fill full).
-    this.meowBarFill = this.add.image(w / 2 - barWidth / 2, barY, AssetKeys.Image.MeowBarFill);
-    this.meowBarFill.setOrigin(0, 0.5);
-    this.meowBarFill.displayWidth = 0;
-    this.meowBarFill.displayHeight = 26;
+    // White rounded-pill track behind the fill so the empty portion of
+    // the bar reads as a real container instead of the game background
+    // showing through the outline.
+    const track = this.add.graphics();
+    track.fillStyle(0xffffff, 0.92);
+    track.fillRoundedRect(
+      this.meowBarBounds.left,
+      this.meowBarBounds.top,
+      this.meowBarBounds.width,
+      this.meowBarBounds.height,
+      this.meowBarBounds.radius,
+    );
+
+    // Fill graphics — redrawn each frame in updateMeowBar() to match progress.
+    this.meowBarFillGfx = this.add.graphics();
 
     // Outline (rounded frame) drawn last so it crisps up the bar edges.
     this.meowBarOutline = this.add.image(w / 2, barY, AssetKeys.Image.MeowBarOutline);
@@ -292,9 +307,22 @@ export class Game extends Scene {
   }
 
   private updateMeowBar(): void {
-    if (!this.meowBarFill) return;
+    if (!this.meowBarFillGfx) return;
     const pct = this.meow.getProgress() / Balance.meowBarMax;
-    this.meowBarFill.displayWidth = this.meowBarWidth * pct;
+    const fillWidth = this.meowBarBounds.width * pct;
+    this.meowBarFillGfx.clear();
+    if (fillWidth > 0.5) {
+      this.meowBarFillGfx.fillStyle(0xf57c00, 1);
+      this.meowBarFillGfx.fillRoundedRect(
+        this.meowBarBounds.left,
+        this.meowBarBounds.top,
+        fillWidth,
+        this.meowBarBounds.height,
+        // Cap the radius at half the current fill width so the pill stays
+        // visually correct at very low progress instead of going to a circle.
+        Math.min(this.meowBarBounds.radius, fillWidth / 2),
+      );
+    }
   }
 
   // -- HUD ----------------------------------------------------------------
