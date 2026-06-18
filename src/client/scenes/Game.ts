@@ -18,9 +18,9 @@ import type { CatAnimationState, CatBreed, CatModel, InteractionType } from '@/t
 // in the running game and the console prints the exact { x, y } at that
 // point — copy/paste it here to dial in seats by eye.
 const CAT_SEAT_POSITIONS: { x: number; y: number }[] = [
-  { x: 0.025, y: 0.484 }, // left ledge
-  { x: 0.5, y: 0.42 },    // roof — placeholder; waiting on a real shift+click coord
-  { x: 0.141, y: 0.609 }, // right ledge
+  { x: 0.033, y: 0.481 }, // left ledge
+  { x: 0.112, y: 0.386 }, // roof
+  { x: 0.189, y: 0.628 }, // right ledge
 ];
 
 const DEBUG_LOG_SEAT_CLICKS = true;
