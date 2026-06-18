@@ -212,7 +212,15 @@ export class Game extends Scene {
       barBg.displayHeight = PSPSPS_BAR_HEIGHT;
       barBg.setTint(color.bar);
 
-      const targetX = barLeft + barWidth * system.getTargetFraction();
+      // Position the target using the same "stay-inside-the-bar" mapping
+      // that the moving elements use (see syncLaneElements). At fraction
+      // 0 the sprite's left edge sits at the bar's left edge; at fraction
+      // 1 its right edge sits at the bar's right edge. That keeps the
+      // visible target aligned with the element it's catching.
+      const tgtHalfW = PSPSPS_TARGET_DISPLAY_SIZE / 2;
+      const tgtTravelRange = barWidth - PSPSPS_TARGET_DISPLAY_SIZE;
+      const targetX =
+        barLeft + tgtHalfW + system.getTargetFraction() * tgtTravelRange;
       const target = this.add.image(targetX, centerY, AssetKeys.Image.PspspsTarget);
       target.setDisplaySize(PSPSPS_TARGET_DISPLAY_SIZE, PSPSPS_TARGET_DISPLAY_SIZE);
       target.setTint(color.target);
@@ -235,6 +243,12 @@ export class Game extends Scene {
     const w = this.scale.width;
     const barWidth = w * PSPSPS_BAR_WIDTH_FRACTION;
     const barLeft = w / 2 - barWidth / 2;
+
+    // "Stay-inside-the-bar" mapping: fraction 0 puts the sprite's left edge
+    // at the bar's left edge, fraction 1 puts its right edge at the bar's
+    // right edge. The sprite never overhangs either side.
+    const elHalfW = PSPSPS_ELEMENT_DISPLAY_WIDTH / 2;
+    const elTravelRange = barWidth - PSPSPS_ELEMENT_DISPLAY_WIDTH;
 
     const elements = lane.system.getElements();
     const aliveIds = new Set(elements.map((e) => e.id));
@@ -263,7 +277,7 @@ export class Game extends Scene {
         sprite = this.add.container(0, lane.centerY, [ball, letters]);
         lane.elementSprites.set(el.id, sprite);
       }
-      sprite.x = barLeft + barWidth * el.fraction;
+      sprite.x = barLeft + elHalfW + el.fraction * elTravelRange;
       sprite.y = lane.centerY;
     }
   }

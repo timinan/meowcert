@@ -31,8 +31,13 @@ export class RhythmSystem {
     const dtSec = dtMs / 1000;
     for (const el of this.elements) {
       el.fraction += el.speed * dtSec;
-      if (el.fraction > 1) {
-        el.fraction = Balance.pspspsSpawnXFraction;
+    }
+    // Despawn anything that's slid past the right edge so we never render
+    // an element half-outside the bar. New elements will spawn over time
+    // via spawnTick().
+    for (let i = this.elements.length - 1; i >= 0; i--) {
+      if (this.elements[i]!.fraction > 1) {
+        this.elements.splice(i, 1);
       }
     }
   }

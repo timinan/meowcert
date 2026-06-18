@@ -34,15 +34,15 @@ describe('RhythmSystem (pspsps track)', () => {
     expect(r.getElements().length).toBeLessThanOrEqual(Balance.pspspsMaxElements);
   });
 
-  it('wraps elements that pass the right edge back to the left', () => {
+  it('removes elements that pass the right edge', () => {
     const r = new RhythmSystem(() => 0.5);
     // Spawn one
     for (let i = 0; i <= Balance.pspspsBaseSpawnDelayTicks; i++) r.tick();
-    const el = r.getElements()[0]!;
+    expect(r.getElements().length).toBe(1);
     // Force it past the right edge
-    el.fraction = 1.5;
+    (r.getElements()[0]! as { fraction: number }).fraction = 1.5;
     r.tick();
-    expect(r.getElements()[0]!.fraction).toBe(Balance.pspspsSpawnXFraction);
+    expect(r.getElements().length).toBe(0);
   });
 
   it('a tap with no elements near the target awards nothing', () => {
@@ -75,17 +75,20 @@ describe('RhythmSystem (pspsps track)', () => {
 
   it('a tap consumes multiple overlapping elements at once', () => {
     const r = new RhythmSystem(() => 0.5);
-    // Tick enough times to guarantee at least 3 spawns
-    for (let i = 0; i < Balance.pspspsBaseSpawnDelayTicks * 5; i++) r.tick();
-    expect(r.getElements().length).toBeGreaterThanOrEqual(3);
+    const target = r.getTargetFraction();
+    // Inject 3 elements directly on the target. Done via type cast because
+    // natural spawn-and-wait would race against the despawn-at-right-edge
+    // behavior, leaving the test flaky.
+    type Internal = {
+      elements: { id: string; fraction: number; speed: number }[];
+    };
+    const internal = r as unknown as Internal;
+    internal.elements.push({ id: 'a', fraction: target, speed: 0 });
+    internal.elements.push({ id: 'b', fraction: target, speed: 0 });
+    internal.elements.push({ id: 'c', fraction: target, speed: 0 });
 
-    // Stack three of them on the target
-    for (const el of r.getElements().slice(0, 3)) {
-      (el as { fraction: number }).fraction = r.getTargetFraction();
-    }
-    const before = r.getElements().length;
     const result = r.tap();
-    expect(result.perfectHits + result.partialHits).toBeGreaterThanOrEqual(3);
-    expect(r.getElements().length).toBe(before - (result.perfectHits + result.partialHits));
+    expect(result.perfectHits).toBe(3);
+    expect(r.getElements()).toHaveLength(0);
   });
 });
