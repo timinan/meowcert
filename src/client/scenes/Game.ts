@@ -46,8 +46,12 @@ const LANE_COUNT = 3;
 // backgrounds touch and no game background shows between them.
 const PSPSPS_BAR_HEIGHT = 56;
 const LANE_SPACING = PSPSPS_BAR_HEIGHT;
-const BOTTOM_LANE_Y_FROM_BOTTOM = 80;
-const PSPSPS_BAR_WIDTH_FRACTION = 0.8;
+// Bottom lane sits flush near the bottom of the screen so the stack of
+// three bars anchors the bottom of the playfield.
+const BOTTOM_LANE_Y_FROM_BOTTOM = 28;
+// Bars span the full width of the canvas so pspsps elements can travel
+// from screen edge to screen edge.
+const PSPSPS_BAR_WIDTH_FRACTION = 1.0;
 const PSPSPS_TARGET_DISPLAY_SIZE = 52;
 const PSPSPS_ELEMENT_DISPLAY_WIDTH = 48;
 const PSPSPS_ELEMENT_DISPLAY_HEIGHT = 44;
@@ -301,9 +305,10 @@ export class Game extends Scene {
     const h = this.scale.height;
     const barWidth = w * 0.6;
     const barDisplayHeight = 48; // chunkier so the interior is comfortable
-    // Sit above the top-most rhythm lane with a bit of breathing room.
+    // Sit above the top-most rhythm lane with a comfortable gap so the
+    // meow bar doesn't kiss the top of the rhythm lane stack.
     const topLaneY = h - BOTTOM_LANE_Y_FROM_BOTTOM - (LANE_COUNT - 1) * LANE_SPACING;
-    const barY = topLaneY - 50;
+    const barY = topLaneY - 60;
 
     // The interior of the outline image (where it's transparent inside the
     // border) measured in pixels: bbox of black pixels is x 6–145, y 8–21 in
