@@ -26,13 +26,19 @@ const INTERACTION_BUTTON_DEFS: { type: InteractionType; label: string }[] = [
 
 // Lane layout
 const LANE_COUNT = 3;
-const LANE_SPACING = 70;                    // vertical gap between lane centers
-const BOTTOM_LANE_Y_FROM_BOTTOM = 90;       // bottom-most lane's distance from canvas bottom
+// Lane centers are spaced by exactly the bar height so the rhythm bar
+// backgrounds touch and no game background shows between them.
+const PSPSPS_BAR_HEIGHT = 56;
+const LANE_SPACING = PSPSPS_BAR_HEIGHT;
+const BOTTOM_LANE_Y_FROM_BOTTOM = 80;
 const PSPSPS_BAR_WIDTH_FRACTION = 0.8;
-const PSPSPS_BAR_HEIGHT = 48;
-const PSPSPS_TARGET_DISPLAY_SIZE = 64;
-const PSPSPS_ELEMENT_DISPLAY_WIDTH = 52;
-const PSPSPS_ELEMENT_DISPLAY_HEIGHT = 48;
+const PSPSPS_TARGET_DISPLAY_SIZE = 52;
+const PSPSPS_ELEMENT_DISPLAY_WIDTH = 48;
+const PSPSPS_ELEMENT_DISPLAY_HEIGHT = 44;
+// Tap-zone vertical half-height around each lane center. Slightly bigger
+// than LANE_SPACING / 2 so a tap that lands right between two lanes still
+// resolves on the closer one without dead-zoning the gap.
+const LANE_TAP_TOLERANCE = LANE_SPACING / 2 + 4;
 
 // Temporarily off while we tune the rhythm bar in isolation.
 // When ready, flip this to true to re-enable the cat-petting mini-game.
@@ -274,36 +280,55 @@ export class Game extends Scene {
   // -- Input + scoring ----------------------------------------------------
 
   private setupInput(): void {
-    const handler = () => {
-      this.startMusicOnFirstGesture();
-      this.onTap();
+    this.input.on(
+      'pointerdown',
+      (pointer: { x: number; y: number }) => {
+        this.startMusicOnFirstGesture();
+        const lane = this.findLaneAtY(pointer.y);
+        if (lane) this.onLaneTap(lane);
+      },
+    );
+
+    // Keyboard helpers for desktop dev: 1 = top lane, 2 = middle, 3 = bottom
+    // (visual top-down reading order, regardless of the array index).
+    const keyToLane: Record<string, number> = {
+      ONE: LANE_COUNT - 1,
+      TWO: LANE_COUNT - 2,
+      THREE: LANE_COUNT - 3,
     };
-    this.input.on('pointerdown', handler);
-    this.input.keyboard?.on('keydown-SPACE', handler);
+    for (const [key, index] of Object.entries(keyToLane)) {
+      if (index < 0) continue;
+      this.input.keyboard?.on(`keydown-${key}`, () => {
+        this.startMusicOnFirstGesture();
+        const lane = this.lanes[index];
+        if (lane) this.onLaneTap(lane);
+      });
+    }
   }
 
-  private onTap(): void {
-    if (this.interactionActive) return;
-
-    let totalPoints = 0;
-    let anyPerfect = false;
-    let lanesHit = 0;
-
+  private findLaneAtY(y: number): PspspsLane | null {
+    let closest: PspspsLane | null = null;
+    let minDist = Infinity;
     for (const lane of this.lanes) {
-      const result = lane.system.tap();
-      if (result.pointsAwarded > 0) {
-        totalPoints += result.pointsAwarded;
-        if (result.perfectHits > 0) anyPerfect = true;
-        lanesHit += 1;
-        this.pulseLaneTarget(lane);
+      const dist = Math.abs(y - lane.centerY);
+      if (dist < minDist) {
+        minDist = dist;
+        closest = lane;
       }
     }
+    return minDist <= LANE_TAP_TOLERANCE ? closest : null;
+  }
 
-    if (totalPoints > 0) {
-      this.score.add(totalPoints);
+  private onLaneTap(lane: PspspsLane): void {
+    if (this.interactionActive) return;
+
+    const result = lane.system.tap();
+    if (result.pointsAwarded > 0) {
+      this.score.add(result.pointsAwarded);
       this.meow.onScoreChanged(this.score.get());
       this.pspspsSfx?.play();
-      this.flashScore(totalPoints, anyPerfect, lanesHit);
+      this.pulseLaneTarget(lane);
+      this.flashScore(lane, result.pointsAwarded, result.perfectHits > 0);
     }
 
     if (this.meow.isFull()) {
@@ -317,22 +342,23 @@ export class Game extends Scene {
     }
   }
 
-  private flashScore(points: number, anyPerfect: boolean, lanesHit: number): void {
-    const prefix = lanesHit > 1 ? `${lanesHit}x` : anyPerfect ? 'PERFECT' : '';
-    const label = prefix ? `${prefix} +${points}` : `+${points}`;
-    const color = lanesHit > 1 ? '#ffd34d' : anyPerfect ? '#00ff88' : '#ffffff';
+  private flashScore(lane: PspspsLane, points: number, isPerfect: boolean): void {
+    const label = isPerfect ? `PERFECT +${points}` : `+${points}`;
+    const color = isPerfect ? '#00ff88' : '#ffffff';
     const text = this.add
-      .text(this.scale.width / 2, this.scale.height / 2 - 40, label, {
+      .text(lane.target.x, lane.centerY - 40, label, {
         fontFamily: 'sans-serif',
-        fontSize: '24px',
+        fontSize: '22px',
         color,
+        stroke: '#000000',
+        strokeThickness: 3,
       })
       .setOrigin(0.5);
     this.tweens.add({
       targets: text,
       alpha: 0,
       y: text.y - 30,
-      duration: 500,
+      duration: 600,
       onComplete: () => text.destroy(),
     });
   }
