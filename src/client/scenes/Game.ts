@@ -8,15 +8,26 @@ import { MeowBarSystem } from '@/systems/meow-bar-system';
 import { RhythmSystem } from '@/systems/rhythm-system';
 import { InteractionSystem } from '@/systems/interaction-system';
 import { CatSelectionSystem } from '@/systems/cat-selection-system';
-import type { CatBreed, CatModel, InteractionType } from '@/types/game';
+import type { CatAnimationState, CatBreed, CatModel, InteractionType } from '@/types/game';
 
+// Seat coordinates (fractions of canvas width/height). Cats are anchored at
+// origin (0.5, 1) so the y value is where the cat's feet touch.
+// Order: [0] left ledge, [1] roof, [2] right ledge.
+// Tweak these by eye once you see them in the running game.
 const CAT_SEAT_POSITIONS: { x: number; y: number }[] = [
-  { x: 0.25, y: 0.6 },
-  { x: 0.5, y: 0.5 },
-  { x: 0.75, y: 0.62 },
+  { x: 0.1, y: 0.62 },  // left ledge — alongside the building
+  { x: 0.5, y: 0.13 },  // roof — top of the central roof peak
+  { x: 0.88, y: 0.62 }, // right ledge — by the mailbox
 ];
 
 const CAT_BREEDS_IN_ORDER: CatBreed[] = ['cat1', 'cat2', 'cat3'];
+
+const RESTING_ANIMATION_POOL: CatAnimationState[] = [
+  'idle',
+  'lick',
+  'sleep',
+  'stretch',
+];
 
 const INTERACTION_BUTTON_DEFS: { type: InteractionType; label: string }[] = [
   { type: 'pet', label: 'Pet' },
@@ -130,14 +141,18 @@ export class Game extends Scene {
     // Pre-create the pspsps sfx instance so we can replay it fast on every hit
     this.pspspsSfx = this.sound.add(AssetKeys.Audio.Pspsps, { volume: 0.7 });
 
-    // Spawn the base cats
+    // Spawn the base cats. Shuffle the resting-animation pool so each seated
+    // cat gets a different idle behavior (one might lick, one stretch, etc).
+    const shuffledRest = [...RESTING_ANIMATION_POOL].sort(() => Math.random() - 0.5);
     for (let i = 0; i < Balance.baseCatsOnScreen; i++) {
       const breed = CAT_BREEDS_IN_ORDER[i % CAT_BREEDS_IN_ORDER.length]!;
       const seat = CAT_SEAT_POSITIONS[i]!;
+      const resting = shuffledRest[i % shuffledRest.length]!;
       const model: CatModel = {
         id: `seat-${i}`,
         breed,
-        animation: 'idle',
+        animation: resting,
+        restingAnimation: resting,
         x: seat.x * 100,
         y: seat.y * 100,
       };
@@ -565,7 +580,8 @@ export class Game extends Scene {
         scale: 1,
         duration: 400,
         onComplete: () => {
-          cat.setAnimation('idle');
+          // Return to whatever the cat was doing before being picked up.
+          cat.setAnimation(cat.model.restingAnimation);
         },
       });
       this.activeCat = null;

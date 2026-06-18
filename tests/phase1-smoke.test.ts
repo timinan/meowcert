@@ -35,9 +35,9 @@ describe('phase 1 — systems composed end-to-end', () => {
 
   it('interaction + selection compose: pick a cat then resolve a pet', () => {
     const cats: CatModel[] = [
-      { id: 'a', breed: 'cat1', animation: 'idle', x: 0, y: 0 },
-      { id: 'b', breed: 'cat2', animation: 'idle', x: 0, y: 0 },
-      { id: 'c', breed: 'cat3', animation: 'idle', x: 0, y: 0 },
+      { id: 'a', breed: 'cat1', animation: 'idle', restingAnimation: 'idle', x: 0, y: 0 },
+      { id: 'b', breed: 'cat2', animation: 'idle', restingAnimation: 'idle', x: 0, y: 0 },
+      { id: 'c', breed: 'cat3', animation: 'idle', restingAnimation: 'idle', x: 0, y: 0 },
     ];
 
     const selector = new CatSelectionSystem(() => 0.4);

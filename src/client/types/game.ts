@@ -13,6 +13,10 @@ export interface CatModel {
   id: string;
   breed: CatBreed;
   animation: CatAnimationState;
+  // The animation a cat returns to when not actively meowing/being petted.
+  // Each seated cat picks a different one (idle, lick, sleep, stretch) so
+  // the scene doesn't look uniform.
+  restingAnimation: CatAnimationState;
   x: number; // 0–100 percent of background width
   y: number; // 0–100 percent of background height
 }

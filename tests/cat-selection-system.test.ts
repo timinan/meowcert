@@ -6,6 +6,7 @@ const cat = (id: string): CatModel => ({
   id,
   breed: 'cat1',
   animation: 'idle',
+  restingAnimation: 'idle',
   x: 0,
   y: 0,
 });
