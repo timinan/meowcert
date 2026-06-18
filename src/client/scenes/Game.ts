@@ -108,7 +108,7 @@ export class Game extends Scene {
 
   // Meow bar
   private meowBarOutline!: GameObjects.Image;
-  private meowBarFill!: GameObjects.Image;
+  private meowBarTrackAndFillGfx!: GameObjects.Graphics;
   private meowBarBounds = { left: 0, top: 0, width: 0, height: 0, radius: 0 };
 
   // Interaction state
@@ -318,32 +318,13 @@ export class Game extends Scene {
       radius: interiorHeight / 2,
     };
 
-    // White rounded-pill track behind the fill — sized to the outline's
-    // exact interior so it sits cleanly inside the black border.
-    const track = this.add.graphics();
-    track.fillStyle(0xffffff, 0.95);
-    track.fillRoundedRect(
-      this.meowBarBounds.left,
-      this.meowBarBounds.top,
-      this.meowBarBounds.width,
-      this.meowBarBounds.height,
-      this.meowBarBounds.radius,
-    );
-
-    // Orange fill — uses the textured meowBarFill asset (the prototype's
-    // orange-pill graphic with shading). We grow its displayWidth from 0 up
-    // to the interior width as progress climbs, so the orange pill extends
-    // across the bar like a cat tail filling out. Both rounded ends of the
-    // pill stay visible at any size since the texture's left+right caps are
-    // both inside the displayed region.
-    this.meowBarFill = this.add.image(
-      this.meowBarBounds.left,
-      this.meowBarBounds.top + this.meowBarBounds.height / 2,
-      AssetKeys.Image.MeowBarFill,
-    );
-    this.meowBarFill.setOrigin(0, 0.5);
-    this.meowBarFill.displayWidth = 0;
-    this.meowBarFill.displayHeight = this.meowBarBounds.height;
+    // Both the white "empty" track and the orange "filled" portion are
+    // drawn together each frame so they perfectly tile across the interior
+    // with no overlap and no game-background visible between them. Orange
+    // sits on the left, white on the right, meeting at the current
+    // progress edge. The meowBarFill.png asset isn't used here — its
+    // transparent gaps were causing the white-track-bleeding-through look.
+    this.meowBarTrackAndFillGfx = this.add.graphics();
 
     // Outline (rounded frame) drawn last so it crisps up the bar edges.
     this.meowBarOutline = this.add.image(w / 2, barY, AssetKeys.Image.MeowBarOutline);
@@ -352,9 +333,39 @@ export class Game extends Scene {
   }
 
   private updateMeowBar(): void {
-    if (!this.meowBarFill) return;
+    if (!this.meowBarTrackAndFillGfx) return;
     const pct = this.meow.getProgress() / Balance.meowBarMax;
-    this.meowBarFill.displayWidth = pct * this.meowBarBounds.width;
+    const fillWidth = pct * this.meowBarBounds.width;
+    const emptyWidth = this.meowBarBounds.width - fillWidth;
+    const { left, top, height, radius } = this.meowBarBounds;
+
+    this.meowBarTrackAndFillGfx.clear();
+
+    // Empty portion (white pill on the right). Skipped if the bar is full.
+    if (emptyWidth > 0.5) {
+      this.meowBarTrackAndFillGfx.fillStyle(0xffffff, 0.95);
+      this.meowBarTrackAndFillGfx.fillRoundedRect(
+        left + fillWidth,
+        top,
+        emptyWidth,
+        height,
+        // Cap the right-side radius at half the empty segment's width so a
+        // nearly-full bar still draws a sensible pill instead of a circle.
+        Math.min(radius, emptyWidth / 2),
+      );
+    }
+
+    // Filled portion (orange pill on the left). Skipped if the bar is empty.
+    if (fillWidth > 0.5) {
+      this.meowBarTrackAndFillGfx.fillStyle(0xf57c00, 1);
+      this.meowBarTrackAndFillGfx.fillRoundedRect(
+        left,
+        top,
+        fillWidth,
+        height,
+        Math.min(radius, fillWidth / 2),
+      );
+    }
   }
 
   // -- HUD ----------------------------------------------------------------
