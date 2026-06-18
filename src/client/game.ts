@@ -13,13 +13,14 @@ const config: Phaser.Types.Core.GameConfig = {
   parent: 'game-container',
   backgroundColor: '#028af8',
   scale: {
-    // FIT keeps the internal game resolution pinned at 1024x768 and scales
-    // the visual canvas to fit any container while preserving aspect ratio
-    // (letterboxes top/bottom or sides as needed). RESIZE was causing the
-    // canvas to shrink to the top-left when DevTools opened and pointer
-    // coordinates to drift, since cat positions were calculated against a
-    // canvas size that kept changing under us.
-    mode: Phaser.Scale.FIT,
+    // RESIZE lets the canvas fill whatever portrait/landscape area the
+    // Devvit web view gives us — important because FIT letterboxes the
+    // game with huge black bars in mobile/portrait. The trade-off is that
+    // when the viewport changes (DevTools opens, orientation flips),
+    // anything positioned in pixels at scene-create time goes out of
+    // place. We'll add a resize handler later if it becomes a real
+    // problem.
+    mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
     width: 1024,
     height: 768,
