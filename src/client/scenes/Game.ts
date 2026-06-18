@@ -385,12 +385,24 @@ export class Game extends Scene {
       'pointerdown',
       (pointer: { x: number; y: number; event?: { shiftKey?: boolean } }) => {
         // Dev helper: shift+click anywhere in the scene prints the click
-        // position as { x, y } canvas fractions. Use it to dial in
-        // CAT_SEAT_POSITIONS (and any future seat coords) by eye.
+        // position as { x, y } canvas fractions AND drops a red dot at
+        // that spot so you can verify visually that the dot lands where
+        // you clicked. If the dot is far from the cursor, the canvas
+        // pointer mapping is off and we need a different fix.
         if (DEBUG_LOG_SEAT_CLICKS && pointer.event?.shiftKey) {
           const x = Number((pointer.x / this.scale.width).toFixed(3));
           const y = Number((pointer.y / this.scale.height).toFixed(3));
-          console.log(`[seat] { x: ${x}, y: ${y} },`);
+          console.log(
+            `[seat] { x: ${x}, y: ${y} },  // canvas=${Math.round(this.scale.width)}x${Math.round(this.scale.height)} pointer=${Math.round(pointer.x)},${Math.round(pointer.y)}`,
+          );
+          const dot = this.add.circle(pointer.x, pointer.y, 8, 0xff3366, 1);
+          dot.setStrokeStyle(2, 0xffffff);
+          this.tweens.add({
+            targets: dot,
+            alpha: 0,
+            duration: 4000,
+            onComplete: () => dot.destroy(),
+          });
           return;
         }
         this.startMusicOnFirstGesture();
