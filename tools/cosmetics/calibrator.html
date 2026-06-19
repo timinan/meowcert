@@ -105,6 +105,72 @@
         font-family: ui-monospace, monospace;
         font-size: 11px;
       }
+      /* Tabs */
+      .tabs {
+        display: flex;
+        gap: 4px;
+        border-bottom: 1px solid var(--accent);
+        margin-bottom: 4px;
+      }
+      .tab {
+        background: transparent;
+        color: var(--accent);
+        border: none;
+        border-bottom: 2px solid transparent;
+        padding: 8px 14px;
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+        border-radius: 0;
+      }
+      .tab:hover { color: var(--text); filter: none; }
+      .tab.active {
+        color: var(--text);
+        border-bottom-color: var(--primary);
+      }
+      .pane { display: flex; flex-direction: column; gap: 10px; }
+      .pane.hidden { display: none; }
+      /* Variant rows */
+      .variant-row {
+        display: grid;
+        grid-template-columns: 24px 24px 70px 1fr;
+        gap: 8px;
+        align-items: center;
+        padding: 4px 6px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .variant-row:hover { background: rgba(192, 160, 230, 0.08); }
+      .variant-row.previewing {
+        background: rgba(255, 211, 77, 0.15);
+        outline: 1px solid var(--primary);
+      }
+      .variant-row input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+      .variant-row .swatch {
+        width: 22px;
+        height: 22px;
+        border-radius: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+      }
+      .variant-row .tint-label {
+        font-size: 12px;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .variant-row input[type="text"] {
+        background: var(--bg);
+        color: var(--text);
+        border: 1px solid var(--accent);
+        padding: 4px 6px;
+        font: inherit;
+        font-size: 12px;
+        border-radius: 4px;
+      }
+      .variant-row input[type="text"]:disabled {
+        opacity: 0.4;
+        background: rgba(0, 0, 0, 0.2);
+      }
     </style>
   </head>
   <body>
@@ -139,48 +205,65 @@
 
       <div class="panel controls">
         <h1 id="curId">c1</h1>
-        <label>
-          Name
-          <input type="text" id="name" placeholder="e.g. Cowboy Hat" />
-        </label>
-        <label>
-          Slot
-          <select id="slot">
-            <option value="head">head — sits on top of head (hat, crown)</option>
-            <option value="face">face — over the face (mustache, glasses)</option>
-            <option value="neck">neck — at the neck (bandana, bow tie, scarf)</option>
-            <option value="body">body — covers the body (sweater, cape)</option>
-            <option value="held">held — held in paws (toy, ball)</option>
-          </select>
-        </label>
-        <label>
-          Rarity
-          <select id="rarity">
-            <option value="common">common</option>
-            <option value="uncommon">uncommon</option>
-            <option value="rare">rare</option>
-            <option value="legendary">legendary</option>
-          </select>
-        </label>
-        <div class="row">
-          <label>
-            X offset
-            <input type="number" id="offsetX" value="0" step="1" />
-          </label>
-          <label>
-            Y offset
-            <input type="number" id="offsetY" value="-46" step="1" />
-          </label>
-          <label>
-            Scale
-            <input type="number" id="scale" value="1" step="0.1" min="0.1" max="4" />
-          </label>
+
+        <div class="tabs">
+          <button class="tab active" data-tab="base">Base</button>
+          <button class="tab" data-tab="variants">Tint variants</button>
         </div>
-        <div class="hint">
-          Offset is measured in cat-source pixels from the cat's vertical
-          midline (X=0) and from the top of the cat sprite (Y=0). Y &lt; 0 sits
-          above the top, Y &gt; 0 sits inside the cat's body. The game uses
-          these numbers directly.
+
+        <div class="pane" id="basePane">
+          <label>
+            Name
+            <input type="text" id="name" placeholder="e.g. Cowboy Hat" />
+          </label>
+          <label>
+            Slot
+            <select id="slot">
+              <option value="head">head — sits on top of head (hat, crown)</option>
+              <option value="face">face — over the face (mustache, glasses)</option>
+              <option value="neck">neck — at the neck (bandana, bow tie, scarf)</option>
+              <option value="body">body — covers the body (sweater, cape)</option>
+              <option value="held">held — held in paws (toy, ball)</option>
+            </select>
+          </label>
+          <label>
+            Rarity
+            <select id="rarity">
+              <option value="common">common</option>
+              <option value="uncommon">uncommon</option>
+              <option value="rare">rare</option>
+              <option value="legendary">legendary</option>
+            </select>
+          </label>
+          <div class="row">
+            <label>
+              X offset
+              <input type="number" id="offsetX" value="0" step="1" />
+            </label>
+            <label>
+              Y offset
+              <input type="number" id="offsetY" value="-46" step="1" />
+            </label>
+            <label>
+              Scale
+              <input type="number" id="scale" value="1" step="0.1" min="0.1" max="4" />
+            </label>
+          </div>
+          <div class="hint">
+            Offset is in cat-source pixels from the cat's vertical midline
+            (X=0) and from the top of the cat sprite (Y=0). Y &lt; 0 sits
+            above the top, Y &gt; 0 sits inside the cat's body.
+          </div>
+        </div>
+
+        <div class="pane hidden" id="variantsPane">
+          <div class="hint">
+            Toggle a tint to ship it as a variant of <strong id="varBaseName">c1</strong>.
+            Click any row to preview that tint on the canvas. Variants
+            inherit slot / offset / rarity from the base; only name + tint
+            differ.
+          </div>
+          <div id="variantList"></div>
         </div>
 
         <h2>Save / Load</h2>
@@ -207,10 +290,23 @@
       // still pull the atlas from the project's public/ folder.
       const ATLAS_IMG_PATH = '/public/assets/atlas/cats.png';
       const ATLAS_JSON_PATH = '/public/assets/atlas/cats.json';
-      const STORAGE_KEY = 'pspsps:cosmetic-calibrator:v1';
+      const STORAGE_KEY = 'pspsps:cosmetic-calibrator:v2';
       const ZOOM = 4;
 
       const COSMETIC_IDS = Array.from({ length: 17 }, (_, i) => `c${i + 1}`);
+
+      // Tint variants — each base can have 0+ tinted versions. Variants
+      // inherit slot, offset, scale, and rarity from the base; only name
+      // and tint differ. Picked to give visual contrast across head/face/
+      // body/etc so e.g. red glasses still read as different from gold.
+      const TINT_PALETTE = [
+        { id: 'red',    color: '#ff5555', label: 'Red' },
+        { id: 'blue',   color: '#5588ff', label: 'Blue' },
+        { id: 'green',  color: '#55cc55', label: 'Green' },
+        { id: 'gold',   color: '#ffd34d', label: 'Gold' },
+        { id: 'purple', color: '#c678ff', label: 'Purple' },
+        { id: 'pink',   color: '#ff8fbf', label: 'Pink' },
+      ];
 
       const DEFAULT_NAMES = {
         c1: 'Plain Bandana', c2: 'Bow Tie', c3: 'Tiny Scarf', c4: 'Striped Sock',
@@ -251,13 +347,24 @@
             for (const id of COSMETIC_IDS) {
               parsed[id] = { ...freshEntry(id), ...(parsed[id] || {}) };
             }
+            parsed.variants = parsed.variants || {};
+            for (const id of COSMETIC_IDS) {
+              parsed.variants[id] = parsed.variants[id] || freshVariantEntry();
+            }
             return parsed;
           }
         } catch (e) {
           console.warn('Failed to load saved state, starting fresh:', e);
         }
-        const blank = {};
-        for (const id of COSMETIC_IDS) blank[id] = freshEntry(id);
+        return freshStateBlock();
+      }
+
+      function freshStateBlock() {
+        const blank = { variants: {} };
+        for (const id of COSMETIC_IDS) {
+          blank[id] = freshEntry(id);
+          blank.variants[id] = freshVariantEntry();
+        }
         return blank;
       }
 
@@ -276,6 +383,26 @@
         };
       }
 
+      function freshVariantEntry() {
+        // For each base we track a per-tint enabled flag + editable name.
+        // Disabled tints don't appear in the exported JSON.
+        const v = {};
+        for (const tint of TINT_PALETTE) {
+          v[tint.id] = { enabled: false, name: '' };
+        }
+        return v;
+      }
+
+      function variantId(baseId, tintId) {
+        return `${baseId}-${tintId}`;
+      }
+
+      function defaultVariantName(baseId, tintId) {
+        const baseName = state[baseId]?.name || baseId;
+        const tintLabel = TINT_PALETTE.find((t) => t.id === tintId)?.label || tintId;
+        return `${tintLabel} ${baseName}`;
+      }
+
       function saveState() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         // Autosave to the local Node server on every edit (debounced) so
@@ -287,15 +414,36 @@
       }
 
       function buildOutputArray() {
-        return COSMETIC_IDS.map((id) => ({
-          id,
-          name: state[id].name,
-          slot: state[id].slot,
-          rarity: state[id].rarity,
-          offsetX: state[id].offsetX,
-          offsetY: state[id].offsetY,
-          scale: state[id].scale,
-        }));
+        const out = [];
+        for (const id of COSMETIC_IDS) {
+          out.push({
+            id,
+            name: state[id].name,
+            slot: state[id].slot,
+            rarity: state[id].rarity,
+            offsetX: state[id].offsetX,
+            offsetY: state[id].offsetY,
+            scale: state[id].scale,
+          });
+        }
+        // Append enabled tint variants. Each variant inherits its base's
+        // slot / offset / rarity in the game (resolved via tintOf at
+        // render time); we only persist what's different here.
+        for (const id of COSMETIC_IDS) {
+          const baseVariants = state.variants[id] || {};
+          for (const tint of TINT_PALETTE) {
+            const v = baseVariants[tint.id];
+            if (!v || !v.enabled) continue;
+            out.push({
+              id: variantId(id, tint.id),
+              tintOf: id,
+              tint: tint.color,
+              name: v.name || defaultVariantName(id, tint.id),
+              rarity: state[id].rarity,
+            });
+          }
+        }
+        return out;
       }
 
       let serverSaveAvailable = true;
@@ -354,10 +502,24 @@
       }
 
       function arrayToState(arr) {
-        const out = {};
-        for (const id of COSMETIC_IDS) out[id] = freshEntry(id);
+        const out = freshStateBlock();
         for (const entry of arr) {
-          if (entry && entry.id && COSMETIC_IDS.includes(entry.id)) {
+          if (!entry || !entry.id) continue;
+          if (entry.tintOf) {
+            // Variant entry — figure out which tint id it represents and
+            // flip the corresponding flag back on.
+            const baseId = entry.tintOf;
+            if (!COSMETIC_IDS.includes(baseId)) continue;
+            const tintId = String(entry.id).replace(`${baseId}-`, '');
+            if (out.variants[baseId][tintId]) {
+              out.variants[baseId][tintId] = {
+                enabled: true,
+                name: entry.name || '',
+              };
+            }
+            continue;
+          }
+          if (COSMETIC_IDS.includes(entry.id)) {
             out[entry.id] = { ...out[entry.id], ...entry };
           }
         }
@@ -486,6 +648,10 @@
 
         document.getElementById('catSelect').addEventListener('change', render);
 
+        document.querySelectorAll('.tab').forEach((btn) => {
+          btn.addEventListener('click', () => setActiveTab(btn.dataset.tab));
+        });
+
         document.getElementById('copy').addEventListener('click', async () => {
           const out = document.getElementById('output').value;
           try {
@@ -572,6 +738,7 @@
         document.getElementById('offsetX').value = entry.offsetX;
         document.getElementById('offsetY').value = entry.offsetY;
         document.getElementById('scale').value = entry.scale;
+        buildVariantsPane();
         render();
         updateOutput();
       }
@@ -623,10 +790,23 @@
         const cosCenterX = feetX + entry.offsetX * ZOOM;
         const cosCenterY = topY + entry.offsetY * ZOOM;
 
-        ctx.drawImage(
-          atlasImg, cosFrame.x, cosFrame.y, cosFrame.w, cosFrame.h,
-          cosCenterX - cosW / 2, cosCenterY - cosH / 2, cosW, cosH
-        );
+        // If a tint is being previewed (Variants tab), stamp the sprite
+        // with a multiply-blend tint that mirrors Phaser's setTint(). The
+        // alpha mask is reapplied so transparent pixels don't pick up the
+        // tint color.
+        if (previewTintColor) {
+          drawTintedSprite(
+            ctx, atlasImg,
+            cosFrame.x, cosFrame.y, cosFrame.w, cosFrame.h,
+            cosCenterX - cosW / 2, cosCenterY - cosH / 2, cosW, cosH,
+            previewTintColor,
+          );
+        } else {
+          ctx.drawImage(
+            atlasImg, cosFrame.x, cosFrame.y, cosFrame.w, cosFrame.h,
+            cosCenterX - cosW / 2, cosCenterY - cosH / 2, cosW, cosH
+          );
+        }
 
         // Crosshair at anchor point
         ctx.strokeStyle = '#ffd34d';
@@ -655,6 +835,119 @@
 
       function updateOutput() {
         document.getElementById('output').value = JSON.stringify(buildOutputArray(), null, 2);
+      }
+
+      // --- Variants tab ----------------------------------------------------
+
+      let activeTab = 'base';
+      let previewTintColor = null; // hex string when previewing a variant
+
+      function setActiveTab(tab) {
+        activeTab = tab;
+        document.querySelectorAll('.tab').forEach((b) => {
+          b.classList.toggle('active', b.dataset.tab === tab);
+        });
+        document.getElementById('basePane').classList.toggle('hidden', tab !== 'base');
+        document.getElementById('variantsPane').classList.toggle('hidden', tab !== 'variants');
+        // Stop previewing the moment we leave the variants tab so the
+        // base preview shows the untinted sprite.
+        if (tab !== 'variants') previewTintColor = null;
+        render();
+      }
+
+      function buildVariantsPane() {
+        const cur = curId();
+        document.getElementById('varBaseName').textContent = `${cur} — ${state[cur].name}`;
+        const list = document.getElementById('variantList');
+        list.innerHTML = '';
+        const variants = state.variants[cur];
+        let previewingTintId = null;
+        TINT_PALETTE.forEach((tint) => {
+          const v = variants[tint.id];
+          const row = document.createElement('div');
+          row.className = 'variant-row';
+          row.dataset.tintId = tint.id;
+
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.checked = !!v.enabled;
+          cb.addEventListener('click', (e) => e.stopPropagation());
+          cb.addEventListener('change', () => {
+            v.enabled = cb.checked;
+            if (cb.checked && !v.name) v.name = defaultVariantName(cur, tint.id);
+            nameInput.disabled = !cb.checked;
+            nameInput.value = v.name;
+            saveState();
+            updateOutput();
+          });
+
+          const swatch = document.createElement('span');
+          swatch.className = 'swatch';
+          swatch.style.background = tint.color;
+
+          const label = document.createElement('span');
+          label.className = 'tint-label';
+          label.textContent = tint.label;
+
+          const nameInput = document.createElement('input');
+          nameInput.type = 'text';
+          nameInput.placeholder = defaultVariantName(cur, tint.id);
+          nameInput.value = v.name || '';
+          nameInput.disabled = !v.enabled;
+          nameInput.addEventListener('click', (e) => e.stopPropagation());
+          nameInput.addEventListener('input', () => {
+            v.name = nameInput.value;
+            saveState();
+            updateOutput();
+          });
+
+          // Click anywhere on the row (other than the inputs) to preview
+          // this tint on the canvas.
+          row.addEventListener('click', () => {
+            previewTintColor = tint.color;
+            list.querySelectorAll('.variant-row').forEach((r) =>
+              r.classList.toggle('previewing', r === row),
+            );
+            render();
+          });
+
+          row.append(cb, swatch, label, nameInput);
+          list.appendChild(row);
+          if (v.enabled && previewingTintId === null) previewingTintId = tint.id;
+        });
+        // Auto-preview the first enabled variant so something is on the
+        // canvas the moment the tab is opened.
+        if (previewingTintId) {
+          previewTintColor = TINT_PALETTE.find((t) => t.id === previewingTintId).color;
+          list.querySelector(`[data-tint-id="${previewingTintId}"]`)?.classList.add('previewing');
+        } else {
+          previewTintColor = null;
+        }
+        render();
+      }
+
+      // --- Tinted-sprite renderer ------------------------------------------
+
+      const tintCanvas = document.createElement('canvas');
+      function drawTintedSprite(ctx, img, sx, sy, sw, sh, dx, dy, dw, dh, tintHex) {
+        tintCanvas.width = sw;
+        tintCanvas.height = sh;
+        const tctx = tintCanvas.getContext('2d');
+        tctx.imageSmoothingEnabled = false;
+        tctx.clearRect(0, 0, sw, sh);
+        // 1. Draw the original sprite
+        tctx.globalCompositeOperation = 'source-over';
+        tctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+        // 2. Multiply with the tint color — preserves shading
+        tctx.globalCompositeOperation = 'multiply';
+        tctx.fillStyle = tintHex;
+        tctx.fillRect(0, 0, sw, sh);
+        // 3. Clip back to the sprite's alpha so transparent pixels stay
+        //    transparent (multiply happily colors alpha=0 pixels otherwise)
+        tctx.globalCompositeOperation = 'destination-in';
+        tctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+        // 4. Stamp the result onto the display canvas
+        ctx.drawImage(tintCanvas, 0, 0, sw, sh, dx, dy, dw, dh);
       }
 
       function flashButton(id, text) {
