@@ -123,10 +123,17 @@ export class Game extends Scene {
   private interactionDim: GameObjects.Rectangle | null = null;
   // Timing-bar mini-game state — only meaningful while interactionActive.
   private interactionTimeLeftMs = 0;
-  private interactionMarkerFraction = 0; // 0..1, oscillates each frame
+  private interactionMarkerFraction = 0; // 0..1
   private interactionMarkerDirection: 1 | -1 = 1;
+  // Layout cached so update() and event handlers can reference it.
   private interactionBarLeft = 0;
   private interactionBarWidth = 0;
+  private interactionBarCenterY = 0;
+  private interactionBarHeight = 28;
+  // Which action button is currently being held — only when this is set does
+  // the marker animate and the bar render. Released = resolve at marker pos.
+  private interactionHeldType: InteractionType | null = null;
+  private interactionPointerUpHandler: (() => void) | null = null;
   private interactionMarker: GameObjects.Rectangle | null = null;
   private interactionTimerText: GameObjects.Text | null = null;
   private interactionBarGfx: GameObjects.Graphics | null = null;
@@ -249,8 +256,8 @@ export class Game extends Scene {
   }
 
   private advancePettingInteraction(deltaMs: number): void {
-    // Tick down the round timer first — if a previous miss penalty drained
-    // it, end immediately.
+    // The round timer always counts down — the 15-second budget is yours
+    // to spend however you want, holding or not.
     this.interactionTimeLeftMs -= deltaMs;
     if (this.interactionTimeLeftMs <= 0) {
       this.interactionTimeLeftMs = 0;
@@ -259,23 +266,24 @@ export class Game extends Scene {
       return;
     }
 
-    // Marker ping-pongs across the bar. interactionMarkerTraversalMs is
-    // the time it takes to cross from one edge to the other.
-    const speed = 1 / Balance.interactionMarkerTraversalMs;
-    this.interactionMarkerFraction +=
-      this.interactionMarkerDirection * speed * deltaMs;
-    if (this.interactionMarkerFraction >= 1) {
-      this.interactionMarkerFraction = 1;
-      this.interactionMarkerDirection = -1;
-    } else if (this.interactionMarkerFraction <= 0) {
-      this.interactionMarkerFraction = 0;
-      this.interactionMarkerDirection = 1;
-    }
-
-    if (this.interactionMarker) {
-      this.interactionMarker.x =
-        this.interactionBarLeft +
-        this.interactionBarWidth * this.interactionMarkerFraction;
+    // Marker only moves while a button is being held — the bar is hidden
+    // and the marker frozen any other time.
+    if (this.interactionHeldType !== null) {
+      const speed = 1 / Balance.interactionMarkerTraversalMs;
+      this.interactionMarkerFraction +=
+        this.interactionMarkerDirection * speed * deltaMs;
+      if (this.interactionMarkerFraction >= 1) {
+        this.interactionMarkerFraction = 1;
+        this.interactionMarkerDirection = -1;
+      } else if (this.interactionMarkerFraction <= 0) {
+        this.interactionMarkerFraction = 0;
+        this.interactionMarkerDirection = 1;
+      }
+      if (this.interactionMarker) {
+        this.interactionMarker.x =
+          this.interactionBarLeft +
+          this.interactionBarWidth * this.interactionMarkerFraction;
+      }
     }
     this.updatePettingTimerLabel();
   }
@@ -862,87 +870,129 @@ export class Game extends Scene {
 
     const w = this.scale.width;
     const h = this.scale.height;
-    const buttonRowY = h - BOTTOM_LANE_Y_FROM_BOTTOM - LANE_COUNT * LANE_SPACING - 60;
-    const barCenterY = buttonRowY - 80;
-    const barW = Math.min(w * 0.72, 460);
+    // Dim ONLY the rhythm-lane region so the cat above stays visible and
+    // the interaction UI can sit on top of the dimmed lanes below.
+    const lanesTop = h - BOTTOM_LANE_Y_FROM_BOTTOM - LANE_COUNT * LANE_SPACING - PSPSPS_BAR_HEIGHT / 2;
+    // Interaction UI lives in the dimmed-lane area:
+    //   - countdown text at the top of the dim region
+    //   - timing bar just below it (hidden until a button is held)
+    //   - three petting buttons near the bottom of the dim region
+    const buttonRowY = h - BOTTOM_LANE_Y_FROM_BOTTOM - PSPSPS_BAR_HEIGHT;
+    const barCenterY = lanesTop + 60;
+    const barW = Math.min(w * 0.7, 460);
     const barH = 28;
     const barLeft = w / 2 - barW / 2;
-    const dimTop = h - BOTTOM_LANE_Y_FROM_BOTTOM - LANE_COUNT * LANE_SPACING - 180;
 
     this.interactionBarLeft = barLeft;
     this.interactionBarWidth = barW;
+    this.interactionBarCenterY = barCenterY;
+    this.interactionBarHeight = barH;
     this.interactionTimeLeftMs = Balance.interactionRoundDurationMs;
     this.interactionMarkerFraction = 0;
     this.interactionMarkerDirection = 1;
+    this.interactionHeldType = null;
 
-    // Dim the rhythm-bar + UI region so the timing-bar mini-game reads as
-    // the only active surface.
+    // Dim covers exactly the rhythm-lane region — the cat house art above
+    // stays untouched so the active cat reads clearly.
     this.interactionDim = this.add
-      .rectangle(0, dimTop, w, h - dimTop, 0x000000, 0.6)
+      .rectangle(0, lanesTop, w, h - lanesTop, 0x000000, 0.68)
       .setOrigin(0, 0)
       .setDepth(500);
 
-    // Active cat tweens to the upper portion of the dim area so it sits
-    // above the timing bar without clipping into the seated cats above.
+    // Active cat tweens forward but stays well above the dim region so it
+    // doesn't get blocked by the buttons or bar.
+    const catFeetY = lanesTop - 24;
     this.tweens.add({
       targets: this.activeCat.sprite,
       x: w / 2,
-      y: dimTop + 180,
-      scale: 1.5,
+      y: catFeetY,
+      scale: 1.6,
       duration: 360,
       ease: 'Quad.easeOut',
     });
     this.activeCat.sprite.setDepth(550);
     this.activeCat.setAnimation('meow');
 
-    this.drawTimingBar(barLeft, barCenterY, barW, barH);
+    // Bar + marker start hidden — they appear only while a button is held.
+    this.interactionBarGfx = this.add.graphics().setDepth(550).setVisible(false);
+    this.interactionMarker = this.add
+      .rectangle(barLeft, barCenterY, 6, barH + 16, 0xffd84a)
+      .setDepth(560)
+      .setStrokeStyle(2, 0x000000)
+      .setVisible(false);
+
     this.spawnTimingBarButtons(buttonRowY);
 
-    // Countdown text above the bar — updated each frame in update().
+    // Countdown text at top of dim region — always visible.
     this.interactionTimerText = this.add
-      .text(w / 2, barCenterY - 38, '15.0s', {
+      .text(w / 2, lanesTop + 14, '15.0s', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
-        fontSize: '22px',
+        fontSize: '20px',
         color: '#ffffff',
         stroke: '#000000',
         strokeThickness: 4,
       })
-      .setOrigin(0.5)
+      .setOrigin(0.5, 0)
       .setDepth(610);
+
+    // Listen for ANY pointerup while the interaction is live — if a button
+    // was being held, that's when we resolve the attempt. Doing this at the
+    // scene level handles cases where the player drags off the button
+    // before releasing.
+    this.interactionPointerUpHandler = () => {
+      if (this.interactionHeldType !== null) {
+        const type = this.interactionHeldType;
+        this.interactionHeldType = null;
+        this.hideTimingBar();
+        this.resolveInteraction(type);
+      }
+    };
+    this.input.on('pointerup', this.interactionPointerUpHandler);
   }
 
-  private drawTimingBar(left: number, centerY: number, width: number, height: number): void {
-    // Static layered backdrop: dark base + concentric green-zone bands so
-    // the player can read where each action's hit window sits at a glance.
-    const gfx = this.add.graphics().setDepth(550);
-    const top = centerY - height / 2;
+  private redrawTimingBarForAction(type: InteractionType): void {
+    if (!this.interactionBarGfx) return;
+    const gfx = this.interactionBarGfx;
+    const left = this.interactionBarLeft;
+    const width = this.interactionBarWidth;
+    const height = this.interactionBarHeight;
+    const top = this.interactionBarCenterY - height / 2;
 
-    // Base bar
-    gfx.fillStyle(0x111111, 0.95);
+    gfx.clear();
+    // Red everywhere — that's the fail region.
+    gfx.fillStyle(0xe53935, 1);
     gfx.fillRoundedRect(left, top, width, height, 6);
-
-    // Concentric zones — largest first so smaller ones layer on top.
-    const drawZone = (zone: number, color: number) => {
-      const zw = width * zone;
-      gfx.fillStyle(color, 1);
-      gfx.fillRoundedRect(left + (width - zw) / 2, top + 2, zw, height - 4, 4);
-    };
-    drawZone(Balance.interactionZones.pet, 0x4caf50); // green (easy)
-    drawZone(Balance.interactionZones.chinScratch, 0xffb300); // amber (medium)
-    drawZone(Balance.interactionZones.bellyRub, 0xe53935); // red (hard)
-
-    // Outer border to crisp the edges.
-    gfx.lineStyle(2, 0xffffff, 0.85);
+    // Centered green band sized to this action's zone fraction.
+    const zone = Balance.interactionZones[type];
+    const greenW = width * zone;
+    gfx.fillStyle(0x4caf50, 1);
+    gfx.fillRoundedRect(left + (width - greenW) / 2, top + 2, greenW, height - 4, 4);
+    // Outer border.
+    gfx.lineStyle(2, 0xffffff, 0.9);
     gfx.strokeRoundedRect(left, top, width, height, 6);
+  }
 
-    this.interactionBarGfx = gfx;
+  private showTimingBar(type: InteractionType): void {
+    this.redrawTimingBarForAction(type);
+    this.interactionBarGfx?.setVisible(true);
+    if (this.interactionMarker) {
+      this.interactionMarker.setVisible(true);
+      this.interactionMarker.x = this.interactionBarLeft;
+    }
+  }
 
-    // Moving marker — yellow vertical pill that ticks along the bar.
-    this.interactionMarker = this.add
-      .rectangle(left, centerY, 6, height + 16, 0xffd84a)
-      .setDepth(560)
-      .setStrokeStyle(2, 0x000000);
+  private hideTimingBar(): void {
+    this.interactionBarGfx?.setVisible(false);
+    this.interactionMarker?.setVisible(false);
+  }
+
+  private startActionHold(type: InteractionType): void {
+    if (!this.interactionActive || this.interactionHeldType !== null) return;
+    this.interactionHeldType = type;
+    this.interactionMarkerFraction = 0;
+    this.interactionMarkerDirection = 1;
+    this.showTimingBar(type);
   }
 
   private spawnTimingBarButtons(buttonRowY: number): void {
@@ -992,7 +1042,7 @@ export class Game extends Scene {
         })
         .setOrigin(0.5);
 
-      bg.on('pointerdown', () => this.resolveInteraction(def.type));
+      bg.on('pointerdown', () => this.startActionHold(def.type));
       container.add([bg, label, rewardText]);
     }
   }
@@ -1087,6 +1137,11 @@ export class Game extends Scene {
     this.interactionTimerText = null;
     this.interactionBarGfx?.destroy();
     this.interactionBarGfx = null;
+    this.interactionHeldType = null;
+    if (this.interactionPointerUpHandler) {
+      this.input.off('pointerup', this.interactionPointerUpHandler);
+      this.interactionPointerUpHandler = null;
+    }
     this.meow.reset();
   }
 
@@ -1114,6 +1169,10 @@ export class Game extends Scene {
     this.interactionTimerText = null;
     this.interactionBarGfx?.destroy();
     this.interactionBarGfx = null;
+    if (this.interactionPointerUpHandler) {
+      this.input.off('pointerup', this.interactionPointerUpHandler);
+      this.interactionPointerUpHandler = null;
+    }
     this.music?.stop();
     this.music = null;
     for (const lane of this.lanes) {
