@@ -80,7 +80,7 @@ export class Collection extends Scene {
     this.add.rectangle(0, 0, width, height, 0x1a0a2e, 1).setOrigin(0, 0);
 
     // Title shrinks at narrow widths to clear the top-right coin counter.
-    const titleFontSize = width < 480 ? 20 : 28;
+    const titleFontSize = width >= 480 ? 28 : width >= 360 ? 22 : 18;
     this.add
       .text(width / 2, 36, 'Collection', {
         fontFamily: 'Pixeloid Sans, sans-serif',
@@ -89,6 +89,7 @@ export class Collection extends Scene {
         color: '#ffffff',
         stroke: '#000000',
         strokeThickness: 5,
+        lineSpacing: 6,
       })
       .setOrigin(0.5, 0);
 

@@ -92,9 +92,9 @@ export class Boxes extends Scene {
     }
 
     // Title scales down at narrow widths so it doesn't crash into the
-    // top-right coin counter. Coin counter sits at the top with the title
-    // visually centered below it.
-    const titleFontSize = width < 520 ? 22 : 32;
+    // top-right coin counter. Non-zero lineSpacing so a wrapped title
+    // doesn't render lines on top of each other.
+    const titleFontSize = width >= 520 ? 32 : width >= 380 ? 22 : 18;
     this.add
       .text(width / 2, 44, 'Mystery Boxes', {
         fontFamily: 'Pixeloid Sans, sans-serif',
@@ -104,6 +104,7 @@ export class Boxes extends Scene {
         stroke: '#000000',
         strokeThickness: 5,
         align: 'center',
+        lineSpacing: 6,
         wordWrap: { width: width - 32 },
       })
       .setOrigin(0.5, 0);

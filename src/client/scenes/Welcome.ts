@@ -59,11 +59,13 @@ export class Welcome extends Scene {
       );
     }
 
-    // Title scales down on narrow canvases — at 44px the original 18-char
-    // greeting clips on viewports under ~620px wide.
-    const titleFontSize = width < 620 ? 30 : 44;
+    // Title size is picked from a few breakpoints so 'Welcome to pspsps!'
+    // fits on one line at narrow widths. lineSpacing is non-zero so even
+    // if it does wrap, the two lines don't render on top of each other —
+    // that was the bug in the previous screenshot.
+    const titleFontSize = width >= 720 ? 44 : width >= 520 ? 32 : 22;
     this.title = this.add
-      .text(width / 2, height * 0.16, 'Welcome to pspsps!', {
+      .text(width / 2, height * 0.14, 'Welcome to pspsps!', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
         fontSize: `${titleFontSize}px`,
@@ -71,18 +73,20 @@ export class Welcome extends Scene {
         stroke: '#000000',
         strokeThickness: 6,
         align: 'center',
+        lineSpacing: 8,
         wordWrap: { width: width - 32 },
       })
       .setOrigin(0.5);
 
+    const subtitleFontSize = width >= 520 ? 20 : 16;
     this.subtitle = this.add
       .text(
         width / 2,
-        height * 0.3,
+        height * 0.32,
         "Your cat house is ready. Here's 300 coins to get you started — let's open your first boxes!",
         {
           fontFamily: 'Pixeloid Sans, sans-serif',
-          fontSize: '20px',
+          fontSize: `${subtitleFontSize}px`,
           color: '#e0d3ff',
           align: 'center',
           lineSpacing: 8,
@@ -92,10 +96,10 @@ export class Welcome extends Scene {
       .setOrigin(0.5);
 
     this.coinsText = this.add
-      .text(width - 16, 16, '🪙 0', {
+      .text(width - 16, 12, '🪙 0', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
-        fontSize: '24px',
+        fontSize: '22px',
         color: '#ffd34d',
         stroke: '#000000',
         strokeThickness: 4,
@@ -156,6 +160,14 @@ export class Welcome extends Scene {
     // at 360 so it doesn't get silly-wide on desktop.
     const btnW = Math.min(360, width - 32);
     const btnH = 72;
+    // Internal horizontal padding so the label has visible breathing room
+    // from the button edges. Label font scales down if the label would
+    // otherwise exceed the inner width — Pixeloid Sans Bold runs ~14px per
+    // char at fontSize 24, so divide and clamp.
+    const innerPadding = 24;
+    const innerW = btnW - innerPadding * 2;
+    const maxFontByWidth = Math.floor((innerW / label.length) * 1.6);
+    const labelFontSize = Math.max(14, Math.min(24, maxFontByWidth));
 
     const container = this.add.container(width / 2, height * 0.62);
     const bg = this.add.rectangle(0, 0, btnW, btnH, 0x1a0a2e, 0.95);
@@ -166,7 +178,7 @@ export class Welcome extends Scene {
       .text(0, 0, label, {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
-        fontSize: '24px',
+        fontSize: `${labelFontSize}px`,
         color: '#ffffff',
       })
       .setOrigin(0.5);
