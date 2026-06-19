@@ -121,7 +121,15 @@ export class Game extends Scene {
   private activeCat: Cat | null = null;
   private interactionButtons: GameObjects.Container | null = null;
   private interactionDim: GameObjects.Rectangle | null = null;
-  private drainTimer: Time.TimerEvent | null = null;
+  // Timing-bar mini-game state — only meaningful while interactionActive.
+  private interactionTimeLeftMs = 0;
+  private interactionMarkerFraction = 0; // 0..1, oscillates each frame
+  private interactionMarkerDirection: 1 | -1 = 1;
+  private interactionBarLeft = 0;
+  private interactionBarWidth = 0;
+  private interactionMarker: GameObjects.Rectangle | null = null;
+  private interactionTimerText: GameObjects.Text | null = null;
+  private interactionBarGfx: GameObjects.Graphics | null = null;
 
   // HUD
   private coins = 0;
@@ -218,10 +226,11 @@ export class Game extends Scene {
   }
 
   override update(_time: number, delta: number): void {
-    // While the petting interaction is up the rhythm system pauses entirely
-    // — balls freeze in place, nothing despawns. Otherwise the player
-    // would lose their combo just by reading the buttons.
-    if (!this.interactionActive) {
+    if (this.interactionActive) {
+      // Petting mini-game runs here — rhythm system is fully paused so the
+      // combo doesn't break behind the dim overlay.
+      this.advancePettingInteraction(delta);
+    } else {
       const meowPct = this.meow.getProgress() / Balance.meowBarMax;
       const speedMult =
         1 + meowPct * (Balance.pspspsSpeedMultiplierAtFullMeow - 1);
@@ -231,15 +240,50 @@ export class Game extends Scene {
         missedThisFrame += lane.system.advance(delta);
         this.syncLaneElements(lane);
       }
-      // Any ball that slid all the way past the right edge without a tap
-      // counts as a missed catch and breaks the streak — same as a
-      // wrong-lane misclick. Keeps the combo honest.
       if (missedThisFrame > 0 && this.combo > 0) {
         this.combo = 0;
       }
     }
     this.updateMeowBar();
     this.updateHud();
+  }
+
+  private advancePettingInteraction(deltaMs: number): void {
+    // Tick down the round timer first — if a previous miss penalty drained
+    // it, end immediately.
+    this.interactionTimeLeftMs -= deltaMs;
+    if (this.interactionTimeLeftMs <= 0) {
+      this.interactionTimeLeftMs = 0;
+      this.updatePettingTimerLabel();
+      this.endInteraction();
+      return;
+    }
+
+    // Marker ping-pongs across the bar. interactionMarkerTraversalMs is
+    // the time it takes to cross from one edge to the other.
+    const speed = 1 / Balance.interactionMarkerTraversalMs;
+    this.interactionMarkerFraction +=
+      this.interactionMarkerDirection * speed * deltaMs;
+    if (this.interactionMarkerFraction >= 1) {
+      this.interactionMarkerFraction = 1;
+      this.interactionMarkerDirection = -1;
+    } else if (this.interactionMarkerFraction <= 0) {
+      this.interactionMarkerFraction = 0;
+      this.interactionMarkerDirection = 1;
+    }
+
+    if (this.interactionMarker) {
+      this.interactionMarker.x =
+        this.interactionBarLeft +
+        this.interactionBarWidth * this.interactionMarkerFraction;
+    }
+    this.updatePettingTimerLabel();
+  }
+
+  private updatePettingTimerLabel(): void {
+    if (!this.interactionTimerText) return;
+    const seconds = Math.max(0, this.interactionTimeLeftMs) / 1000;
+    this.interactionTimerText.setText(`${seconds.toFixed(1)}s`);
   }
 
   private getComboMultiplier(): number {
@@ -816,72 +860,123 @@ export class Game extends Scene {
     this.activeCat = this.cats.find((c) => c.model.id === chosenModel.id) ?? null;
     if (!this.activeCat) return;
 
-    // Dim the rhythm-bar region so the player's focus is unambiguously on
-    // the cat and the petting buttons. Sits between the rhythm UI and the
-    // interaction UI in the z-order.
     const w = this.scale.width;
     const h = this.scale.height;
-    const dimTop = h - BOTTOM_LANE_Y_FROM_BOTTOM - LANE_COUNT * LANE_SPACING - 110;
+    const buttonRowY = h - BOTTOM_LANE_Y_FROM_BOTTOM - LANE_COUNT * LANE_SPACING - 60;
+    const barCenterY = buttonRowY - 80;
+    const barW = Math.min(w * 0.72, 460);
+    const barH = 28;
+    const barLeft = w / 2 - barW / 2;
+    const dimTop = h - BOTTOM_LANE_Y_FROM_BOTTOM - LANE_COUNT * LANE_SPACING - 180;
+
+    this.interactionBarLeft = barLeft;
+    this.interactionBarWidth = barW;
+    this.interactionTimeLeftMs = Balance.interactionRoundDurationMs;
+    this.interactionMarkerFraction = 0;
+    this.interactionMarkerDirection = 1;
+
+    // Dim the rhythm-bar + UI region so the timing-bar mini-game reads as
+    // the only active surface.
     this.interactionDim = this.add
-      .rectangle(0, dimTop, w, h - dimTop, 0x000000, 0.55)
+      .rectangle(0, dimTop, w, h - dimTop, 0x000000, 0.6)
       .setOrigin(0, 0)
       .setDepth(500);
 
-    // Active cat tweens to the lower-middle of the screen above the dim
-    // overlay so it sits clearly in front of the cat-house art without
-    // crashing into the seated cats above.
+    // Active cat tweens to the upper portion of the dim area so it sits
+    // above the timing bar without clipping into the seated cats above.
     this.tweens.add({
       targets: this.activeCat.sprite,
       x: w / 2,
-      y: h * 0.52,
-      scale: 1.7,
-      duration: 380,
+      y: dimTop + 180,
+      scale: 1.5,
+      duration: 360,
       ease: 'Quad.easeOut',
     });
     this.activeCat.sprite.setDepth(550);
     this.activeCat.setAnimation('meow');
 
-    this.spawnInteractionButtons();
+    this.drawTimingBar(barLeft, barCenterY, barW, barH);
+    this.spawnTimingBarButtons(buttonRowY);
 
-    this.drainTimer = this.time.addEvent({
-      delay: Balance.tickDurationMs,
-      loop: true,
-      callback: () => {
-        this.meow.drainTick();
-        if (this.meow.isEmpty()) {
-          this.endInteraction();
-        }
-      },
-    });
+    // Countdown text above the bar — updated each frame in update().
+    this.interactionTimerText = this.add
+      .text(w / 2, barCenterY - 38, '15.0s', {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontStyle: 'bold',
+        fontSize: '22px',
+        color: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 4,
+      })
+      .setOrigin(0.5)
+      .setDepth(610);
   }
 
-  private spawnInteractionButtons(): void {
+  private drawTimingBar(left: number, centerY: number, width: number, height: number): void {
+    // Static layered backdrop: dark base + concentric green-zone bands so
+    // the player can read where each action's hit window sits at a glance.
+    const gfx = this.add.graphics().setDepth(550);
+    const top = centerY - height / 2;
+
+    // Base bar
+    gfx.fillStyle(0x111111, 0.95);
+    gfx.fillRoundedRect(left, top, width, height, 6);
+
+    // Concentric zones — largest first so smaller ones layer on top.
+    const drawZone = (zone: number, color: number) => {
+      const zw = width * zone;
+      gfx.fillStyle(color, 1);
+      gfx.fillRoundedRect(left + (width - zw) / 2, top + 2, zw, height - 4, 4);
+    };
+    drawZone(Balance.interactionZones.pet, 0x4caf50); // green (easy)
+    drawZone(Balance.interactionZones.chinScratch, 0xffb300); // amber (medium)
+    drawZone(Balance.interactionZones.bellyRub, 0xe53935); // red (hard)
+
+    // Outer border to crisp the edges.
+    gfx.lineStyle(2, 0xffffff, 0.85);
+    gfx.strokeRoundedRect(left, top, width, height, 6);
+
+    this.interactionBarGfx = gfx;
+
+    // Moving marker — yellow vertical pill that ticks along the bar.
+    this.interactionMarker = this.add
+      .rectangle(left, centerY, 6, height + 16, 0xffd84a)
+      .setDepth(560)
+      .setStrokeStyle(2, 0x000000);
+  }
+
+  private spawnTimingBarButtons(buttonRowY: number): void {
     const w = this.scale.width;
-    const h = this.scale.height;
     const container = this.add.container(0, 0).setDepth(600);
     this.interactionButtons = container;
 
-    // Three buttons in a horizontal row above the rhythm bar stack so they
-    // never collide with the lanes' tap zones. Sized so they fit
-    // comfortably even on narrow portrait mobile views.
     const btnW = 110;
     const btnH = 52;
     const gap = 14;
-    const totalW = INTERACTION_BUTTON_DEFS.length * btnW + (INTERACTION_BUTTON_DEFS.length - 1) * gap;
+    const totalW =
+      INTERACTION_BUTTON_DEFS.length * btnW +
+      (INTERACTION_BUTTON_DEFS.length - 1) * gap;
     const startX = w / 2 - totalW / 2 + btnW / 2;
-    const buttonY = h - BOTTOM_LANE_Y_FROM_BOTTOM - LANE_COUNT * LANE_SPACING - 60;
+
+    // Color-match each button to its zone color so players can connect
+    // the action to the band on the bar.
+    const buttonAccent: Record<InteractionType, number> = {
+      pet: 0x4caf50,
+      chinScratch: 0xffb300,
+      bellyRub: 0xe53935,
+    };
 
     for (let i = 0; i < INTERACTION_BUTTON_DEFS.length; i++) {
       const def = INTERACTION_BUTTON_DEFS[i]!;
       const x = startX + i * (btnW + gap);
-      const chance = InteractionSystem.chanceFor(def.type);
+      const reward = InteractionSystem.rewardFor(def.type);
 
-      const bg = this.add.rectangle(x, buttonY, btnW, btnH, 0x261540, 0.92);
-      bg.setStrokeStyle(2, 0xffffff);
+      const bg = this.add.rectangle(x, buttonRowY, btnW, btnH, 0x261540, 0.92);
+      bg.setStrokeStyle(3, buttonAccent[def.type]);
       bg.setInteractive({ useHandCursor: true });
 
       const label = this.add
-        .text(x, buttonY - 8, def.label, {
+        .text(x, buttonRowY - 10, def.label, {
           fontFamily: 'Pixeloid Sans, sans-serif',
           fontStyle: 'bold',
           fontSize: '14px',
@@ -889,8 +984,8 @@ export class Game extends Scene {
         })
         .setOrigin(0.5);
 
-      const chanceText = this.add
-        .text(x, buttonY + 12, `${Math.round(chance * 100)}%`, {
+      const rewardText = this.add
+        .text(x, buttonRowY + 12, `+${reward}🪙`, {
           fontFamily: 'Pixeloid Sans, sans-serif',
           fontSize: '12px',
           color: '#ffd34d',
@@ -898,13 +993,13 @@ export class Game extends Scene {
         .setOrigin(0.5);
 
       bg.on('pointerdown', () => this.resolveInteraction(def.type));
-      container.add([bg, label, chanceText]);
+      container.add([bg, label, rewardText]);
     }
   }
 
   private resolveInteraction(type: InteractionType): void {
-    if (!this.activeCat) return;
-    const result = this.interaction.resolve(type);
+    if (!this.activeCat || !this.interactionActive) return;
+    const result = this.interaction.resolve(type, this.interactionMarkerFraction);
 
     if (result.outcome === 'success') {
       this.coins += result.coinsAwarded;
@@ -912,31 +1007,50 @@ export class Game extends Scene {
       // do). Using 'lick' as the success animation since it reads as
       // affectionate and works across all breeds we ship with.
       this.activeCat.setAnimation('lick');
+      // Bounce back to 'meow' after a short beat so the player can keep
+      // racking up successes within the same round.
+      this.time.delayedCall(500, () => {
+        if (this.interactionActive && this.activeCat) {
+          this.activeCat.setAnimation('meow');
+        }
+      });
     } else {
       this.activeCat.setAnimation('hiss');
+      this.interactionTimeLeftMs -= Balance.interactionMissPenaltyMs;
+      this.time.delayedCall(450, () => {
+        if (this.interactionActive && this.activeCat) {
+          this.activeCat.setAnimation('meow');
+        }
+      });
     }
 
     const feedback = this.add
       .text(
         this.scale.width / 2,
-        this.scale.height / 2 - 100,
-        result.outcome === 'success' ? `+${result.coinsAwarded} coins` : 'Hiss!',
+        this.interactionTimerText
+          ? this.interactionTimerText.y + 28
+          : this.scale.height / 2,
+        result.outcome === 'success'
+          ? `+${result.coinsAwarded}🪙`
+          : `Miss! -1s`,
         {
           fontFamily: 'Pixeloid Sans, sans-serif',
-          fontSize: '24px',
+          fontStyle: 'bold',
+          fontSize: '20px',
           color: result.outcome === 'success' ? '#00ff88' : '#ff4444',
+          stroke: '#000000',
+          strokeThickness: 4,
         },
       )
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(620);
     this.tweens.add({
       targets: feedback,
       alpha: 0,
-      y: feedback.y - 40,
-      duration: 800,
+      y: feedback.y - 36,
+      duration: 700,
       onComplete: () => feedback.destroy(),
     });
-
-    this.time.delayedCall(800, () => this.endInteraction());
   }
 
   private endInteraction(): void {
@@ -967,8 +1081,12 @@ export class Game extends Scene {
     this.interactionButtons = null;
     this.interactionDim?.destroy();
     this.interactionDim = null;
-    this.drainTimer?.remove();
-    this.drainTimer = null;
+    this.interactionMarker?.destroy();
+    this.interactionMarker = null;
+    this.interactionTimerText?.destroy();
+    this.interactionTimerText = null;
+    this.interactionBarGfx?.destroy();
+    this.interactionBarGfx = null;
     this.meow.reset();
   }
 
@@ -984,14 +1102,18 @@ export class Game extends Scene {
   // -- Cleanup ------------------------------------------------------------
 
   private cleanup(): void {
-    this.drainTimer?.remove();
-    this.drainTimer = null;
     this.spawnTimer?.remove();
     this.spawnTimer = null;
     this.interactionButtons?.destroy(true);
     this.interactionButtons = null;
     this.interactionDim?.destroy();
     this.interactionDim = null;
+    this.interactionMarker?.destroy();
+    this.interactionMarker = null;
+    this.interactionTimerText?.destroy();
+    this.interactionTimerText = null;
+    this.interactionBarGfx?.destroy();
+    this.interactionBarGfx = null;
     this.music?.stop();
     this.music = null;
     for (const lane of this.lanes) {

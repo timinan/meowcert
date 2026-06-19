@@ -40,12 +40,24 @@ export const Balance = {
   baseCatsOnScreen: 3,
   catAnimationFrameRate: 12, // bumped from 8 for smoother loops
 
-  // Interaction
-  interactionChances: {
-    pet: 0.7,
+  // Petting timing-bar mini-game. Each action gets its own green-zone
+  // width (a fraction of the bar centered on 0.5), with smaller zones
+  // paying out more coins to balance the difficulty.
+  interactionZones: {
+    pet: 0.7, // easy: any tap in the central 70% of the bar
     chinScratch: 0.3,
-    bellyRub: 0.15,
+    bellyRub: 0.15, // hard: must hit the central 15%
   },
-  successCoinReward: 25,
-  failCoinReward: 0,
+  interactionRewards: {
+    pet: 10,
+    chinScratch: 25,
+    bellyRub: 60,
+  },
+  // Round timing
+  interactionRoundDurationMs: 15_000, // full round budget
+  interactionMissPenaltyMs: 1_000, // a miss eats a second off the clock
+  // Marker oscillates back and forth across the bar. This is the time it
+  // takes to traverse from one edge to the other (a full ping-pong cycle
+  // is twice this).
+  interactionMarkerTraversalMs: 1_400,
 } as const;

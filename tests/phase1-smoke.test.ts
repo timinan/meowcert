@@ -41,13 +41,14 @@ describe('phase 1 — systems composed end-to-end', () => {
     ];
 
     const selector = new CatSelectionSystem(() => 0.4);
-    const interaction = new InteractionSystem(() => 0.5);
+    const interaction = new InteractionSystem();
 
     const picked = selector.pickActive(cats);
     expect(['a', 'b', 'c']).toContain(picked.id);
 
-    // rng=0.5, pet chance=0.7, so 0.5 < 0.7 => success
-    const result = interaction.resolve('pet');
+    // Marker exactly in the middle of the bar — always inside every action's
+    // central zone, so it's a guaranteed success on any choice.
+    const result = interaction.resolve('pet', 0.5);
     expect(result.outcome).toBe('success');
     expect(result.coinsAwarded).toBeGreaterThan(0);
   });
