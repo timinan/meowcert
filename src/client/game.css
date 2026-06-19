@@ -1,8 +1,22 @@
+@font-face {
+  font-family: 'Pixeloid Sans';
+  src: url('/assets/fonts/PixeloidSans.otf') format('opentype');
+  font-weight: 400;
+  font-display: block;
+}
+@font-face {
+  font-family: 'Pixeloid Sans';
+  src: url('/assets/fonts/PixeloidSans-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-display: block;
+}
+
 body {
   margin: 0;
   padding: 0;
   color: rgba(255, 255, 255, 0.87);
   background-color: #0f0f0f;
+  font-family: 'Pixeloid Sans', sans-serif;
 }
 
 #app {

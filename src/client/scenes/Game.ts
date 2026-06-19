@@ -398,18 +398,19 @@ export class Game extends Scene {
 
   private createHud(): void {
     this.hudScoreText = this.add.text(16, 16, 'Score: 0', {
-      fontFamily: 'sans-serif',
+      fontFamily: 'Pixeloid Sans, sans-serif',
       fontSize: '18px',
       color: '#ffffff',
     });
     this.hudCoinsText = this.add.text(16, 40, '🪙 0', {
-      fontFamily: 'sans-serif',
+      fontFamily: 'Pixeloid Sans, sans-serif',
       fontSize: '18px',
       color: '#ffd34d',
     });
     this.hudComboText = this.add
       .text(16, 64, '', {
-        fontFamily: 'sans-serif',
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontStyle: 'bold',
         fontSize: '20px',
         color: '#ff8fbf',
         stroke: '#000000',
@@ -543,9 +544,12 @@ export class Game extends Scene {
     // so it's clearly visible).
     const laneHex = `#${lane.color.element.toString(16).padStart(6, '0')}`;
     const color = isPerfect ? '#00ff88' : laneHex;
+    // Bold for PERFECT or any combo (>1x) — those moments deserve to pop.
+    const useBold = isPerfect || multiplier > 1;
     const text = this.add
       .text(lane.target.x, lane.centerY - 40, label, {
-        fontFamily: 'sans-serif',
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontStyle: useBold ? 'bold' : 'normal',
         fontSize: '22px',
         color,
         stroke: '#000000',
@@ -614,7 +618,7 @@ export class Game extends Scene {
 
       const label = this.add
         .text(x, y - 8, def.label, {
-          fontFamily: 'sans-serif',
+          fontFamily: 'Pixeloid Sans, sans-serif',
           fontSize: '16px',
           color: '#ffffff',
         })
@@ -622,7 +626,7 @@ export class Game extends Scene {
 
       const chanceText = this.add
         .text(x, y + 14, `${Math.round(chance * 100)}%`, {
-          fontFamily: 'sans-serif',
+          fontFamily: 'Pixeloid Sans, sans-serif',
           fontSize: '12px',
           color: '#ffd34d',
         })
@@ -650,7 +654,7 @@ export class Game extends Scene {
         this.scale.height / 2 - 100,
         result.outcome === 'success' ? `+${result.coinsAwarded} coins` : 'Hiss!',
         {
-          fontFamily: 'sans-serif',
+          fontFamily: 'Pixeloid Sans, sans-serif',
           fontSize: '24px',
           color: result.outcome === 'success' ? '#00ff88' : '#ff4444',
         },

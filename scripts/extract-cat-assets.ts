@@ -16,12 +16,14 @@ import { glob } from 'glob';
 
 const PROTOTYPE_ASSETS = '/Users/timnan/Documents/GitHub/pspsadopt/src/assets';
 const PROTOTYPE_SOUNDS = '/Users/timnan/Documents/GitHub/pspsadopt/src/sounds';
+const PROTOTYPE_FONTS = '/Users/timnan/Documents/GitHub/pspsadopt/src/fonts';
 const PROJECT_ROOT = path.resolve(import.meta.dirname, '..');
 const OUT_RAW = path.join(PROJECT_ROOT, 'assets-raw');
 const OUT_PUBLIC = path.join(PROJECT_ROOT, 'public', 'assets');
 const OUT_ATLAS_DIR = path.join(OUT_PUBLIC, 'atlas');
 const OUT_SOUNDS = path.join(OUT_PUBLIC, 'sounds');
 const OUT_IMAGES = path.join(OUT_PUBLIC, 'images');
+const OUT_FONTS = path.join(OUT_PUBLIC, 'fonts');
 
 const BREEDS = ['cat1', 'cat2', 'cat3'] as const;
 
@@ -47,7 +49,7 @@ interface ExtractedFrame {
 }
 
 async function ensureDirs(): Promise<void> {
-  for (const d of [OUT_RAW, OUT_PUBLIC, OUT_ATLAS_DIR, OUT_SOUNDS, OUT_IMAGES]) {
+  for (const d of [OUT_RAW, OUT_PUBLIC, OUT_ATLAS_DIR, OUT_SOUNDS, OUT_IMAGES, OUT_FONTS]) {
     await fs.mkdir(d, { recursive: true });
   }
 }
@@ -275,6 +277,12 @@ async function copyStaticAssets(): Promise<void> {
   ];
   for (const img of images) {
     await copyFile(path.join(PROTOTYPE_ASSETS, img), path.join(OUT_IMAGES, img));
+  }
+
+  // Fonts
+  const fonts = ['PixeloidSans.otf', 'PixeloidSans-Bold.otf'];
+  for (const font of fonts) {
+    await copyFile(path.join(PROTOTYPE_FONTS, font), path.join(OUT_FONTS, font));
   }
 }
 
