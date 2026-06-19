@@ -397,25 +397,48 @@ export class Game extends Scene {
   // -- HUD ----------------------------------------------------------------
 
   private createHud(): void {
-    this.hudScoreText = this.add.text(16, 16, 'Score: 0', {
+    // Chunky rounded-pill banner in the top-left so the score reads as a
+    // real UI element instead of floating text in the corner. Dark purple
+    // with a soft white border, sized to comfortably hold score + coins
+    // stacked vertically.
+    const bannerX = 16;
+    const bannerY = 16;
+    const bannerW = 220;
+    const bannerH = 78;
+    const bannerR = 16;
+
+    const banner = this.add.graphics();
+    banner.fillStyle(0x261540, 0.85);
+    banner.fillRoundedRect(bannerX, bannerY, bannerW, bannerH, bannerR);
+    banner.lineStyle(2, 0xffffff, 0.35);
+    banner.strokeRoundedRect(bannerX, bannerY, bannerW, bannerH, bannerR);
+
+    this.hudScoreText = this.add.text(bannerX + 16, bannerY + 8, 'Score 0', {
       fontFamily: 'Pixeloid Sans, sans-serif',
-      fontSize: '18px',
+      fontStyle: 'bold',
+      fontSize: '26px',
       color: '#ffffff',
     });
-    this.hudCoinsText = this.add.text(16, 40, '🪙 0', {
+    this.hudCoinsText = this.add.text(bannerX + 16, bannerY + 42, '🪙 0', {
       fontFamily: 'Pixeloid Sans, sans-serif',
-      fontSize: '18px',
+      fontSize: '22px',
       color: '#ffd34d',
     });
+
+    // Combo sits in its own pill below the score banner so it visually
+    // separates as a "bonus" state rather than just another HUD line.
     this.hudComboText = this.add
-      .text(16, 64, '', {
+      .text(bannerX + bannerW / 2, bannerY + bannerH + 14, '', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
-        fontSize: '20px',
-        color: '#ff8fbf',
+        fontSize: '24px',
+        color: '#ffffff',
+        backgroundColor: '#ff5a9c',
+        padding: { x: 14, y: 6 },
         stroke: '#000000',
         strokeThickness: 3,
       })
+      .setOrigin(0.5, 0)
       .setVisible(false);
   }
 
@@ -546,14 +569,18 @@ export class Game extends Scene {
     const color = isPerfect ? '#00ff88' : laneHex;
     // Bold for PERFECT or any combo (>1x) — those moments deserve to pop.
     const useBold = isPerfect || multiplier > 1;
+    // Spawn at the horizontal center of the lane (which equals the screen
+    // center since lanes span the full width). Always readable, never
+    // clipped by the right edge — and the lane's centerY keeps it linked
+    // to whichever lane actually scored.
     const text = this.add
-      .text(lane.target.x, lane.centerY - 40, label, {
+      .text(this.scale.width / 2, lane.centerY - 40, label, {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: useBold ? 'bold' : 'normal',
-        fontSize: '22px',
+        fontSize: '24px',
         color,
         stroke: '#000000',
-        strokeThickness: 3,
+        strokeThickness: 4,
       })
       .setOrigin(0.5);
     this.tweens.add({
