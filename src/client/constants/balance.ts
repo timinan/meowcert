@@ -16,6 +16,19 @@ export const Balance = {
   pspspsPartialMarginFraction: 0.2, // within 20% of bar width = partial
   pspspsPerfectPoints: 200,
   pspspsPartialPoints: 100,
+  // pspsps speed scales linearly with meow-bar progress: 1x base speed at
+  // an empty meter, this multiplier at a full meter. Tunable difficulty
+  // curve without adding any new mechanic.
+  pspspsSpeedMultiplierAtFullMeow: 2,
+
+  // Combo multiplier. Consecutive successful taps build a streak; a tap
+  // that earns no points resets it to 0. Listed in descending order so
+  // we can early-out on the first matching tier.
+  comboTiers: [
+    { atLeast: 30, multiplier: 5 },
+    { atLeast: 15, multiplier: 3 },
+    { atLeast: 5, multiplier: 2 },
+  ] as const,
 
   // Meow bar
   meowBarMax: 100,

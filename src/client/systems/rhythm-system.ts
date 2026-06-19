@@ -21,16 +21,26 @@ export class RhythmSystem {
   private ticksSinceLastSpawn = 0;
   private ticksUntilNextSpawn: number;
   private nextId = 0;
+  private speedMultiplier = 1;
 
   constructor(private readonly rng: () => number = Math.random) {
     this.ticksUntilNextSpawn = this.rollSpawnDelay();
+  }
+
+  /**
+   * Scales how fast existing elements slide right. The renderer sets this
+   * each frame based on meow-bar progress so the game ramps up in
+   * difficulty as the meter fills.
+   */
+  setSpeedMultiplier(mult: number): void {
+    this.speedMultiplier = Math.max(0, mult);
   }
 
   /** Move all elements based on elapsed wall-clock time. Called every frame. */
   advance(dtMs: number): void {
     const dtSec = dtMs / 1000;
     for (const el of this.elements) {
-      el.fraction += el.speed * dtSec;
+      el.fraction += el.speed * dtSec * this.speedMultiplier;
     }
     // Despawn anything that's slid past the right edge so we never render
     // an element half-outside the bar. New elements will spawn over time

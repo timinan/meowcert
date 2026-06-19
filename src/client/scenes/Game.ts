@@ -125,6 +125,11 @@ export class Game extends Scene {
   private coins = 0;
   private hudScoreText!: GameObjects.Text;
   private hudCoinsText!: GameObjects.Text;
+  private hudComboText!: GameObjects.Text;
+
+  // Combo streak — consecutive successful taps. Resets to 0 on a tap that
+  // earns no points. Drives the score multiplier (see Balance.comboTiers).
+  private combo = 0;
 
   // Music + sfx
   private music: Sound.BaseSound | null = null;
@@ -188,12 +193,25 @@ export class Game extends Scene {
   }
 
   override update(_time: number, delta: number): void {
+    // Difficulty ramp: pspsps speed scales 1x → configured max as the meow
+    // bar fills, so the latter half of each session squeezes the player.
+    const meowPct = this.meow.getProgress() / Balance.meowBarMax;
+    const speedMult =
+      1 + meowPct * (Balance.pspspsSpeedMultiplierAtFullMeow - 1);
     for (const lane of this.lanes) {
+      lane.system.setSpeedMultiplier(speedMult);
       lane.system.advance(delta);
       this.syncLaneElements(lane);
     }
     this.updateMeowBar();
     this.updateHud();
+  }
+
+  private getComboMultiplier(): number {
+    for (const tier of Balance.comboTiers) {
+      if (this.combo >= tier.atLeast) return tier.multiplier;
+    }
+    return 1;
   }
 
   // -- Lanes --------------------------------------------------------------
@@ -389,11 +407,27 @@ export class Game extends Scene {
       fontSize: '18px',
       color: '#ffd34d',
     });
+    this.hudComboText = this.add
+      .text(16, 64, '', {
+        fontFamily: 'sans-serif',
+        fontSize: '20px',
+        color: '#ff8fbf',
+        stroke: '#000000',
+        strokeThickness: 3,
+      })
+      .setVisible(false);
   }
 
   private updateHud(): void {
     this.hudScoreText?.setText(`Score: ${this.score.get()}`);
     this.hudCoinsText?.setText(`🪙 ${this.coins}`);
+    const multiplier = this.getComboMultiplier();
+    if (multiplier > 1) {
+      this.hudComboText.setText(`${multiplier}× COMBO  (${this.combo})`);
+      this.hudComboText.setVisible(true);
+    } else {
+      this.hudComboText.setVisible(false);
+    }
   }
 
   // -- Input + scoring ----------------------------------------------------
@@ -474,11 +508,18 @@ export class Game extends Scene {
 
     const result = lane.system.tap();
     if (result.pointsAwarded > 0) {
-      this.score.add(result.pointsAwarded);
+      this.combo += 1;
+      const multiplier = this.getComboMultiplier();
+      const totalPoints = result.pointsAwarded * multiplier;
+      this.score.add(totalPoints);
       this.meow.onScoreChanged(this.score.get());
       this.pspspsSfx?.play();
       this.pulseLaneTarget(lane);
-      this.flashScore(lane, result.pointsAwarded, result.perfectHits > 0);
+      this.flashScore(lane, totalPoints, result.perfectHits > 0, multiplier);
+    } else {
+      // Missed tap (clicked a lane with nothing on the target) — break the
+      // streak so the multiplier can't be banked risk-free.
+      this.combo = 0;
     }
 
     if (this.meow.isFull() && INTERACTION_ENABLED) {
@@ -488,8 +529,15 @@ export class Game extends Scene {
     // 100% until we flip the flag back on — no more cycling.
   }
 
-  private flashScore(lane: PspspsLane, points: number, isPerfect: boolean): void {
-    const label = isPerfect ? `PERFECT +${points}` : `+${points}`;
+  private flashScore(
+    lane: PspspsLane,
+    points: number,
+    isPerfect: boolean,
+    multiplier: number,
+  ): void {
+    const comboPrefix = multiplier > 1 ? `${multiplier}x ` : '';
+    const baseLabel = isPerfect ? 'PERFECT' : '';
+    const label = `${comboPrefix}${baseLabel ? baseLabel + ' ' : ''}+${points}`;
     // Perfect always reads green so the bonus is unmistakable; partial hits
     // tint to match the lane that scored (using the saturated element color
     // so it's clearly visible).
