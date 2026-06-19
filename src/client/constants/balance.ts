@@ -32,7 +32,7 @@ export const Balance = {
 
   // Meow bar
   meowBarMax: 100,
-  pointsPerMeowBarUnit: 100, // 100 score points = 1% bar
+  pointsPerMeowBarUnit: 10, // TEST: 10 score pts = 1% bar (100 pts = 10%) so we can fill the meter fast while debugging the petting interaction. revert to 100 before shipping.
   meowBarDrainPerTick: 1,
   meowBarSpeedPerExtraCat: 0.1,
 
