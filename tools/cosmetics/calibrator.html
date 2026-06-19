@@ -196,6 +196,15 @@
             </select>
           </label>
         </div>
+        <label>
+          Tint blend mode
+          <select id="tintMode">
+            <option value="color" selected>Color — recolor, keep brightness (most natural)</option>
+            <option value="hue">Hue — rotate hue, keep saturation + brightness</option>
+            <option value="multiply">Multiply — matches Phaser's setTint (darker)</option>
+            <option value="soft-light">Soft light — gentle wash</option>
+          </select>
+        </label>
         <div class="hint">
           Drag the cosmetic on the canvas to position it. <kbd>← →</kbd> to step
           between cosmetics, <kbd>↑ ↓</kbd> to nudge Y by 1px. Progress saves to
@@ -357,6 +366,9 @@
       // the session.
       let fileHandle = null;
       let autosaveTimer = null;
+      // Tint blend mode used by both the preview and the next Generate.
+      // Persisted under its own key so it survives schema bumps.
+      let currentTintMode = localStorage.getItem('pspsps:cosmetic-calibrator:tintMode') || 'color';
       const SAVE_FILENAME = 'cosmetics.json';
       // Absolute path so the auto-load fetch resolves regardless of the
       // URL the user opens the page at (e.g. /tools/cosmetics, /cosmetics,
@@ -428,6 +440,10 @@
         };
       }
 
+      function countCosmetics(s) {
+        return Object.keys(s).filter((k) => COSMETIC_ID_RE.test(k)).length;
+      }
+
       function freshVariantEntry() {
         // For each base we track a per-tint enabled flag + editable name.
         // Disabled tints don't appear in the exported JSON.
@@ -481,6 +497,7 @@
           // sprite. Bases omit both fields (implicit frame, no tint).
           if (entry.sourceFrame) obj.sourceFrame = entry.sourceFrame;
           if (entry.tint) obj.tint = entry.tint;
+          if (entry.tintMode) obj.tintMode = entry.tintMode;
           out.push(obj);
         }
         return out;
@@ -680,8 +697,20 @@
         // next time you open the calibrator it reads from the same file.
         const loaded = await tryLoadFromServer();
         if (loaded) {
-          state = loaded;
-          saveState();
+          // Safety guard: if the on-disk file has fewer entries than
+          // localStorage AND localStorage has more than the original
+          // 17 bases, the file likely got truncated (probe, schema bug,
+          // or someone replaced it). Keep localStorage and warn instead
+          // of silently overwriting the user's session.
+          const localCount = countCosmetics(state);
+          const remoteCount = countCosmetics(loaded);
+          if (remoteCount < localCount && localCount > BASE_IDS.length) {
+            console.warn(`[load] disk has ${remoteCount} cosmetics, localStorage has ${localCount} — keeping localStorage. Force save to push it back to disk.`);
+            setSaveStatus(`Disk has fewer cosmetics (${remoteCount}) than this session (${localCount}). Kept your session — click Force save to overwrite the file.`, '#ffaa55');
+          } else {
+            state = loaded;
+            saveState();
+          }
         }
 
         document.getElementById('prev').addEventListener('click', () => step(-1));
@@ -702,6 +731,14 @@
         });
 
         document.getElementById('catSelect').addEventListener('change', render);
+
+        const tintModeEl = document.getElementById('tintMode');
+        tintModeEl.value = currentTintMode;
+        tintModeEl.addEventListener('change', () => {
+          currentTintMode = tintModeEl.value;
+          localStorage.setItem('pspsps:cosmetic-calibrator:tintMode', currentTintMode);
+          render();
+        });
 
         document.querySelectorAll('.tab').forEach((btn) => {
           btn.addEventListener('click', () => setActiveTab(btn.dataset.tab));
@@ -855,12 +892,15 @@
         // means we're looking at a generated cosmetic (c18+), so it
         // should always render in its tinted color on every tab.
         const effectiveTint = previewTintColor || entry.tint || null;
+        const effectiveMode = previewTintColor
+          ? currentTintMode
+          : (entry.tintMode || 'multiply');
         if (effectiveTint) {
           drawTintedSprite(
             ctx, atlasImg,
             cosFrame.x, cosFrame.y, cosFrame.w, cosFrame.h,
             cosCenterX - cosW / 2, cosCenterY - cosH / 2, cosW, cosH,
-            effectiveTint,
+            effectiveTint, effectiveMode,
           );
         } else {
           ctx.drawImage(
@@ -935,6 +975,7 @@
             scale: parent.scale,
             sourceFrame: parentSourceFrame,
             tint: tint.color,
+            tintMode: currentTintMode,
           };
           state.variants[newId] = freshVariantEntry();
           // Clear the selection so navigating back doesn't re-generate.
@@ -1038,7 +1079,7 @@
       // --- Tinted-sprite renderer ------------------------------------------
 
       const tintCanvas = document.createElement('canvas');
-      function drawTintedSprite(ctx, img, sx, sy, sw, sh, dx, dy, dw, dh, tintHex) {
+      function drawTintedSprite(ctx, img, sx, sy, sw, sh, dx, dy, dw, dh, tintHex, mode) {
         tintCanvas.width = sw;
         tintCanvas.height = sh;
         const tctx = tintCanvas.getContext('2d');
@@ -1047,8 +1088,12 @@
         // 1. Draw the original sprite
         tctx.globalCompositeOperation = 'source-over';
         tctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
-        // 2. Multiply with the tint color — preserves shading
-        tctx.globalCompositeOperation = 'multiply';
+        // 2. Blend the tint via the chosen mode:
+        //    multiply   → pixel × tint (Phaser.setTint default; darkens)
+        //    color      → keep brightness, replace hue + saturation
+        //    hue        → replace hue only, keep saturation + brightness
+        //    soft-light → gentle wash
+        tctx.globalCompositeOperation = mode || 'color';
         tctx.fillStyle = tintHex;
         tctx.fillRect(0, 0, sw, sh);
         // 3. Clip back to the sprite's alpha so transparent pixels stay

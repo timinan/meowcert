@@ -37,6 +37,33 @@ const TOOLS = {
   },
 };
 
+const MAX_BACKUPS = 5;
+
+/**
+ * Before overwriting <tool>.json, shuffle the existing file down a
+ * rolling stack of .bak-1.json … .bak-N.json copies. So if a save ever
+ * lands on the wrong data (probe, schema bug, fat-finger), the last few
+ * good versions are still on disk next to the live file.
+ */
+async function rotateBackups(filepath) {
+  // Drop the oldest backup if we're at the cap.
+  const oldest = backupPath(filepath, MAX_BACKUPS);
+  await fs.unlink(oldest).catch(() => {});
+  // Shift each existing backup one slot older.
+  for (let i = MAX_BACKUPS - 1; i >= 1; i--) {
+    const from = backupPath(filepath, i);
+    const to = backupPath(filepath, i + 1);
+    await fs.rename(from, to).catch(() => {});
+  }
+  // Promote the current live file (if any) to .bak-1.
+  await fs.rename(filepath, backupPath(filepath, 1)).catch(() => {});
+}
+
+function backupPath(filepath, n) {
+  const ext = path.extname(filepath);
+  return filepath.slice(0, -ext.length) + `.bak-${n}` + ext;
+}
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -107,6 +134,7 @@ const server = http.createServer(async (req, res) => {
           // Reject anything that isn't valid JSON so we don't poison
           // the file with a half-written payload from a network hiccup.
           JSON.parse(body);
+          await rotateBackups(tool.savePath);
           await fs.writeFile(tool.savePath, body);
           const rel = path.relative(PROJECT_ROOT, tool.savePath);
           res.writeHead(200, { 'content-type': 'application/json' });

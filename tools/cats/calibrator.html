@@ -197,6 +197,15 @@
           <button id="playPause" class="secondary">Pause</button>
           <button id="resetFrame" class="secondary">⟲ 1st frame</button>
         </div>
+        <label>
+          Tint blend mode
+          <select id="tintMode">
+            <option value="color" selected>Color — recolor, keep brightness (most natural)</option>
+            <option value="hue">Hue — rotate hue, keep saturation + brightness</option>
+            <option value="multiply">Multiply — matches Phaser's setTint (darker)</option>
+            <option value="soft-light">Soft light — gentle wash</option>
+          </select>
+        </label>
         <div class="hint">
           <kbd>← →</kbd> step between cats. <kbd>space</kbd> play/pause the
           current animation. The preview uses the cat's source frames
@@ -312,6 +321,9 @@
       let animLastTickAt = 0;
       let autosaveTimer = null;
       let hasUserEdited = false;
+      // Current tint blend mode for the preview AND the next Generate.
+      // Persisted to localStorage separately so it survives reloads.
+      let currentTintMode = localStorage.getItem('pspsps:cat-calibrator:tintMode') || 'color';
       function markEdited() { hasUserEdited = true; }
 
       // --- State + storage -------------------------------------------------
@@ -374,6 +386,10 @@
         };
       }
 
+      function countCats(s) {
+        return Object.keys(s).filter((k) => CAT_ID_RE.test(k)).length;
+      }
+
       function freshVariantEntry() {
         const v = {};
         for (const tint of TINT_PALETTE) {
@@ -407,6 +423,7 @@
           };
           if (entry.sourceFrame) obj.sourceFrame = entry.sourceFrame;
           if (entry.tint) obj.tint = entry.tint;
+          if (entry.tintMode) obj.tintMode = entry.tintMode;
           out.push(obj);
         }
         return out;
@@ -602,6 +619,7 @@
             scale: parent.scale,
             sourceFrame: parentSourceCat,
             tint: tint.color,
+            tintMode: currentTintMode,
           };
           state.variants[newId] = freshVariantEntry();
           v.enabled = false;
@@ -668,17 +686,24 @@
       // --- Rendering -------------------------------------------------------
 
       const tintCanvas = document.createElement('canvas');
-      function drawTintedSprite(ctx, img, sx, sy, sw, sh, dx, dy, dw, dh, tintHex) {
+      function drawTintedSprite(ctx, img, sx, sy, sw, sh, dx, dy, dw, dh, tintHex, mode) {
         tintCanvas.width = sw;
         tintCanvas.height = sh;
         const tctx = tintCanvas.getContext('2d');
         tctx.imageSmoothingEnabled = false;
         tctx.clearRect(0, 0, sw, sh);
+        // 1. Draw the original sprite
         tctx.globalCompositeOperation = 'source-over';
         tctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
-        tctx.globalCompositeOperation = 'multiply';
+        // 2. Blend the tint color on top — the mode picks how:
+        //    multiply     → pixel × tint (Phaser's setTint default; darkens)
+        //    color        → keep brightness, replace hue + saturation (photo-natural)
+        //    hue          → replace hue only, keep saturation + brightness
+        //    soft-light   → gentle wash over highlights/shadows
+        tctx.globalCompositeOperation = mode || 'color';
         tctx.fillStyle = tintHex;
         tctx.fillRect(0, 0, sw, sh);
+        // 3. Mask back to original alpha so transparent pixels don't pick up tint
         tctx.globalCompositeOperation = 'destination-in';
         tctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
         ctx.drawImage(tintCanvas, 0, 0, sw, sh, dx, dy, dw, dh);
@@ -722,8 +747,13 @@
         const dy = cy - h;
 
         const effectiveTint = previewTintColor || entry?.tint || null;
+        // Live previewing? Use the dropdown choice. Otherwise the entry
+        // carries its own tintMode (set at Generate time).
+        const effectiveMode = previewTintColor
+          ? currentTintMode
+          : (entry?.tintMode || 'multiply');
         if (effectiveTint) {
-          drawTintedSprite(ctx, atlasImg, f.x, f.y, f.w, f.h, dx, dy, w, h, effectiveTint);
+          drawTintedSprite(ctx, atlasImg, f.x, f.y, f.w, f.h, dx, dy, w, h, effectiveTint, effectiveMode);
         } else {
           ctx.drawImage(atlasImg, f.x, f.y, f.w, f.h, dx, dy, w, h);
         }
@@ -761,8 +791,20 @@
 
         const loaded = await tryLoadFromServer();
         if (loaded) {
-          state = loaded;
-          saveState();
+          // Safety guard: if the on-disk file has fewer entries than
+          // localStorage AND localStorage has more than the original
+          // 6 bases, the file likely got truncated (probe, schema bug,
+          // or someone replaced it). Keep localStorage and warn instead
+          // of silently overwriting the user's session.
+          const localCount = countCats(state);
+          const remoteCount = countCats(loaded);
+          if (remoteCount < localCount && localCount > BASE_IDS.length) {
+            console.warn(`[load] disk has ${remoteCount} cats, localStorage has ${localCount} — keeping localStorage. Force save to push it back to disk.`);
+            setSaveStatus(`Disk has fewer cats (${remoteCount}) than this session (${localCount}). Kept your session — click Force save to overwrite the file.`, '#ffaa55');
+          } else {
+            state = loaded;
+            saveState();
+          }
         }
 
         document.getElementById('prev').addEventListener('click', () => step(-1));
@@ -784,6 +826,13 @@
         });
 
         document.getElementById('animSelect').addEventListener('change', rebuildAnimFrameList);
+
+        const tintModeEl = document.getElementById('tintMode');
+        tintModeEl.value = currentTintMode;
+        tintModeEl.addEventListener('change', () => {
+          currentTintMode = tintModeEl.value;
+          localStorage.setItem('pspsps:cat-calibrator:tintMode', currentTintMode);
+        });
         document.getElementById('playPause').addEventListener('click', () => {
           playing = !playing;
           document.getElementById('playPause').textContent = playing ? 'Pause' : 'Play';
