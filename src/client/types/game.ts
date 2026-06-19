@@ -1,4 +1,7 @@
-export type CatBreed = 'cat1' | 'cat2' | 'cat3';
+// CatBreed lives in shared/state.ts so the server can reference it too. The
+// full union now includes cat4-6 and the legendary 'rainbow'.
+import type { CatBreed } from '@/../shared/state';
+export type { CatBreed };
 
 export type CatAnimationState =
   | 'idle'
