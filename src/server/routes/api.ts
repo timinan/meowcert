@@ -5,6 +5,7 @@ import type {
   IncrementResponse,
   InitResponse,
 } from '../../shared/api';
+import { state } from './state';
 
 type ErrorResponse = {
   status: 'error';
@@ -12,6 +13,10 @@ type ErrorResponse = {
 };
 
 export const api = new Hono();
+
+// Phase 2 player-state routes: /api/state, /api/box/open, /api/coins/sync,
+// /api/cosmetic/equip, /api/onboarding/complete.
+api.route('/', state);
 
 api.get('/init', async (c) => {
   const { postId } = context;

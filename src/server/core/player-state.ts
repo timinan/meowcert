@@ -3,11 +3,12 @@ import { STARTER_COINS } from '../../shared/state';
 
 /**
  * Minimal interface to Redis — the only operations player-state needs.
- * Devvit's `redis` import from '@devvit/web/server' satisfies this, and
- * tests pass an in-memory mock with the same shape.
+ * Devvit's `redis` import from '@devvit/web/server' returns
+ * `string | undefined` from get(), so we accept either null or undefined
+ * for the "no entry" case.
  */
 export interface RedisLike {
-  get(key: string): Promise<string | null>;
+  get(key: string): Promise<string | null | undefined>;
   set(key: string, value: string): Promise<unknown>;
 }
 
