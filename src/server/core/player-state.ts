@@ -54,6 +54,21 @@ function freshState(username: string): PlayerState {
   };
 }
 
+/**
+ * Force-wipe the player's state and re-initialize a fresh one. Used by
+ * the GET /state route while DEV_RESET_ON_LOAD is on so testers can
+ * re-run onboarding without manually clearing Redis.
+ */
+export async function resetState(
+  redis: RedisLike,
+  username: string,
+  startingCoins: number,
+): Promise<PlayerState> {
+  const fresh: PlayerState = { ...freshState(username), coins: startingCoins };
+  await save(redis, fresh);
+  return fresh;
+}
+
 /** Persist the given state back to Redis, stamping a fresh updatedAt. */
 export async function save(redis: RedisLike, state: PlayerState): Promise<void> {
   state.updatedAt = Date.now();

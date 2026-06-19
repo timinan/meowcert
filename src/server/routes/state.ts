@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { redis, reddit } from '@devvit/web/server';
-import { loadOrInit, save } from '../core/player-state';
+import { loadOrInit, resetState, save } from '../core/player-state';
 import { pullBox, applyPullToState } from '../core/box-pull';
 import {
   BOX_CATALOG,
@@ -8,6 +8,13 @@ import {
   type CatBreed,
   type CosmeticId,
 } from '../../shared/state';
+
+// DEV ONLY — every GET /api/state wipes the player's record and hands
+// back a fresh one with DEV_STARTER_COINS. Onboarding re-runs each page
+// load and you have plenty of coins to test premium boxes. Flip
+// DEV_RESET_ON_LOAD to false (or delete this block) before shipping.
+const DEV_RESET_ON_LOAD = true;
+const DEV_STARTER_COINS = 5000;
 
 export const state = new Hono();
 
@@ -19,7 +26,9 @@ async function currentUsername(): Promise<string> {
 /** GET /api/state — current player state, initializes on first hit. */
 state.get('/state', async (c) => {
   const username = await currentUsername();
-  const player = await loadOrInit(redis, username);
+  const player = DEV_RESET_ON_LOAD
+    ? await resetState(redis, username, DEV_STARTER_COINS)
+    : await loadOrInit(redis, username);
   return c.json({ state: player });
 });
 
