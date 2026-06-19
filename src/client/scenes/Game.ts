@@ -545,11 +545,11 @@ export class Game extends Scene {
       color: '#ffd34d',
     });
 
-    // Combo sits below the score banner as plain bold text — no pill
-    // background — so it reads as a status indicator without competing
-    // visually with the banner.
+    // Combo sits BELOW the two HUD nav pills (BOXES / COLLECTION) so it
+    // doesn't collide with them. Nav pills land at y=110 and y=148; combo
+    // sits at y=176 with a touch of breathing room.
     this.hudComboText = this.add
-      .text(bannerX + bannerW / 2, bannerY + bannerH + 8, '', {
+      .text(bannerX + bannerW / 2, 176, '', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
         fontSize: '20px',

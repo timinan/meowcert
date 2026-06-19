@@ -91,22 +91,28 @@ export class Boxes extends Scene {
       );
     }
 
+    // Title scales down at narrow widths so it doesn't crash into the
+    // top-right coin counter. Coin counter sits at the top with the title
+    // visually centered below it.
+    const titleFontSize = width < 520 ? 22 : 32;
     this.add
-      .text(width / 2, 36, 'Mystery Boxes', {
+      .text(width / 2, 44, 'Mystery Boxes', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
-        fontSize: '32px',
+        fontSize: `${titleFontSize}px`,
         color: '#ffffff',
         stroke: '#000000',
         strokeThickness: 5,
+        align: 'center',
+        wordWrap: { width: width - 32 },
       })
       .setOrigin(0.5, 0);
 
     this.coinsText = this.add
-      .text(width - 16, 16, '🪙 0', {
+      .text(width - 16, 12, '🪙 0', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
-        fontSize: '24px',
+        fontSize: '22px',
         color: '#ffd34d',
         stroke: '#000000',
         strokeThickness: 4,

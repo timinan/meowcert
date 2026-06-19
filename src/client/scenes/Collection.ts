@@ -79,11 +79,13 @@ export class Collection extends Scene {
 
     this.add.rectangle(0, 0, width, height, 0x1a0a2e, 1).setOrigin(0, 0);
 
+    // Title shrinks at narrow widths to clear the top-right coin counter.
+    const titleFontSize = width < 480 ? 20 : 28;
     this.add
-      .text(width / 2, 30, 'Collection', {
+      .text(width / 2, 36, 'Collection', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
-        fontSize: '28px',
+        fontSize: `${titleFontSize}px`,
         color: '#ffffff',
         stroke: '#000000',
         strokeThickness: 5,
@@ -91,10 +93,10 @@ export class Collection extends Scene {
       .setOrigin(0.5, 0);
 
     this.coinsText = this.add
-      .text(width - 16, 16, '🪙 0', {
+      .text(width - 16, 12, '🪙 0', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
-        fontSize: '22px',
+        fontSize: '20px',
         color: '#ffd34d',
         stroke: '#000000',
         strokeThickness: 4,
@@ -147,12 +149,14 @@ export class Collection extends Scene {
   // -- Cat strip ---------------------------------------------------------
 
   private drawCatStrip(): void {
-    // Header — strip itself is built from state in rebuildCatStrip().
+    // Header sits above the title-clearing band (title ends ~y=64), and
+    // above the cat tiles that center at CAT_STRIP_Y. Strip itself is
+    // built from state in rebuildCatStrip().
     this.add
-      .text(36, 80, 'Your cats', {
+      .text(SIDE_MARGIN, 72, 'Your cats', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
-        fontSize: '16px',
+        fontSize: '14px',
         color: '#c0a0e6',
       })
       .setOrigin(0, 0);
@@ -165,7 +169,7 @@ export class Collection extends Scene {
     const cats = this.playerState?.ownedCats ?? [];
     if (cats.length === 0) return;
 
-    const stripY = 130;
+    const stripY = 150;
     // Available row width: canvas minus margins. Each tile shares the row
     // with TILE_GAP between neighbors. Shrink tile width to fit all cats
     // in one row when they wouldn't otherwise; cap at CAT_TILE_MAX_W on
@@ -233,19 +237,24 @@ export class Collection extends Scene {
 
   private drawCosmeticStrip(): void {
     const { width, height } = this.scale;
-    const headerY = height - 200;
+    // Bottom-of-screen stack (bottom → top):
+    //   back button at h-36
+    //   page label   at h-80  (between strip + back)
+    //   strip tiles  centered at h-150  (96 tall → top h-198, bottom h-102)
+    //   "Your cosmetics" header at h-220
+    const headerY = height - 220;
 
     this.add
       .text(SIDE_MARGIN, headerY, 'Your cosmetics', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
-        fontSize: '16px',
+        fontSize: '14px',
         color: '#c0a0e6',
       })
       .setOrigin(0, 0);
 
     // Pagination arrows sit at the edges, vertically centered on the row.
-    const arrowY = headerY + 60;
+    const arrowY = height - 150;
     const leftX = SIDE_MARGIN + ARROW_W / 2;
     const rightX = width - SIDE_MARGIN - ARROW_W / 2;
     const leftBg = this.add.rectangle(leftX, arrowY, ARROW_W, ARROW_W, 0x261540, 0.95);
@@ -269,7 +278,7 @@ export class Collection extends Scene {
     rightBg.on('pointerdown', () => this.changeCosmeticPage(1));
 
     this.pageLabel = this.add
-      .text(width / 2, height - 88, '', {
+      .text(width / 2, height - 80, '', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontSize: '12px',
         color: '#c0a0e6',
@@ -319,7 +328,7 @@ export class Collection extends Scene {
         : COSMETIC_TILE_MAX_W,
     );
 
-    const stripY = this.scale.height - 130;
+    const stripY = this.scale.height - 150;
     const totalW =
       visible.length * tileW + Math.max(0, visible.length - 1) * TILE_GAP;
     const startX = (innerLeft + innerRight) / 2 - totalW / 2 + tileW / 2;
