@@ -1,7 +1,7 @@
 // CatBreed lives in shared/state.ts so the server can reference it too. The
 // full union now includes cat4-6 and the legendary 'rainbow'.
-import type { CatBreed } from '@/../shared/state';
-export type { CatBreed };
+import type { CatBreed, CosmeticId } from '@/../shared/state';
+export type { CatBreed, CosmeticId };
 
 export type CatAnimationState =
   | 'idle'
@@ -22,6 +22,9 @@ export interface CatModel {
   restingAnimation: CatAnimationState;
   x: number; // 0–100 percent of background width
   y: number; // 0–100 percent of background height
+  /** Cosmetic worn by this cat (rendered above its head). `undefined` = no
+   *  accessory. */
+  equippedCosmetic?: CosmeticId;
 }
 
 export type InteractionType = 'pet' | 'chinScratch' | 'bellyRub';
