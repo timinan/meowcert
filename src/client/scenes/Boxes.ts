@@ -136,10 +136,16 @@ export class Boxes extends Scene {
 
   private drawGrid(): void {
     const { width, height } = this.scale;
-    const cardW = 320;
-    const cardH = 220;
-    const gapX = 32;
+    // Card width derived from canvas width so the 2x2 grid fits on
+    // anything from a narrow mobile viewport up to a wide desktop frame.
+    // Clamped between a readable minimum (smaller and the present icon
+    // dominates) and the original max (any wider and the grid feels
+    // sparse).
+    const sideMargin = 16;
+    const gapX = 24;
     const gapY = 24;
+    const cardW = Math.max(140, Math.min(320, (width - sideMargin * 2 - gapX) / 2));
+    const cardH = 220;
     const gridW = cardW * 2 + gapX;
     const gridH = cardH * 2 + gapY;
     const originX = width / 2 - gridW / 2;
@@ -167,12 +173,17 @@ export class Boxes extends Scene {
     bg.setStrokeStyle(3, layout.accent);
     bg.setInteractive({ useHandCursor: true });
 
+    // Drop the title font size on narrow cards so "Premium Cat Crate"
+    // doesn't bleed off the edges. Tagline wraps to the card interior.
+    const titleFontSize = w < 220 ? 16 : 22;
     const title = this.add
       .text(0, -h / 2 + 22, layout.title, {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
-        fontSize: '22px',
+        fontSize: `${titleFontSize}px`,
         color: '#ffffff',
+        align: 'center',
+        wordWrap: { width: w - 16 },
       })
       .setOrigin(0.5, 0);
 
@@ -188,12 +199,16 @@ export class Boxes extends Scene {
     present.lineStyle(2, 0xffffff, 0.85);
     present.strokeRoundedRect(presentX - 32, presentY - 24, 64, 48, 6);
 
+    // Strip the manual newlines from the tagline so wordWrap can re-flow
+    // it to whatever width the card ended up at.
+    const taglineText = layout.tagline.replace(/\n/g, ' ');
     const tagline = this.add
-      .text(0, 42, layout.tagline, {
+      .text(0, 42, taglineText, {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontSize: '13px',
         color: '#c0a0e6',
         align: 'center',
+        wordWrap: { width: w - 16 },
       })
       .setOrigin(0.5, 0);
 

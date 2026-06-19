@@ -59,15 +59,19 @@ export class Welcome extends Scene {
       );
     }
 
+    // Title scales down on narrow canvases — at 44px the original 18-char
+    // greeting clips on viewports under ~620px wide.
+    const titleFontSize = width < 620 ? 30 : 44;
     this.title = this.add
       .text(width / 2, height * 0.16, 'Welcome to pspsps!', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
-        fontSize: '44px',
+        fontSize: `${titleFontSize}px`,
         color: '#ffffff',
         stroke: '#000000',
         strokeThickness: 6,
         align: 'center',
+        wordWrap: { width: width - 32 },
       })
       .setOrigin(0.5);
 
@@ -75,13 +79,14 @@ export class Welcome extends Scene {
       .text(
         width / 2,
         height * 0.3,
-        "Your cat house is ready.\nHere's 300 coins to get you started —\nlet's open your first boxes!",
+        "Your cat house is ready. Here's 300 coins to get you started — let's open your first boxes!",
         {
           fontFamily: 'Pixeloid Sans, sans-serif',
           fontSize: '20px',
           color: '#e0d3ff',
           align: 'center',
           lineSpacing: 8,
+          wordWrap: { width: width - 48 },
         },
       )
       .setOrigin(0.5);
@@ -112,7 +117,7 @@ export class Welcome extends Scene {
 
     if (step === 'cat') {
       this.subtitle.setText(
-        "Your cat house is ready.\nHere's 300 coins to get you started —\nlet's open your first boxes!",
+        "Your cat house is ready. Here's 300 coins to get you started — let's open your first boxes!",
       );
       const cost = BOX_CATALOG.catCrate.cost;
       this.actionButton = this.createButton(
@@ -121,9 +126,7 @@ export class Welcome extends Scene {
         () => this.onOpenBox('catCrate'),
       );
     } else if (step === 'cosmetic') {
-      this.subtitle.setText(
-        'Nice! One more —\npick a style for your crew.',
-      );
+      this.subtitle.setText('Nice! One more — pick a style for your crew.');
       const cost = BOX_CATALOG.stylePack.cost;
       this.actionButton = this.createButton(
         `Open Style Pack · ${cost}🪙`,
@@ -133,7 +136,7 @@ export class Welcome extends Scene {
     } else {
       this.title.setText("You're all set!");
       this.subtitle.setText(
-        'Earn more coins by playing\nthe rhythm game.\nBuy more boxes anytime.',
+        'Earn more coins by playing the rhythm game. Buy more boxes anytime.',
       );
       this.actionButton = this.createButton(
         'Start playing',
@@ -149,7 +152,9 @@ export class Welcome extends Scene {
     onClick: () => void,
   ): GameObjects.Container {
     const { width, height } = this.scale;
-    const btnW = 360;
+    // Button shrinks to the available width on narrow viewports, capped
+    // at 360 so it doesn't get silly-wide on desktop.
+    const btnW = Math.min(360, width - 32);
     const btnH = 72;
 
     const container = this.add.container(width / 2, height * 0.62);

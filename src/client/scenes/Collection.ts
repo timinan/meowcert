@@ -19,11 +19,17 @@ const RARITY_HEX: Record<string, number> = {
   legendary: 0xffd34d,
 };
 
-const CAT_TILE_W = 88;
+// Tile sizes are upper bounds — the actual dimensions used per render
+// shrink to fit the canvas width (see computeCatStripLayout /
+// computeCosmeticStripLayout).
+const CAT_TILE_MAX_W = 88;
 const CAT_TILE_H = 110;
-const COSMETIC_TILE_W = 80;
+const COSMETIC_TILE_MAX_W = 80;
 const COSMETIC_TILE_H = 96;
-const COSMETIC_TILES_PER_PAGE = 8;
+const TILE_GAP = 12;
+const SIDE_MARGIN = 16;
+const ARROW_W = 36;
+const ARROW_GAP = 12;
 
 interface Tile {
   container: GameObjects.Container;
@@ -160,23 +166,31 @@ export class Collection extends Scene {
     if (cats.length === 0) return;
 
     const stripY = 130;
-    const gap = 12;
-    const totalW = cats.length * CAT_TILE_W + (cats.length - 1) * gap;
-    const startX = this.scale.width / 2 - totalW / 2 + CAT_TILE_W / 2;
+    // Available row width: canvas minus margins. Each tile shares the row
+    // with TILE_GAP between neighbors. Shrink tile width to fit all cats
+    // in one row when they wouldn't otherwise; cap at CAT_TILE_MAX_W on
+    // wider viewports so each tile reads.
+    const available = this.scale.width - SIDE_MARGIN * 2;
+    const tileW = Math.min(
+      CAT_TILE_MAX_W,
+      (available - (cats.length - 1) * TILE_GAP) / cats.length,
+    );
+    const totalW = cats.length * tileW + (cats.length - 1) * TILE_GAP;
+    const startX = this.scale.width / 2 - totalW / 2 + tileW / 2;
 
     cats.forEach((breed, idx) => {
-      const x = startX + idx * (CAT_TILE_W + gap);
-      const tile = this.makeCatTile(breed, x, stripY);
+      const x = startX + idx * (tileW + TILE_GAP);
+      const tile = this.makeCatTile(breed, x, stripY, tileW);
       this.catTiles.set(breed, tile);
     });
   }
 
-  private makeCatTile(breed: CatBreed, x: number, y: number): Tile {
+  private makeCatTile(breed: CatBreed, x: number, y: number, tileW: number): Tile {
     const entry = CAT_CATALOG.find((c) => c.id === breed);
     const baseColor = RARITY_HEX[entry?.rarity ?? 'common'] ?? 0xffffff;
 
     const container = this.add.container(x, y);
-    const border = this.add.rectangle(0, 0, CAT_TILE_W, CAT_TILE_H, 0x261540, 0.95);
+    const border = this.add.rectangle(0, 0, tileW, CAT_TILE_H, 0x261540, 0.95);
     border.setStrokeStyle(2, baseColor);
     border.setInteractive({ useHandCursor: true });
 
@@ -185,18 +199,19 @@ export class Collection extends Scene {
       .image(0, -10, AssetKeys.Atlas.Cats, frame)
       .setOrigin(0.5);
     if (breed === 'rainbow') {
-      // Static-ish rainbow tile — pick a saturated stand-in color so the
-      // tile reads as "the rainbow cat" without burning CPU on a hue tween
-      // in every thumbnail.
+      // Static stand-in tint so the tile reads as "the rainbow cat"
+      // without paying for a hue tween in every off-focus thumbnail.
       sprite.setTint(hslToInt(280, 1, 0.65));
     }
-    fitSpriteIntoTile(sprite, CAT_TILE_W - 16, CAT_TILE_H - 36);
+    fitSpriteIntoTile(sprite, tileW - 16, CAT_TILE_H - 36);
 
     const nameText = this.add
       .text(0, CAT_TILE_H / 2 - 14, entry?.name ?? breed, {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontSize: '11px',
         color: '#ffffff',
+        align: 'center',
+        wordWrap: { width: tileW - 4 },
       })
       .setOrigin(0.5);
 
@@ -221,7 +236,7 @@ export class Collection extends Scene {
     const headerY = height - 200;
 
     this.add
-      .text(36, headerY, 'Your cosmetics', {
+      .text(SIDE_MARGIN, headerY, 'Your cosmetics', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
         fontSize: '16px',
@@ -229,22 +244,24 @@ export class Collection extends Scene {
       })
       .setOrigin(0, 0);
 
-    // Pagination arrows
+    // Pagination arrows sit at the edges, vertically centered on the row.
     const arrowY = headerY + 60;
-    const leftBg = this.add.rectangle(36, arrowY, 36, 36, 0x261540, 0.95);
+    const leftX = SIDE_MARGIN + ARROW_W / 2;
+    const rightX = width - SIDE_MARGIN - ARROW_W / 2;
+    const leftBg = this.add.rectangle(leftX, arrowY, ARROW_W, ARROW_W, 0x261540, 0.95);
     leftBg.setStrokeStyle(2, 0xffffff);
     leftBg.setInteractive({ useHandCursor: true });
-    this.add.text(36, arrowY, '◀', {
+    this.add.text(leftX, arrowY, '◀', {
       fontFamily: 'Pixeloid Sans, sans-serif',
       fontSize: '18px',
       color: '#ffffff',
     }).setOrigin(0.5);
     leftBg.on('pointerdown', () => this.changeCosmeticPage(-1));
 
-    const rightBg = this.add.rectangle(width - 36, arrowY, 36, 36, 0x261540, 0.95);
+    const rightBg = this.add.rectangle(rightX, arrowY, ARROW_W, ARROW_W, 0x261540, 0.95);
     rightBg.setStrokeStyle(2, 0xffffff);
     rightBg.setInteractive({ useHandCursor: true });
-    this.add.text(width - 36, arrowY, '▶', {
+    this.add.text(rightX, arrowY, '▶', {
       fontFamily: 'Pixeloid Sans, sans-serif',
       fontSize: '18px',
       color: '#ffffff',
@@ -260,6 +277,20 @@ export class Collection extends Scene {
       .setOrigin(0.5);
   }
 
+  private cosmeticTilesPerPage(): number {
+    // The row is bookended by arrows + their gaps. Whatever is left has to
+    // fit some number of tiles with TILE_GAP between them. Clamp at 4 so
+    // the page rotation doesn't feel like flipping single tiles, and at 8
+    // so a wide desktop frame doesn't strand the user with one giant page.
+    const available =
+      this.scale.width
+      - SIDE_MARGIN * 2
+      - ARROW_W * 2
+      - ARROW_GAP * 2;
+    const tilePlusGap = COSMETIC_TILE_MAX_W + TILE_GAP;
+    return Math.max(4, Math.min(8, Math.floor((available + TILE_GAP) / tilePlusGap)));
+  }
+
   private cosmeticEntries(): Array<{ kind: 'none' } | { kind: 'cosmetic'; id: CosmeticId }> {
     const owned = this.playerState?.ownedCosmetics ?? [];
     return [{ kind: 'none' as const }, ...owned.map((id) => ({ kind: 'cosmetic' as const, id }))];
@@ -270,33 +301,44 @@ export class Collection extends Scene {
     this.cosmeticTiles = [];
 
     const entries = this.cosmeticEntries();
-    const totalPages = Math.max(1, Math.ceil(entries.length / COSMETIC_TILES_PER_PAGE));
+    const perPage = this.cosmeticTilesPerPage();
+    const totalPages = Math.max(1, Math.ceil(entries.length / perPage));
     if (this.cosmeticPage >= totalPages) this.cosmeticPage = totalPages - 1;
 
-    const start = this.cosmeticPage * COSMETIC_TILES_PER_PAGE;
-    const visible = entries.slice(start, start + COSMETIC_TILES_PER_PAGE);
+    const start = this.cosmeticPage * perPage;
+    const visible = entries.slice(start, start + perPage);
+
+    // Lane the tiles between the two pagination arrows.
+    const innerLeft = SIDE_MARGIN + ARROW_W + ARROW_GAP;
+    const innerRight = this.scale.width - SIDE_MARGIN - ARROW_W - ARROW_GAP;
+    const innerW = innerRight - innerLeft;
+    const tileW = Math.min(
+      COSMETIC_TILE_MAX_W,
+      visible.length > 0
+        ? (innerW - (visible.length - 1) * TILE_GAP) / visible.length
+        : COSMETIC_TILE_MAX_W,
+    );
 
     const stripY = this.scale.height - 130;
-    const gap = 12;
     const totalW =
-      visible.length * COSMETIC_TILE_W + Math.max(0, visible.length - 1) * gap;
-    const startX = this.scale.width / 2 - totalW / 2 + COSMETIC_TILE_W / 2;
+      visible.length * tileW + Math.max(0, visible.length - 1) * TILE_GAP;
+    const startX = (innerLeft + innerRight) / 2 - totalW / 2 + tileW / 2;
 
     visible.forEach((entry, idx) => {
-      const x = startX + idx * (COSMETIC_TILE_W + gap);
+      const x = startX + idx * (tileW + TILE_GAP);
       const tile = entry.kind === 'none'
-        ? this.makeNoneTile(x, stripY)
-        : this.makeCosmeticTile(entry.id, x, stripY);
+        ? this.makeNoneTile(x, stripY, tileW)
+        : this.makeCosmeticTile(entry.id, x, stripY, tileW);
       this.cosmeticTiles.push(tile);
     });
 
     this.pageLabel.setText(`${this.cosmeticPage + 1} / ${totalPages}`);
   }
 
-  private makeNoneTile(x: number, y: number): Tile {
+  private makeNoneTile(x: number, y: number, tileW: number): Tile {
     const baseColor = 0x888888;
     const container = this.add.container(x, y);
-    const border = this.add.rectangle(0, 0, COSMETIC_TILE_W, COSMETIC_TILE_H, 0x261540, 0.95);
+    const border = this.add.rectangle(0, 0, tileW, COSMETIC_TILE_H, 0x261540, 0.95);
     border.setStrokeStyle(2, baseColor);
     border.setInteractive({ useHandCursor: true });
     const x1 = this.add.text(0, -10, '✕', {
@@ -325,19 +367,19 @@ export class Collection extends Scene {
     return { container, border, baseColor };
   }
 
-  private makeCosmeticTile(id: CosmeticId, x: number, y: number): Tile {
+  private makeCosmeticTile(id: CosmeticId, x: number, y: number, tileW: number): Tile {
     const entry = COSMETIC_CATALOG.find((c) => c.id === id);
     const baseColor = RARITY_HEX[entry?.rarity ?? 'common'] ?? 0xffffff;
 
     const container = this.add.container(x, y);
-    const border = this.add.rectangle(0, 0, COSMETIC_TILE_W, COSMETIC_TILE_H, 0x261540, 0.95);
+    const border = this.add.rectangle(0, 0, tileW, COSMETIC_TILE_H, 0x261540, 0.95);
     border.setStrokeStyle(2, baseColor);
     border.setInteractive({ useHandCursor: true });
 
     const sprite = this.add
       .image(0, -10, AssetKeys.Atlas.Cats, `cosmetic_${id}_idle_00`)
       .setOrigin(0.5);
-    fitSpriteIntoTile(sprite, COSMETIC_TILE_W - 16, COSMETIC_TILE_H - 32);
+    fitSpriteIntoTile(sprite, tileW - 16, COSMETIC_TILE_H - 32);
 
     const nameText = this.add
       .text(0, COSMETIC_TILE_H / 2 - 14, entry?.name ?? id, {
@@ -345,7 +387,7 @@ export class Collection extends Scene {
         fontSize: '10px',
         color: '#ffffff',
         align: 'center',
-        wordWrap: { width: COSMETIC_TILE_W - 6 },
+        wordWrap: { width: tileW - 6 },
       })
       .setOrigin(0.5);
 
@@ -366,7 +408,7 @@ export class Collection extends Scene {
 
   private changeCosmeticPage(direction: 1 | -1): void {
     const entries = this.cosmeticEntries();
-    const totalPages = Math.max(1, Math.ceil(entries.length / COSMETIC_TILES_PER_PAGE));
+    const totalPages = Math.max(1, Math.ceil(entries.length / this.cosmeticTilesPerPage()));
     this.cosmeticPage = (this.cosmeticPage + direction + totalPages) % totalPages;
     this.rebuildCosmeticStrip();
   }
