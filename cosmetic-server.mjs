@@ -71,7 +71,7 @@ const server = http.createServer(async (req, res) => {
 
     let pathname = decodeURIComponent((req.url ?? '/').split('?')[0]);
     if (pathname === '/') pathname = '/cosmetic-calibrator.html';
-    const filepath = path.join(PROJECT_ROOT, pathname);
+    let filepath = path.join(PROJECT_ROOT, pathname);
 
     // Block directory traversal.
     if (!filepath.startsWith(PROJECT_ROOT + path.sep) && filepath !== PROJECT_ROOT) {
@@ -80,7 +80,20 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    const stat = await fs.stat(filepath).catch(() => null);
+    let stat = await fs.stat(filepath).catch(() => null);
+
+    // If the requested path has no extension and doesn't exist, try
+    // `<path>.html` so /cosmetic-calibrator resolves the same as
+    // /cosmetic-calibrator.html.
+    if ((!stat || stat.isDirectory()) && !path.extname(filepath)) {
+      const withHtml = filepath + '.html';
+      const htmlStat = await fs.stat(withHtml).catch(() => null);
+      if (htmlStat && !htmlStat.isDirectory()) {
+        filepath = withHtml;
+        stat = htmlStat;
+      }
+    }
+
     if (!stat || stat.isDirectory()) {
       res.writeHead(404, { 'content-type': 'text/plain' });
       res.end(`Not found: ${pathname}`);
