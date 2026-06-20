@@ -245,6 +245,9 @@
             scene. Scale only matters if you want a breed to render bigger
             or smaller relative to the others.
           </div>
+          <button id="deleteVariant" class="secondary" style="display: none; background: #c14a4a;">
+            🗑 Delete this variant
+          </button>
         </div>
 
         <div class="pane hidden" id="variantsPane">
@@ -531,9 +534,30 @@
         document.getElementById('name').value = entry.name;
         document.getElementById('rarity').value = entry.rarity;
         document.getElementById('scale').value = entry.scale;
+        const deleteBtn = document.getElementById('deleteVariant');
+        if (deleteBtn) {
+          // Only generated tinted cats can be deleted; base cats are tied
+          // to atlas content.
+          deleteBtn.style.display = entry.sourceFrame ? '' : 'none';
+        }
         buildVariantsPane();
         updateAnimFrames();
         updateOutput();
+      }
+
+      function onDeleteVariant() {
+        const cur = curId();
+        const entry = state[cur];
+        if (!entry?.sourceFrame) return;
+        if (!confirm(`Delete ${cur} (${entry.name})? This removes the tinted cat from the catalog. The parent base is unaffected.`)) return;
+        delete state[cur];
+        delete state.variants[cur];
+        markEdited();
+        saveState();
+        const ids = catIds();
+        currentIdx = Math.min(currentIdx, ids.length - 1);
+        if (currentIdx < 0) currentIdx = 0;
+        loadCurrent();
       }
 
       function buildVariantsPane() {
@@ -853,6 +877,7 @@
 
         document.getElementById('save').addEventListener('click', forceSave);
         document.getElementById('generateVariants').addEventListener('click', onGenerate);
+        document.getElementById('deleteVariant').addEventListener('click', onDeleteVariant);
 
         document.getElementById('reset').addEventListener('click', () => {
           if (!confirm('Reset all cats to defaults? Generated cats and edits will be lost.')) return;

@@ -263,6 +263,9 @@
             (X=0) and from the top of the cat sprite (Y=0). Y &lt; 0 sits
             above the top, Y &gt; 0 sits inside the cat's body.
           </div>
+          <button id="deleteVariant" class="secondary" style="display: none; background: #c14a4a;">
+            🗑 Delete this variant
+          </button>
         </div>
 
         <div class="pane hidden" id="variantsPane">
@@ -788,6 +791,7 @@
 
         document.getElementById('save').addEventListener('click', forceSave);
         document.getElementById('generateVariants').addEventListener('click', onGenerate);
+        document.getElementById('deleteVariant').addEventListener('click', onDeleteVariant);
         document.getElementById('load').addEventListener('click', loadFromFilePicker);
 
         document.getElementById('reset').addEventListener('click', () => {
@@ -866,9 +870,35 @@
         document.getElementById('offsetX').value = entry.offsetX;
         document.getElementById('offsetY').value = entry.offsetY;
         document.getElementById('scale').value = entry.scale;
+        // Only generated variants (entries with sourceFrame + tint) can be
+        // deleted — bases are tied to atlas content and can't be removed
+        // from the catalog without re-extraction.
+        const deleteBtn = document.getElementById('deleteVariant');
+        if (deleteBtn) {
+          deleteBtn.style.display = entry.sourceFrame ? '' : 'none';
+        }
         buildVariantsPane();
         render();
         updateOutput();
+      }
+
+      function onDeleteVariant() {
+        const cur = curId();
+        const entry = state[cur];
+        if (!entry?.sourceFrame) return; // safety — should not happen
+        if (!confirm(`Delete ${cur} (${entry.name})? This removes the variant from the catalog. The parent base is unaffected.`)) {
+          return;
+        }
+        delete state[cur];
+        delete state.variants[cur];
+        markEdited();
+        saveState();
+        // Step to the previous cosmetic so we don't land on an empty
+        // slot. Wrap-around handled by cosmeticIds().
+        const ids = cosmeticIds();
+        currentIdx = Math.min(currentIdx, ids.length - 1);
+        if (currentIdx < 0) currentIdx = 0;
+        loadCurrent();
       }
 
       function render() {
