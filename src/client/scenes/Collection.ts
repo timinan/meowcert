@@ -49,6 +49,11 @@ interface Tile {
 export class Collection extends Scene {
   private playerState: PlayerState | null = null;
   private busy = false;
+  /** Cosmetic the user has *previewed* for the selected cat but not yet
+   *  saved to the server. `undefined` = no pending change. `null` = pending
+   *  unequip. */
+  private pendingCosmetic: CosmeticId | null | undefined = undefined;
+  private saveButton: GameObjects.Container | null = null;
 
   private selectedCat: CatBreed | null = null;
   private cosmeticPage = 0;
@@ -366,11 +371,12 @@ export class Collection extends Scene {
 
     border.on('pointerdown', () => {
       if (this.busy || !this.selectedCat) return;
-      void this.applyEquip(this.selectedCat, null);
+      this.previewEquip(null);
     });
 
-    // Highlight if the selected cat currently has nothing equipped.
-    if (this.selectedCat && !this.playerState?.equippedCosmetics[this.selectedCat]) {
+    // Highlight if the selected cat currently has nothing equipped
+    // (taking any pending preview into account).
+    if (this.selectedCat && this.effectiveEquipped(this.selectedCat) === null) {
       border.setStrokeStyle(3, 0x00ff88);
     }
 
@@ -405,11 +411,11 @@ export class Collection extends Scene {
 
     border.on('pointerdown', () => {
       if (this.busy || !this.selectedCat) return;
-      void this.applyEquip(this.selectedCat, id);
+      this.previewEquip(id);
     });
 
-    // Highlight if currently equipped on the selected cat.
-    if (this.selectedCat && this.playerState?.equippedCosmetics[this.selectedCat] === id) {
+    // Highlight if currently equipped on the selected cat (or pending).
+    if (this.selectedCat && this.effectiveEquipped(this.selectedCat) === id) {
       border.setStrokeStyle(3, 0x00ff88);
     }
 
@@ -466,21 +472,26 @@ export class Collection extends Scene {
       });
     }
 
-    const equippedId = this.playerState?.equippedCosmetics[breed] ?? null;
+    // Use effective equipped (pending preview if set, else server state)
+    // so the preview reflects what Save would commit.
+    const equippedId = this.effectiveEquipped(breed);
     if (equippedId) {
       // Generated variants share a parent's atlas frame; resolve via the
-      // catalog so tinted cosmetics render correctly here too.
+      // catalog so tinted cosmetics render correctly here too. Both cat
+      // and cosmetic sprites were extracted on the same 91×64 canvas, so
+      // sharing position (0,0), origin (0.5,0.5), and the same scale puts
+      // them in lock-step — Phaser's trimmed-atlas handling takes care of
+      // the cosmetic's actual painted position within that canvas.
       const entry = COSMETIC_CATALOG.find((c) => c.id === equippedId);
       const renderId =
         entry?.sourceFrame?.match(/^cosmetic_(c\d+)_/)?.[1] ?? equippedId;
       const cos = this.add
-        .image(0, -40, AssetKeys.Atlas.Cosmetics, `cosmetic_${renderId}_idle_00`)
+        .image(0, 0, AssetKeys.Atlas.Cosmetics, `cosmetic_${renderId}_idle_00`)
         .setOrigin(0.5);
       if (entry?.tint) {
         cos.setTint(parseInt(entry.tint.replace('#', ''), 16));
       }
-      const cosScale = Math.min(120 / Math.max(cos.width || 32, cos.height || 32), 4);
-      cos.setScale(cosScale);
+      cos.setScale(scale);
       this.previewLayer.add(cos);
     }
 
@@ -493,33 +504,100 @@ export class Collection extends Scene {
 
   // -- Equip -----------------------------------------------------------
 
-  private async applyEquip(breed: CatBreed, cosmeticId: CosmeticId | null): Promise<void> {
-    if (this.busy) return;
+  /** Whatever the cosmetic for `breed` is right now — pending preview if
+   *  there's an unsaved change for the currently selected cat, otherwise
+   *  the server-confirmed state. Returns null for "no cosmetic". */
+  private effectiveEquipped(breed: CatBreed): CosmeticId | null {
+    if (breed === this.selectedCat && this.pendingCosmetic !== undefined) {
+      return this.pendingCosmetic;
+    }
+    return this.playerState?.equippedCosmetics[breed] ?? null;
+  }
+
+  /** Stage an equip for the selected cat without hitting the server. */
+  private previewEquip(cosmeticId: CosmeticId | null): void {
+    if (!this.selectedCat) return;
+    const currentSaved = this.playerState?.equippedCosmetics[this.selectedCat] ?? null;
+    this.pendingCosmetic = cosmeticId === currentSaved ? undefined : cosmeticId;
+    this.refreshPreview();
+    this.rebuildCosmeticStrip();
+    this.refreshSaveButton();
+  }
+
+  private async onSavePressed(): Promise<void> {
+    if (this.busy || !this.selectedCat || this.pendingCosmetic === undefined) return;
     this.busy = true;
     try {
-      const result = await equipCosmetic(breed, cosmeticId);
+      const result = await equipCosmetic(this.selectedCat, this.pendingCosmetic);
       if (!result.ok) {
         console.warn('[collection] equip failed:', result.reason);
         return;
       }
       this.playerState = result.state;
+      this.pendingCosmetic = undefined;
       this.refreshFromState();
+      this.flashSavedToast();
     } catch (e) {
       console.warn('[collection] equip error', e);
     } finally {
       this.busy = false;
+      this.refreshSaveButton();
     }
   }
 
-  // -- Back button ------------------------------------------------------
+  private flashSavedToast(): void {
+    const { width } = this.scale;
+    const toast = this.add
+      .text(width / 2, 70, '✓ Saved', {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontStyle: 'bold',
+        fontSize: '16px',
+        color: '#7fdc8a',
+        backgroundColor: '#1a0a2e',
+        padding: { x: 12, y: 6 },
+      })
+      .setOrigin(0.5)
+      .setDepth(2000);
+    this.tweens.add({
+      targets: toast,
+      alpha: 0,
+      y: 50,
+      duration: 1200,
+      delay: 600,
+      onComplete: () => toast.destroy(),
+    });
+  }
+
+  // -- Save / Back buttons --------------------------------------------
 
   private drawBackButton(): void {
     const { width, height } = this.scale;
-    const container = this.add.container(width / 2, height - 36);
-    const bg = this.add.rectangle(0, 0, 160, 44, 0x1a0a2e, 0.95);
-    bg.setStrokeStyle(2, 0xffffff);
-    bg.setInteractive({ useHandCursor: true });
-    const label = this.add
+
+    // Save button — visible only when there's a pending change.
+    const saveContainer = this.add.container(width / 2 - 90, height - 36);
+    const saveBg = this.add.rectangle(0, 0, 160, 44, 0xffd34d, 1);
+    saveBg.setStrokeStyle(2, 0x1a0a2e);
+    saveBg.setInteractive({ useHandCursor: true });
+    const saveLabel = this.add
+      .text(0, 0, '💾 Save', {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontStyle: 'bold',
+        fontSize: '18px',
+        color: '#1a0a2e',
+      })
+      .setOrigin(0.5);
+    saveContainer.add([saveBg, saveLabel]);
+    saveContainer.setVisible(false);
+    saveBg.on('pointerdown', () => void this.onSavePressed());
+    this.saveButton = saveContainer;
+
+    // Back button sits alongside Save; when nothing's pending it just
+    // centers itself.
+    const backContainer = this.add.container(width / 2 + 90, height - 36);
+    const backBg = this.add.rectangle(0, 0, 160, 44, 0x1a0a2e, 0.95);
+    backBg.setStrokeStyle(2, 0xffffff);
+    backBg.setInteractive({ useHandCursor: true });
+    const backLabel = this.add
       .text(0, 0, '← Back', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
@@ -527,11 +605,26 @@ export class Collection extends Scene {
         color: '#ffffff',
       })
       .setOrigin(0.5);
-    container.add([bg, label]);
-    bg.on('pointerdown', () => {
+    backContainer.add([backBg, backLabel]);
+    backBg.on('pointerdown', () => {
       if (this.busy) return;
+      // If there's unsaved work, ask before discarding it.
+      if (this.pendingCosmetic !== undefined) {
+        // Save-or-discard isn't quite a confirm() use-case in Phaser, so
+        // we just auto-save before exiting — least surprising behaviour.
+        void this.onSavePressed().then(() => {
+          this.scene.start(SceneKeys.Game, { playerState: this.playerState });
+        });
+        return;
+      }
       this.scene.start(SceneKeys.Game, { playerState: this.playerState });
     });
+  }
+
+  private refreshSaveButton(): void {
+    if (!this.saveButton) return;
+    const hasPending = this.pendingCosmetic !== undefined;
+    this.saveButton.setVisible(hasPending);
   }
 }
 
