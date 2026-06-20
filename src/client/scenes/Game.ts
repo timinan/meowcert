@@ -1171,7 +1171,15 @@ export class Game extends Scene {
       this.input.off('pointerup', this.interactionPointerUpHandler);
       this.interactionPointerUpHandler = null;
     }
-    this.meow.reset();
+    // Anchor the meow bar's next round to the CURRENT total score.
+    // Otherwise the first rhythm hit after the interaction would
+    // compute deltaScore = currentScore - 0 = huge, instantly refill
+    // the bar, and re-trigger the interaction on the next tap.
+    this.meow.reset(this.score.get());
+    // Clear the combo streak too — the rhythm system was frozen during
+    // the interaction, so any "2× COMBO" callout left over from before
+    // part 2 isn't meaningful anymore.
+    this.combo = 0;
   }
 
   // -- Music --------------------------------------------------------------

@@ -38,8 +38,17 @@ export class MeowBarSystem {
     return this.progress <= 0;
   }
 
-  reset(): void {
+  /**
+   * Drop the bar to 0 after a petting interaction completes.
+   *
+   * `currentScore` MUST be the player's current total score. We anchor
+   * the next round's delta calculation to that value — otherwise the
+   * very next hit produces a delta of (currentScore - 0) = huge, which
+   * instantly maxes the bar and re-triggers the interaction on the next
+   * tap. The caller is responsible for passing the live total.
+   */
+  reset(currentScore = 0): void {
     this.progress = 0;
-    this.lastTriggerScore = 0;
+    this.lastTriggerScore = currentScore;
   }
 }
