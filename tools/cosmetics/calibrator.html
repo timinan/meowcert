@@ -171,6 +171,43 @@
         opacity: 0.4;
         background: rgba(0, 0, 0, 0.2);
       }
+      /* Free-form color picker on the Variants tab */
+      .hue-row { padding: 4px 0; }
+      #hueSlider {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 100%;
+        height: 18px;
+        border-radius: 9px;
+        background: linear-gradient(to right,
+          hsl(0,80%,55%), hsl(60,80%,55%), hsl(120,80%,55%),
+          hsl(180,80%,55%), hsl(240,80%,55%), hsl(300,80%,55%), hsl(360,80%,55%));
+        outline: none;
+        cursor: pointer;
+      }
+      #hueSlider::-webkit-slider-thumb,
+      #hueSlider::-moz-range-thumb {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 18px; height: 18px; border-radius: 50%;
+        background: white;
+        border: 2px solid var(--bg);
+        cursor: grab;
+      }
+      .quick-picks {
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        gap: 6px;
+        padding: 6px 0;
+      }
+      .quick-picks button {
+        height: 28px;
+        border-radius: 4px;
+        border: 2px solid rgba(255,255,255,0.15);
+        cursor: pointer;
+        padding: 0;
+      }
+      .quick-picks button:hover { border-color: var(--primary); }
     </style>
   </head>
   <body>
@@ -270,17 +307,43 @@
 
         <div class="pane hidden" id="variantsPane">
           <div class="hint">
-            Check the tints you want to spin off as new cosmetics from
-            <strong id="varBaseName">c1</strong>. Click anywhere on a row to preview
-            that tint on the canvas. Click <b>Generate</b> to add each
-            checked variant as a real catalog entry (c18, c19, …) — they
-            inherit slot, offset, scale, and rarity from this base, and
-            you can keep editing them like any other cosmetic. Generated
-            entries themselves can be re-tinted from their own Variants
-            tab.
+            Pick any color, preview it live on the canvas, then click
+            Generate. New variant inherits slot, offset, scale, and rarity
+            from <strong id="varBaseName">c1</strong> and can itself be re-tinted
+            later from its own Variants tab.
           </div>
-          <div id="variantList"></div>
-          <button id="generateVariants">⚡ Generate selected as new cosmetics</button>
+
+          <div class="hue-row">
+            <input type="range" id="hueSlider" min="0" max="360" step="1" value="0" />
+          </div>
+          <div class="row">
+            <label style="flex: 1.2">
+              Saturation
+              <input type="range" id="satSlider" min="0" max="100" step="1" value="80" />
+            </label>
+            <label style="flex: 1.2">
+              Lightness
+              <input type="range" id="lightSlider" min="0" max="100" step="1" value="60" />
+            </label>
+          </div>
+          <div class="row">
+            <label style="flex: 1">
+              Color
+              <input type="color" id="colorPicker" value="#ff5555" />
+            </label>
+            <label style="flex: 1.4">
+              Hex
+              <input type="text" id="hexInput" value="#ff5555" maxlength="7" />
+            </label>
+          </div>
+
+          <div class="quick-picks" id="quickPicks"></div>
+
+          <label>
+            Variant name
+            <input type="text" id="variantName" placeholder="Auto-fills as 'Tinted &lt;base&gt;'" />
+          </label>
+          <button id="generateVariants">⚡ Generate variant</button>
         </div>
 
         <h2>Save / Load</h2>
@@ -792,6 +855,35 @@
         document.getElementById('save').addEventListener('click', forceSave);
         document.getElementById('generateVariants').addEventListener('click', onGenerate);
         document.getElementById('deleteVariant').addEventListener('click', onDeleteVariant);
+
+        // Free-form color picker wiring — every input feeds the same
+        // setVariantColor() reducer, which syncs the rest and re-renders.
+        document.getElementById('hueSlider').addEventListener('input', (e) => {
+          setVariantColor({ h: Number(e.target.value) }, 'hue');
+        });
+        document.getElementById('satSlider').addEventListener('input', (e) => {
+          setVariantColor({ s: Number(e.target.value) }, 'sat');
+        });
+        document.getElementById('lightSlider').addEventListener('input', (e) => {
+          setVariantColor({ l: Number(e.target.value) }, 'light');
+        });
+        document.getElementById('colorPicker').addEventListener('input', (e) => {
+          const hsl = hexToHsl(e.target.value);
+          if (hsl) setVariantColor(hsl, 'picker');
+        });
+        document.getElementById('hexInput').addEventListener('input', (e) => {
+          const hsl = hexToHsl(e.target.value);
+          if (hsl) setVariantColor(hsl, 'hex');
+        });
+        document.getElementById('variantName').addEventListener('input', (e) => {
+          // Mark the input as user-edited so setVariantColor() stops
+          // overwriting it with auto-fills when colors change.
+          if (e.target.value) {
+            e.target.dataset.userEdited = '1';
+          } else {
+            delete e.target.dataset.userEdited;
+          }
+        });
         document.getElementById('load').addEventListener('click', loadFromFilePicker);
 
         document.getElementById('reset').addEventListener('click', () => {
@@ -1019,124 +1111,145 @@
         render();
       }
 
+      // --- Free-form color picker ----------------------------------------
+      // Single source of truth for the currently selected variant color.
+      // Updating it syncs all the controls (hue slider, sat/light sliders,
+      // colorPicker, hex input) plus the canvas preview.
+      let variantHsl = { h: 0, s: 80, l: 60 };
+
+      function setVariantColor(next, source) {
+        variantHsl = {
+          h: clamp(Math.round(next.h ?? variantHsl.h), 0, 360),
+          s: clamp(Math.round(next.s ?? variantHsl.s), 0, 100),
+          l: clamp(Math.round(next.l ?? variantHsl.l), 0, 100),
+        };
+        const hex = hslToHex(variantHsl.h, variantHsl.s, variantHsl.l);
+        if (source !== 'hue') document.getElementById('hueSlider').value = variantHsl.h;
+        if (source !== 'sat') document.getElementById('satSlider').value = variantHsl.s;
+        if (source !== 'light') document.getElementById('lightSlider').value = variantHsl.l;
+        if (source !== 'picker') document.getElementById('colorPicker').value = hex;
+        if (source !== 'hex') document.getElementById('hexInput').value = hex;
+        previewTintColor = hex;
+        // Auto-fill the variant name placeholder (don't stomp on user edits)
+        const nameInput = document.getElementById('variantName');
+        if (nameInput && !nameInput.dataset.userEdited) {
+          const baseName = state[curId()]?.name || curId();
+          nameInput.placeholder = `Tinted ${baseName}`;
+        }
+        render();
+      }
+
+      function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+
+      function hslToHex(h, s, l) {
+        const sat = s / 100, light = l / 100;
+        const c = (1 - Math.abs(2 * light - 1)) * sat;
+        const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+        const m = light - c / 2;
+        let r = 0, g = 0, b = 0;
+        if (h < 60) { r = c; g = x; b = 0; }
+        else if (h < 120) { r = x; g = c; b = 0; }
+        else if (h < 180) { r = 0; g = c; b = x; }
+        else if (h < 240) { r = 0; g = x; b = c; }
+        else if (h < 300) { r = x; g = 0; b = c; }
+        else { r = c; g = 0; b = x; }
+        const R = Math.round((r + m) * 255), G = Math.round((g + m) * 255), B = Math.round((b + m) * 255);
+        return '#' + [R, G, B].map((n) => n.toString(16).padStart(2, '0')).join('');
+      }
+
+      function hexToHsl(hex) {
+        const cleaned = hex.replace(/^#/, '');
+        if (!/^[0-9a-f]{6}$/i.test(cleaned)) return null;
+        const r = parseInt(cleaned.slice(0, 2), 16) / 255;
+        const g = parseInt(cleaned.slice(2, 4), 16) / 255;
+        const b = parseInt(cleaned.slice(4, 6), 16) / 255;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        const l = (max + min) / 2;
+        let h = 0, s = 0;
+        if (max !== min) {
+          const d = max - min;
+          s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+          if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+          else if (max === g) h = (b - r) / d + 2;
+          else h = (r - g) / d + 4;
+          h *= 60;
+        }
+        return { h: Math.round(h), s: Math.round(s * 100), l: Math.round(l * 100) };
+      }
+
       function onGenerate() {
         const parentId = curId();
         const parent = state[parentId];
         const parentSourceFrame = sourceFrameFor(parentId);
-        const generated = [];
+        const hex = hslToHex(variantHsl.h, variantHsl.s, variantHsl.l);
+        const nameInput = document.getElementById('variantName');
+        const baseName = parent.name || parentId;
+        const name = (nameInput.value && nameInput.value.trim()) || `Tinted ${baseName}`;
 
-        for (const tint of TINT_PALETTE) {
-          const v = state.variants[parentId]?.[tint.id];
-          if (!v || !v.enabled) continue;
-          const newId = nextFreeId();
-          state[newId] = {
-            name: v.name || defaultVariantName(parentId, tint.id),
-            slot: parent.slot,
-            rarity: parent.rarity,
-            offsetX: parent.offsetX,
-            offsetY: parent.offsetY,
-            scale: parent.scale,
-            sourceFrame: parentSourceFrame,
-            tint: tint.color,
-            tintMode: currentTintMode,
-          };
-          state.variants[newId] = freshVariantEntry();
-          // Clear the selection so navigating back doesn't re-generate.
-          v.enabled = false;
-          v.name = '';
-          generated.push(newId);
-        }
-
-        if (generated.length === 0) {
-          flashButton('generateVariants', 'Check at least one tint first');
-          return;
-        }
+        const newId = nextFreeId();
+        state[newId] = {
+          name,
+          slot: parent.slot,
+          rarity: parent.rarity,
+          offsetX: parent.offsetX,
+          offsetY: parent.offsetY,
+          scale: parent.scale,
+          sourceFrame: parentSourceFrame,
+          tint: hex,
+          tintMode: currentTintMode,
+        };
+        state.variants[newId] = freshVariantEntry();
 
         markEdited();
         saveState();
         updateOutput();
 
-        // Jump to the first new cosmetic on the Base tab so the user can
-        // immediately fine-tune position / rename if they want.
+        // Reset the name input so the next variant gets a clean placeholder.
+        nameInput.value = '';
+        delete nameInput.dataset.userEdited;
+
+        // Jump to the newly created cosmetic on the Base tab.
         const ids = cosmeticIds();
-        currentIdx = ids.indexOf(generated[0]);
+        currentIdx = ids.indexOf(newId);
         setActiveTab('base');
         loadCurrent();
 
-        flashButton('generateVariants', `✓ Generated ${generated.length}: ${generated.join(', ')}`);
+        flashButton('generateVariants', `✓ Generated ${newId}`);
       }
+
+      // Quick-pick swatches — clicking sets the variant color.
+      const QUICK_PICKS = [
+        '#ff5555', '#ff8a3c', '#ffd34d', '#7fdc8a',
+        '#55cc55', '#5588ff', '#6fbcff', '#c678ff',
+        '#ff8fbf', '#ffffff', '#888888', '#1a0a2e',
+      ];
 
       function buildVariantsPane() {
         const cur = curId();
         document.getElementById('varBaseName').textContent = `${cur} — ${state[cur].name}`;
-        const list = document.getElementById('variantList');
-        list.innerHTML = '';
-        const variants = state.variants[cur];
-        let previewingTintId = null;
-        TINT_PALETTE.forEach((tint) => {
-          const v = variants[tint.id];
-          const row = document.createElement('div');
-          row.className = 'variant-row';
-          row.dataset.tintId = tint.id;
 
-          const cb = document.createElement('input');
-          cb.type = 'checkbox';
-          cb.checked = !!v.enabled;
-          cb.addEventListener('click', (e) => e.stopPropagation());
-          cb.addEventListener('change', () => {
-            v.enabled = cb.checked;
-            if (cb.checked && !v.name) v.name = defaultVariantName(cur, tint.id);
-            nameInput.disabled = !cb.checked;
-            nameInput.value = v.name;
-            markEdited();
-            saveState();
-            updateOutput();
+        // Populate the quick-pick swatches (idempotent — same DOM every time).
+        const picks = document.getElementById('quickPicks');
+        picks.innerHTML = '';
+        for (const hex of QUICK_PICKS) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.style.background = hex;
+          btn.title = hex;
+          btn.addEventListener('click', () => {
+            const hsl = hexToHsl(hex);
+            if (hsl) setVariantColor(hsl, 'quick-pick');
           });
-
-          const swatch = document.createElement('span');
-          swatch.className = 'swatch';
-          swatch.style.background = tint.color;
-
-          const label = document.createElement('span');
-          label.className = 'tint-label';
-          label.textContent = tint.label;
-
-          const nameInput = document.createElement('input');
-          nameInput.type = 'text';
-          nameInput.placeholder = defaultVariantName(cur, tint.id);
-          nameInput.value = v.name || '';
-          nameInput.disabled = !v.enabled;
-          nameInput.addEventListener('click', (e) => e.stopPropagation());
-          nameInput.addEventListener('input', () => {
-            v.name = nameInput.value;
-            markEdited();
-            saveState();
-            updateOutput();
-          });
-
-          // Click anywhere on the row (other than the inputs) to preview
-          // this tint on the canvas.
-          row.addEventListener('click', () => {
-            previewTintColor = tint.color;
-            list.querySelectorAll('.variant-row').forEach((r) =>
-              r.classList.toggle('previewing', r === row),
-            );
-            render();
-          });
-
-          row.append(cb, swatch, label, nameInput);
-          list.appendChild(row);
-          if (v.enabled && previewingTintId === null) previewingTintId = tint.id;
-        });
-        // Auto-preview the first enabled variant so something is on the
-        // canvas the moment the tab is opened.
-        if (previewingTintId) {
-          previewTintColor = TINT_PALETTE.find((t) => t.id === previewingTintId).color;
-          list.querySelector(`[data-tint-id="${previewingTintId}"]`)?.classList.add('previewing');
-        } else {
-          previewTintColor = null;
+          picks.appendChild(btn);
         }
-        render();
+
+        // Refresh the auto-fill placeholder based on the current base.
+        const nameInput = document.getElementById('variantName');
+        const baseName = state[cur]?.name || cur;
+        nameInput.placeholder = `Tinted ${baseName}`;
+        // Restore color sync state from current variantHsl (no implicit reset
+        // — keeps the picker stable when you navigate between bases).
+        setVariantColor(variantHsl, null);
       }
 
       // --- Tinted-sprite renderer ------------------------------------------
