@@ -1105,9 +1105,14 @@
         });
         document.getElementById('basePane').classList.toggle('hidden', tab !== 'base');
         document.getElementById('variantsPane').classList.toggle('hidden', tab !== 'variants');
-        // Stop previewing the moment we leave the variants tab so the
-        // base preview shows the untinted sprite.
-        if (tab !== 'variants') previewTintColor = null;
+        // Apply the current picker color when entering the variants tab,
+        // clear it when leaving. Base tab always shows the entry as it
+        // would render in-game (with its own entry.tint if generated).
+        if (tab === 'variants') {
+          previewTintColor = hslToHex(variantHsl.h, variantHsl.s, variantHsl.l);
+        } else {
+          previewTintColor = null;
+        }
         render();
       }
 
@@ -1129,7 +1134,12 @@
         if (source !== 'light') document.getElementById('lightSlider').value = variantHsl.l;
         if (source !== 'picker') document.getElementById('colorPicker').value = hex;
         if (source !== 'hex') document.getElementById('hexInput').value = hex;
-        previewTintColor = hex;
+        // Only the Variants tab should ever apply a preview tint. On the
+        // Base tab we keep previewTintColor null so generated entries
+        // render with their persistent entry.tint (or untinted for bases).
+        if (activeTab === 'variants') {
+          previewTintColor = hex;
+        }
         // Auto-fill the variant name placeholder (don't stomp on user edits)
         const nameInput = document.getElementById('variantName');
         if (nameInput && !nameInput.dataset.userEdited) {

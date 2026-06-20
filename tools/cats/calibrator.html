@@ -571,7 +571,13 @@
         });
         document.getElementById('basePane').classList.toggle('hidden', tab !== 'base');
         document.getElementById('variantsPane').classList.toggle('hidden', tab !== 'variants');
-        if (tab !== 'variants') previewTintColor = null;
+        // Apply the current picker color when entering the variants tab,
+        // clear it when leaving.
+        if (tab === 'variants') {
+          previewTintColor = hslToHex(variantHsl.h, variantHsl.s, variantHsl.l);
+        } else {
+          previewTintColor = null;
+        }
       }
 
       function loadCurrent() {
@@ -624,7 +630,12 @@
         if (source !== 'light') document.getElementById('lightSlider').value = variantHsl.l;
         if (source !== 'picker') document.getElementById('colorPicker').value = hex;
         if (source !== 'hex') document.getElementById('hexInput').value = hex;
-        previewTintColor = hex;
+        // Only the Variants tab applies a preview tint. Base shows the
+        // entry as it would render in-game (with its persistent entry.tint
+        // for generated cats, or untinted for bases).
+        if (activeTab === 'variants') {
+          previewTintColor = hex;
+        }
       }
 
       function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
