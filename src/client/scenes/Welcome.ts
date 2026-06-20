@@ -239,16 +239,17 @@ export class Welcome extends Scene {
         : COSMETIC_CATALOG.find((c) => c.id === (pull.itemId as CosmeticId));
       const itemName = entry?.name ?? pull.itemId;
 
-      const { frame, rainbow } = resolveFrame(pull.itemId, isCat);
+      const { frame, rainbow, tint } = resolveFrame(pull.itemId, isCat);
 
       playBoxOpenAnimation(
         this,
         {
-          textureKey: AssetKeys.Atlas.Cats,
+          textureKey: isCat ? AssetKeys.Atlas.Cats : AssetKeys.Atlas.Cosmetics,
           frame,
           itemName,
           rarity: pull.rarity,
           ...(rainbow ? { rainbow: true } : {}),
+          ...(tint ? { tint: parseInt(tint.replace('#', ''), 16) } : {}),
           duplicate: pull.duplicate,
           refundCoins: pull.refundCoins,
         },
@@ -280,8 +281,18 @@ export class Welcome extends Scene {
 function resolveFrame(
   itemId: CatBreed | CosmeticId,
   isCat: boolean,
-): { frame: string; rainbow?: boolean } {
-  if (!isCat) return { frame: `cosmetic_${itemId}_idle_00` };
+): { frame: string; rainbow?: boolean; tint?: string } {
+  if (!isCat) {
+    // Generated tint variants render the parent's atlas frame with the
+    // tint applied at draw time.
+    const entry = COSMETIC_CATALOG.find((c) => c.id === itemId);
+    const renderId =
+      entry?.sourceFrame?.match(/^cosmetic_(c\d+)_/)?.[1] ?? itemId;
+    return {
+      frame: `cosmetic_${renderId}_idle_00`,
+      ...(entry?.tint ? { tint: entry.tint } : {}),
+    };
+  }
   if (itemId === 'rainbow') return { frame: 'cat6_idle_00', rainbow: true };
   return { frame: `${itemId}_idle_00` };
 }

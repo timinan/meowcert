@@ -387,7 +387,7 @@ export class Collection extends Scene {
     border.setInteractive({ useHandCursor: true });
 
     const sprite = this.add
-      .image(0, -10, AssetKeys.Atlas.Cats, `cosmetic_${id}_idle_00`)
+      .image(0, -10, AssetKeys.Atlas.Cosmetics, `cosmetic_${id}_idle_00`)
       .setOrigin(0.5);
     fitSpriteIntoTile(sprite, tileW - 16, COSMETIC_TILE_H - 32);
 
@@ -468,9 +468,17 @@ export class Collection extends Scene {
 
     const equippedId = this.playerState?.equippedCosmetics[breed] ?? null;
     if (equippedId) {
+      // Generated variants share a parent's atlas frame; resolve via the
+      // catalog so tinted cosmetics render correctly here too.
+      const entry = COSMETIC_CATALOG.find((c) => c.id === equippedId);
+      const renderId =
+        entry?.sourceFrame?.match(/^cosmetic_(c\d+)_/)?.[1] ?? equippedId;
       const cos = this.add
-        .image(0, -40, AssetKeys.Atlas.Cats, `cosmetic_${equippedId}_idle_00`)
+        .image(0, -40, AssetKeys.Atlas.Cosmetics, `cosmetic_${renderId}_idle_00`)
         .setOrigin(0.5);
+      if (entry?.tint) {
+        cos.setTint(parseInt(entry.tint.replace('#', ''), 16));
+      }
       const cosScale = Math.min(120 / Math.max(cos.width || 32, cos.height || 32), 4);
       cos.setScale(cosScale);
       this.previewLayer.add(cos);
