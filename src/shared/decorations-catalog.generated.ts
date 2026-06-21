@@ -1,0 +1,14 @@
+// AUTO-GENERATED — do not edit by hand.
+// Source: tools/decorations/decorations.json
+// Regenerate: npm run sync:catalog
+
+import type { DecorationEntry } from './state';
+
+export const GENERATED_DECORATION_CATALOG: readonly DecorationEntry[] = [
+  { id: 'd1', displayName: 'Cozy Lamp',    frame: 'd1', rarity: 'common' },
+  { id: 'd2', displayName: 'House Plant',  frame: 'd2', rarity: 'common' },
+  { id: 'd3', displayName: 'Food Bowl',    frame: 'd3', rarity: 'common' },
+  { id: 'd4', displayName: 'Photo Frame',  frame: 'd4', rarity: 'uncommon' },
+  { id: 'd5', displayName: 'Scratch Post', frame: 'd5', rarity: 'uncommon' },
+  { id: 'd6', displayName: 'Yarn Ball',    frame: 'd6', rarity: 'rare' },
+] as const;

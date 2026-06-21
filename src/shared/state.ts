@@ -96,6 +96,8 @@ export interface BoxConfig {
 
 export { GENERATED_CAT_CATALOG as CAT_CATALOG } from './cats-catalog.generated';
 export { GENERATED_COSMETIC_CATALOG as COSMETIC_CATALOG } from './cosmetics-catalog.generated';
+export { GENERATED_DECORATION_CATALOG as DECORATION_CATALOG } from './decorations-catalog.generated';
+export { GENERATED_THEME_CATALOG as THEME_CATALOG } from './themes-catalog.generated';
 
 // -- Box catalog --------------------------------------------------------
 
