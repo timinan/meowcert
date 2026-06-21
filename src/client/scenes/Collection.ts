@@ -2,20 +2,22 @@ import * as Phaser from 'phaser';
 import { Scene, GameObjects } from 'phaser';
 import { SceneKeys } from '@/constants/scenes';
 import { AssetKeys } from '@/constants/assets';
-import { equipCosmetic, fetchState, setDecorationInSlot } from '@/services/state-client';
+import { equipCosmetic, fetchState, setDecorationInSlot, setTheme } from '@/services/state-client';
 import { hslToInt } from '@/util/color';
 import { TopHud } from '@/ui/top-hud';
 import {
   CAT_CATALOG,
   COSMETIC_CATALOG,
   DECORATION_CATALOG,
+  THEME_CATALOG,
   type CatBreed,
   type CosmeticId,
   type DecorationId,
   type PlayerState,
+  type SlotId,
+  type ThemeId,
 } from '@/../shared/state';
 import { SCENE_SLOTS } from '@/constants/scene-slots';
-import type { SlotId } from '@/../shared/state';
 
 const RARITY_HEX: Record<string, number> = {
   common: 0xffffff,
@@ -63,11 +65,12 @@ export class Collection extends Scene {
   private selectedCat: CatBreed | null = null;
   private cosmeticPage = 0;
 
-  private activeTab: 'cosmetics' | 'decor' = 'cosmetics';
+  private activeTab: 'cosmetics' | 'decor' | 'theme' = 'cosmetics';
   private selectedDecorationId: DecorationId | null = null;
   private tabBarContainer: GameObjects.Container | null = null;
   private cosmeticStripGroup: GameObjects.GameObject[] = [];
   private decorTabContainer: GameObjects.Container | null = null;
+  private themeTabContainer: GameObjects.Container | null = null;
 
   private topHud!: TopHud;
   private previewLayer!: GameObjects.Container;
@@ -93,6 +96,7 @@ export class Collection extends Scene {
     this.tabBarContainer = null;
     this.cosmeticStripGroup = [];
     this.decorTabContainer = null;
+    this.themeTabContainer = null;
   }
 
   async create(): Promise<void> {
@@ -166,8 +170,10 @@ export class Collection extends Scene {
     this.rebuildCatStrip();
     if (this.activeTab === 'cosmetics') {
       this.rebuildCosmeticStrip();
-    } else {
+    } else if (this.activeTab === 'decor') {
       this.renderDecorTab();
+    } else {
+      this.renderThemeTab();
     }
     if (!this.selectedCat && this.playerState?.ownedCats.length) {
       this.selectedCat = this.playerState.ownedCats[0] ?? null;
@@ -610,77 +616,120 @@ export class Collection extends Scene {
     // Tab bar sits just above the bottom content area (cosmetic strip header
     // is at height-220; put the bar at height-248 to clear it).
     const barY = height - 248;
-    const tabW = width / 2 - 4;
+    const gap = 4;
+    const tabW = Math.floor((width - gap * 4) / 3);
 
     const container = this.add.container(0, barY);
 
-    const cosTab = this.add.rectangle(tabW / 2 + 2, 0, tabW, 28, 0x3a2060, 1);
+    const cosX = gap + tabW / 2;
+    const cosTab = this.add.rectangle(cosX, 0, tabW, 28, 0x3a2060, 1);
     cosTab.setStrokeStyle(2, 0xc0a0e6);
     cosTab.setInteractive({ useHandCursor: true });
     const cosLabel = this.add
-      .text(tabW / 2 + 2, 0, 'Cosmetics', {
+      .text(cosX, 0, 'Cosmetics', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontSize: '13px',
         color: '#ffffff',
       })
       .setOrigin(0.5);
 
-    const decTab = this.add.rectangle(width / 2 + tabW / 2 + 2, 0, tabW, 28, 0x3a2060, 1);
+    const decX = gap * 2 + tabW + tabW / 2;
+    const decTab = this.add.rectangle(decX, 0, tabW, 28, 0x3a2060, 1);
     decTab.setStrokeStyle(2, 0xc0a0e6);
     decTab.setInteractive({ useHandCursor: true });
     const decLabel = this.add
-      .text(width / 2 + tabW / 2 + 2, 0, 'Decor', {
+      .text(decX, 0, 'Decor', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontSize: '13px',
         color: '#ffffff',
       })
       .setOrigin(0.5);
 
-    container.add([cosTab, cosLabel, decTab, decLabel]);
+    const themeX = gap * 3 + tabW * 2 + tabW / 2;
+    const themeTab = this.add.rectangle(themeX, 0, tabW, 28, 0x3a2060, 1);
+    themeTab.setStrokeStyle(2, 0xc0a0e6);
+    themeTab.setInteractive({ useHandCursor: true });
+    const themeLabel = this.add
+      .text(themeX, 0, 'Theme', {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontSize: '13px',
+        color: '#ffffff',
+      })
+      .setOrigin(0.5);
+
+    container.add([cosTab, cosLabel, decTab, decLabel, themeTab, themeLabel]);
     this.tabBarContainer = container;
 
     cosTab.on('pointerdown', () => this.switchTab('cosmetics'));
     decTab.on('pointerdown', () => this.switchTab('decor'));
+    themeTab.on('pointerdown', () => this.switchTab('theme'));
 
     this.refreshTabBar();
   }
 
   private refreshTabBar(): void {
     // Re-read the tab bar children to update highlight.
-    // The container has [cosTab rect, cosLabel, decTab rect, decLabel].
+    // The container has [cosTab(0), cosLabel(1), decTab(2), decLabel(3), themeTab(4), themeLabel(5)].
     if (!this.tabBarContainer) return;
     const children = this.tabBarContainer.list;
     const cosRect = children[0] as GameObjects.Rectangle;
     const decRect = children[2] as GameObjects.Rectangle;
-    if (this.activeTab === 'cosmetics') {
-      cosRect.setFillStyle(0x6030b0, 1);
-      decRect.setFillStyle(0x3a2060, 1);
-    } else {
-      cosRect.setFillStyle(0x3a2060, 1);
-      decRect.setFillStyle(0x6030b0, 1);
+    const themeRect = children[4] as GameObjects.Rectangle;
+    cosRect.setFillStyle(this.activeTab === 'cosmetics' ? 0x6030b0 : 0x3a2060, 1);
+    decRect.setFillStyle(this.activeTab === 'decor' ? 0x6030b0 : 0x3a2060, 1);
+    themeRect.setFillStyle(this.activeTab === 'theme' ? 0x6030b0 : 0x3a2060, 1);
+  }
+
+  private setStripInteractive(enabled: boolean): void {
+    for (const obj of this.cosmeticStripGroup) {
+      // Only toggle objects that actually have an active input handler
+      // (the arrow rectangles leftBg/rightBg). Text and non-interactive
+      // elements are skipped — they have no `input` property set.
+      const go = obj as GameObjects.GameObject & {
+        input?: Phaser.Types.Input.InteractiveObject | null;
+        setInteractive: (config?: object) => void;
+        disableInteractive: () => void;
+      };
+      if ('setInteractive' in go && 'disableInteractive' in go) {
+        if (go.input !== undefined && go.input !== null) {
+          if (enabled) go.setInteractive({ useHandCursor: true });
+          else go.disableInteractive();
+        }
+      }
     }
   }
 
-  private switchTab(tab: 'cosmetics' | 'decor'): void {
+  private switchTab(tab: 'cosmetics' | 'decor' | 'theme'): void {
     if (this.activeTab === tab) return;
     this.activeTab = tab;
     this.refreshTabBar();
 
     if (tab === 'cosmetics') {
-      // Show cosmetic strip elements, hide decor container.
+      // Show cosmetic strip elements and re-enable their pointer events.
       for (const obj of this.cosmeticStripGroup) {
         (obj as GameObjects.GameObject & { setVisible: (v: boolean) => void }).setVisible(true);
       }
+      this.setStripInteractive(true);
       this.decorTabContainer?.setVisible(false);
+      this.themeTabContainer?.setVisible(false);
       this.rebuildCosmeticStrip();
     } else {
-      // Hide cosmetic strip elements, show decor.
+      // Hide cosmetic strip elements and disable their pointer events so
+      // invisible arrows don't bleed through to the tab content below.
       for (const obj of this.cosmeticStripGroup) {
         (obj as GameObjects.GameObject & { setVisible: (v: boolean) => void }).setVisible(false);
       }
+      this.setStripInteractive(false);
       // Also hide individual cosmetic tiles which are rebuilt each time.
       for (const tile of this.cosmeticTiles) tile.container.setVisible(false);
-      this.renderDecorTab();
+
+      if (tab === 'decor') {
+        this.themeTabContainer?.setVisible(false);
+        this.renderDecorTab();
+      } else {
+        this.decorTabContainer?.setVisible(false);
+        this.renderThemeTab();
+      }
     }
   }
 
@@ -799,6 +848,76 @@ export class Collection extends Scene {
   private selectDecoration(id: DecorationId): void {
     this.selectedDecorationId = this.selectedDecorationId === id ? null : id;
     this.renderDecorTab();
+  }
+
+  // -- Theme tab -------------------------------------------------------
+
+  private renderThemeTab(): void {
+    // Destroy previous container to avoid stacking live instances.
+    this.themeTabContainer?.destroy(true);
+
+    const { width, height } = this.scale;
+    // Mirror the decor tab: content area starts at height-240, matching topY.
+    const topY = height - 240;
+
+    const container = this.add.container(0, topY);
+    this.themeTabContainer = container;
+
+    const ownedThemes = this.playerState?.house.ownedThemes ?? [];
+    let y = 0;
+
+    for (const themeId of ownedThemes) {
+      const entry = THEME_CATALOG.find((t) => t.id === themeId);
+      if (!entry) continue;
+      const isActive = themeId === this.playerState?.house.themeId;
+      const row = this.add.container(20, y);
+      const rowW = width - 40;
+      const bg = this.add
+        .rectangle(0, 0, rowW, 64, isActive ? 0xffd34d : 0x2c1856, isActive ? 0.4 : 0.6)
+        .setOrigin(0, 0);
+      bg.setStrokeStyle(1, isActive ? 0xffd34d : 0x5040a0);
+      const preview = this.add
+        .image(8, 32, entry.backdropKey)
+        .setOrigin(0, 0.5)
+        .setDisplaySize(80, 56);
+      const label = this.add
+        .text(96, 16, entry.displayName, {
+          fontFamily: 'Pixeloid Sans, sans-serif',
+          fontSize: '14px',
+          color: '#ffffff',
+          fontStyle: 'bold',
+        })
+        .setOrigin(0, 0);
+      const status = this.add
+        .text(96, 36, isActive ? 'Active' : 'Tap to apply', {
+          fontFamily: 'Pixeloid Sans, sans-serif',
+          fontSize: '10px',
+          color: isActive ? '#ffd34d' : '#c0a0e6',
+        })
+        .setOrigin(0, 0);
+      row.add([bg, preview, label, status]);
+      bg.setInteractive({ useHandCursor: true });
+      bg.on('pointerdown', () => void this.applyTheme(themeId));
+      container.add(row);
+      y += 72;
+    }
+
+    if (ownedThemes.length === 0) {
+      container.add(
+        this.add.text(20, 8, '(no themes owned yet)', {
+          fontFamily: 'Pixeloid Sans, sans-serif',
+          fontSize: '11px',
+          color: '#888888',
+        }),
+      );
+    }
+  }
+
+  private async applyTheme(themeId: ThemeId): Promise<void> {
+    if (!this.playerState) return;
+    if (themeId === this.playerState.house.themeId) return;
+    this.playerState = await setTheme(themeId);
+    this.renderThemeTab();
   }
 
   private async placeSelectedInSlot(slotId: SlotId): Promise<void> {
