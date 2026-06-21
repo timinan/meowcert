@@ -132,8 +132,12 @@ export class DressingRoom extends Scene {
     if (!cosId) return;
     const cos = COSMETIC_CATALOG.find((c) => c.id === cosId);
     if (!cos || !cos.sourceFrame) return;
+    // Use frame height × scaleY so the offset is correct even before
+    // Phaser has computed displayHeight for the first time.
+    const baseFrameHeight = this.heroSprite.frame?.height ?? 52;
+    const yOffset = baseFrameHeight * this.heroSprite.scaleY * 0.5;
     this.heroCosmetic = this.add
-      .sprite(this.heroSprite.x, this.heroSprite.y - this.heroSprite.displayHeight * 0.25, AssetKeys.Atlas.Cosmetics, cos.sourceFrame)
+      .sprite(this.heroSprite.x, this.heroSprite.y - yOffset, AssetKeys.Atlas.Cosmetics, cos.sourceFrame)
       .setScale(this.heroSprite.scaleX);
   }
 
@@ -249,6 +253,9 @@ export class DressingRoom extends Scene {
   }
 
   private exit(): void {
+    // Resume HouseEditor first, then stop ourselves.
+    // (scene.stop alone doesn't auto-resume a paused parent scene.)
+    this.scene.resume(SceneKeys.HouseEditor);
     this.scene.stop();
   }
 

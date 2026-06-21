@@ -33,9 +33,9 @@ export interface SeatPosition {
 }
 
 export const SCENE_SEATS: readonly SeatPosition[] = [
-  { id: 'seat-left',   label: 'Left Seat',   x: 80,  y: 410, anchor: { x: 0.5, y: 1.0 } },
-  { id: 'seat-center', label: 'Center Seat', x: 160, y: 410, anchor: { x: 0.5, y: 1.0 } },
-  { id: 'seat-right',  label: 'Right Seat',  x: 240, y: 410, anchor: { x: 0.5, y: 1.0 } },
+  { id: 'seat-left',   label: 'Left Seat',   x: 80,  y: 370, anchor: { x: 0.5, y: 1.0 } },
+  { id: 'seat-center', label: 'Center Seat', x: 160, y: 370, anchor: { x: 0.5, y: 1.0 } },
+  { id: 'seat-right',  label: 'Right Seat',  x: 240, y: 370, anchor: { x: 0.5, y: 1.0 } },
 ] as const;
 
 export const SEAT_IDS: readonly SeatId[] = SCENE_SEATS.map((s) => s.id);
