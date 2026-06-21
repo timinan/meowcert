@@ -1,5 +1,6 @@
 import { GameObjects, Scene } from 'phaser';
 import type { SeatPosition } from '@/constants/scene-slots';
+import { designToCanvas } from '@/constants/scene-slots';
 
 /**
  * Dashed circle marker for cat seats. Same pattern as SlotGhost but a
@@ -16,8 +17,7 @@ export class SeatGhost extends GameObjects.Container {
   private radius = 24;
 
   constructor(scene: Scene, seat: SeatPosition) {
-    const renderX = (seat.x / 320) * scene.scale.width;
-    const renderY = (seat.y / 480) * scene.scale.height;
+    const { x: renderX, y: renderY } = designToCanvas(scene, seat.x, seat.y);
     super(scene, renderX, renderY);
     this.seatId = seat.id;
 

@@ -1,5 +1,6 @@
 import { GameObjects, Scene } from 'phaser';
 import type { SceneSlot } from '@/constants/scene-slots';
+import { designToCanvas } from '@/constants/scene-slots';
 
 /**
  * Visible-during-edit-mode dashed rectangle that marks where a decoration
@@ -19,8 +20,7 @@ export class SlotGhost extends GameObjects.Container {
   private readonly _height: number;
 
   constructor(scene: Scene, slot: SceneSlot, width = 50, height = 50) {
-    const renderX = (slot.x / 320) * scene.scale.width;
-    const renderY = (slot.y / 480) * scene.scale.height;
+    const { x: renderX, y: renderY } = designToCanvas(scene, slot.x, slot.y);
     super(scene, renderX, renderY);
     this.slotId = slot.id;
     this._width = width;

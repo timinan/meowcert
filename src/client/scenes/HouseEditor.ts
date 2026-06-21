@@ -2,7 +2,7 @@ import { GameObjects, Scene, Scenes } from 'phaser';
 import { SceneKeys } from '@/constants/scenes';
 import { TopHud } from '@/ui/top-hud';
 import { RoomRenderer } from '@/entities/room-renderer';
-import { SCENE_SLOTS, SCENE_SEATS } from '@/constants/scene-slots';
+import { SCENE_SLOTS, SCENE_SEATS, designToCanvas } from '@/constants/scene-slots';
 import { SlotGhost } from '@/entities/slot-ghost';
 import { SeatGhost } from '@/entities/seat-ghost';
 import { fetchState, setDecorationInSlot, setSeat, sellItem, rehomeCat, setTheme } from '@/services/state-client';
@@ -82,7 +82,7 @@ export class HouseEditor extends Scene {
     this.roomRenderer.renderFrom(this.playerState);
 
     // TEMP-DEMO: visualize floor line where seats anchor
-    const floorY = (370 / 480) * this.scale.height;
+    const { y: floorY } = designToCanvas(this, 0, 370);
     this.add.line(0, 0, 0, floorY, this.scale.width, floorY, 0xff5050, 0.5).setOrigin(0, 0);
     this.add.text(this.scale.width - 8, floorY - 12, 'floor (design y=370)', {
       fontFamily: 'Pixeloid Sans, sans-serif',
@@ -107,16 +107,16 @@ export class HouseEditor extends Scene {
     }
 
     // Tray placeholder — filled in by tabs below
-    this.trayContainer = this.add.container(0, this.scale.height - 180).setDepth(80);
+    this.trayContainer = this.add.container(0, this.scale.height - 140).setDepth(80);
     const trayBg = this.add
-      .rectangle(0, 0, this.scale.width, 180, 0x2c1856, 0.95)
+      .rectangle(0, 0, this.scale.width, 140, 0x2c1856, 0.95)
       .setOrigin(0, 0);
     trayBg.setStrokeStyle(2, 0xc0a0e6, 0.4);
     this.trayContainer.add(trayBg);
 
     this.contextMenu = new ContextMenu(this);
     this.confirmModal = new ConfirmModal(this);
-    this.tabContent = this.add.container(0, this.scale.height - 130).setDepth(82);
+    this.tabContent = this.add.container(0, this.scale.height - 90).setDepth(82);
     this.drawTabBar();
     this.renderActiveTab();
 
@@ -135,7 +135,7 @@ export class HouseEditor extends Scene {
 
   private drawTabBar(): void {
     this.tabsBar?.destroy(true);
-    const trayY = this.scale.height - 180;
+    const trayY = this.scale.height - 140;
     this.tabsBar = this.add.container(0, trayY + 4).setDepth(82);
     const tabs: { key: 'decor' | 'cats' | 'themes'; label: string }[] = [
       { key: 'decor',  label: 'DECOR' },
@@ -209,7 +209,7 @@ export class HouseEditor extends Scene {
       // TEMP-DEMO: use Cosmetics atlas instead of Decorations atlas
       const sprite = this.add
         .sprite(x, y, AssetKeys.Atlas.Cosmetics, frame)
-        .setScale(0.5);
+        .setScale(0.9);
       if (entry.tint) {
         const colorInt = parseInt(entry.tint.replace('#', ''), 16);
         sprite.setTint(colorInt);

@@ -2,7 +2,7 @@ import { GameObjects, Scene, Scenes } from 'phaser';
 import { ThemeManager } from '@/entities/theme-manager';
 import { Decoration } from '@/entities/decoration';
 import { Cat, parentIdFor } from '@/entities/cat'; // TEMP-DEMO: parentIdFor for cosmetic frame derivation
-import { SCENE_SLOTS, SCENE_SEATS } from '@/constants/scene-slots';
+import { SCENE_SLOTS, SCENE_SEATS, designToCanvas } from '@/constants/scene-slots';
 import { AssetKeys } from '@/constants/assets'; // TEMP-DEMO: for cosmetics atlas in cosmetics-as-decor fallback
 import { DECORATION_CATALOG, CAT_CATALOG, COSMETIC_CATALOG } from '@/../shared/state'; // TEMP-DEMO: COSMETIC_CATALOG for cosmetics-as-decor fallback
 import type { PlayerState } from '@/../shared/state';
@@ -43,8 +43,7 @@ export class RoomRenderer {
         // TEMP-DEMO: derive frame from parentIdFor (handles both base and tint-variant cosmetics)
         const renderId = parentIdFor(cosEntry) ?? cosEntry.id;
         const frame = `cosmetic_${renderId}_idle_00`;
-        const renderX = (slot.x / 320) * this.scene.scale.width;
-        const renderY = (slot.y / 480) * this.scene.scale.height;
+        const { x: renderX, y: renderY } = designToCanvas(this.scene, slot.x, slot.y);
         const cosmeticSprite = this.scene.add
           .sprite(renderX, renderY, AssetKeys.Atlas.Cosmetics, frame)
           .setOrigin(slot.anchor.x, slot.anchor.y)
@@ -53,6 +52,8 @@ export class RoomRenderer {
           const colorInt = parseInt(cosEntry.tint.replace('#', ''), 16);
           cosmeticSprite.setTint(colorInt);
         }
+        // TEMP-DEMO: tag with slotId so getDecorationSprites returns the right key
+        (cosmeticSprite as unknown as { slotId: string }).slotId = slot.id;
         // Track as a Decoration-like object — but cast to any since types differ
         // TEMP-DEMO: revert to proper decoration rendering when scenario testing done
         this.decorations.push(cosmeticSprite as unknown as Decoration);
@@ -72,11 +73,8 @@ export class RoomRenderer {
       const catEntry = CAT_CATALOG.find((c) => c.id === catId);
       if (!catEntry) continue;
 
-      const w = this.scene.scale.width;
-      const h = this.scene.scale.height;
-      // SCENE_SEATS coords are in 320×480 design space; scale to canvas size.
-      const x = (seat.x / 320) * w;
-      const y = (seat.y / 480) * h;
+      // SCENE_SEATS coords are in 320×480 design space; map to playable area.
+      const { x, y } = designToCanvas(this.scene, seat.x, seat.y);
 
       const model = {
         id: `seat-${seat.id}`,

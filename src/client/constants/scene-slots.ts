@@ -1,3 +1,4 @@
+import type { Scene } from 'phaser';
 import type { SlotId, SeatId } from '@/../shared/state';
 
 export interface SceneSlot {
@@ -54,3 +55,20 @@ export const SCENE_SEATS: readonly SeatPosition[] = [
 ] as const;
 
 export const SEAT_IDS: readonly SeatId[] = SCENE_SEATS.map((s) => s.id);
+
+const DESIGN_W = 320;
+const DESIGN_H = 480;
+const TOP_BAR = 44;
+export const TRAY_HEIGHT = 140;
+
+/**
+ * Convert design-space coords (320×480) to canvas-space coords mapped onto
+ * the playable area between TopHud and the bottom tray.
+ */
+export function designToCanvas(scene: Scene, designX: number, designY: number): { x: number; y: number } {
+  const playableHeight = scene.scale.height - TOP_BAR - TRAY_HEIGHT;
+  return {
+    x: (designX / DESIGN_W) * scene.scale.width,
+    y: TOP_BAR + (designY / DESIGN_H) * playableHeight,
+  };
+}
