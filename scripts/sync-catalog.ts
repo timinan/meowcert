@@ -5,6 +5,7 @@
  *   tools/cosmetics/cosmetics.json      →  src/shared/cosmetics-catalog.generated.ts
  *   tools/cats/cats.json                →  src/shared/cats-catalog.generated.ts
  *   tools/decorations/decorations.json  →  src/shared/decorations-catalog.generated.ts
+ *   tools/themes/themes.json            →  src/shared/themes-catalog.generated.ts
  *
  * The tools server runs this after every successful POST /save so the
  * game's catalog stays in lock-step with the calibrators without any
@@ -17,6 +18,7 @@ const PROJECT_ROOT = path.resolve(import.meta.dirname, '..');
 const COSMETICS_JSON = path.join(PROJECT_ROOT, 'tools', 'cosmetics', 'cosmetics.json');
 const CATS_JSON = path.join(PROJECT_ROOT, 'tools', 'cats', 'cats.json');
 const DECORATIONS_JSON = path.join(PROJECT_ROOT, 'tools', 'decorations', 'decorations.json');
+const THEMES_JSON = path.join(PROJECT_ROOT, 'tools', 'themes', 'themes.json');
 const OUT_DIR = path.join(PROJECT_ROOT, 'src', 'shared');
 
 interface CosmeticJsonEntry {
@@ -45,6 +47,13 @@ interface CatJsonEntry {
 interface DecorationJsonEntry {
   displayName: string;
   frame: string;
+  rarity: string;
+}
+
+interface ThemeJsonEntry {
+  displayName: string;
+  backdropKey: string;
+  musicKey: string;
   rarity: string;
 }
 
@@ -182,10 +191,46 @@ async function genDecorations(): Promise<number> {
   return Object.keys(raw).length;
 }
 
+async function genThemes(): Promise<number> {
+  let raw: Record<string, ThemeJsonEntry> = {};
+  try {
+    const text = await fs.readFile(THEMES_JSON, 'utf8');
+    raw = JSON.parse(text) as Record<string, ThemeJsonEntry>;
+  } catch {
+    // file not found — write an empty catalog
+  }
+  const lines: string[] = [
+    BANNER,
+    `import type { ThemeEntry } from './state';`,
+    '',
+    `export const GENERATED_THEME_CATALOG: readonly ThemeEntry[] = [`,
+  ];
+  for (const [id, v] of Object.entries(raw)) {
+    lines.push('  {');
+    lines.push(
+      ...fieldLines({
+        id,
+        displayName: v.displayName,
+        backdropKey: v.backdropKey,
+        musicKey: v.musicKey,
+        rarity: v.rarity,
+      }),
+    );
+    lines.push('  },');
+  }
+  lines.push('];');
+  lines.push('');
+  await fs.writeFile(
+    path.join(OUT_DIR, 'themes-catalog.generated.ts'),
+    lines.join('\n'),
+  );
+  return Object.keys(raw).length;
+}
+
 async function main(): Promise<void> {
   await fs.mkdir(OUT_DIR, { recursive: true });
-  const [cosCount, catCount, decCount] = await Promise.all([genCosmetics(), genCats(), genDecorations()]);
-  console.log(`[sync] cosmetics=${cosCount} cats=${catCount} decorations=${decCount}`);
+  const [cosCount, catCount, decCount, themCount] = await Promise.all([genCosmetics(), genCats(), genDecorations(), genThemes()]);
+  console.log(`[sync] cosmetics=${cosCount} cats=${catCount} decorations=${decCount} themes=${themCount}`);
 }
 
 main().catch((err) => {
