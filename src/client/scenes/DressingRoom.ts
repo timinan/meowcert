@@ -275,6 +275,11 @@ export class DressingRoom extends Scene {
   }
 
   private cleanup(): void {
+    this.tweens.killAll();
+    this.time.removeAllEvents();
+    this.input.removeAllListeners();
+    this.input.keyboard?.removeAllListeners();
+    this.scale.off('resize');
     this.heroCosmetic?.destroy();
     this.gridContainer?.destroy(true);
   }
