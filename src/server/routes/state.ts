@@ -156,3 +156,38 @@ state.post('/house/seat', async (c) => {
   await save(redis, player);
   return c.json({ ok: true, state: player });
 });
+
+// POST /inventory/sell — { kind, id }
+state.post('/inventory/sell', async (c) => {
+  const { kind, id } = await c.req.json() as {
+    kind: 'decoration' | 'cosmetic';
+    id: DecorationId | CosmeticId;
+  };
+  const player = await loadOrInit(redis, await currentUsername());
+
+  if (kind === 'decoration') {
+    if (!player.house.ownedDecorations.includes(id as DecorationId)) {
+      return c.json({ ok: false, reason: 'decoration_not_owned' }, 400);
+    }
+    // Unplace if currently placed
+    for (const [slotId, decoId] of Object.entries(player.house.decorations)) {
+      if (decoId === id) delete player.house.decorations[slotId];
+    }
+    player.house.ownedDecorations = player.house.ownedDecorations.filter((d) => d !== id);
+  } else {
+    if (!player.ownedCosmetics.includes(id as CosmeticId)) {
+      return c.json({ ok: false, reason: 'cosmetic_not_owned' }, 400);
+    }
+    // Unequip from any cat
+    for (const [catId, cosId] of Object.entries(player.equippedCosmetics)) {
+      if (cosId === id) delete player.equippedCosmetics[catId];
+    }
+    player.ownedCosmetics = player.ownedCosmetics.filter((c2) => c2 !== id);
+  }
+
+  const SELL_PRICE = 25;
+  player.coins += SELL_PRICE;
+
+  await save(redis, player);
+  return c.json({ ok: true, state: player });
+});
