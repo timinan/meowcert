@@ -145,7 +145,9 @@ export const BOX_CATALOG: Record<BoxId, BoxConfig> = {
 
 /** Fresh users get this many coins on first state load. Enough for one
  * Cat Crate (200) + one Style Pack (50), with 50 left over. */
-export const STARTER_COINS = 300;
+// TEMP-DEMO: bumped from 300 to give 5 cosmetic boxes for testing
+// breakdown: 1 cat crate (200) + 5 style packs (250) + 1 decor crate (50) + 100 buffer = 600
+export const STARTER_COINS = 600;
 
 /** Duplicate pulls return this many coins as a soft refund. */
 export const DUPLICATE_REFUND = 50;

@@ -10,6 +10,7 @@ import { ContextMenu, buildDecorMenu, buildCatMenu } from '@/ui/context-menu';
 import { ConfirmModal } from '@/ui/confirm-modal';
 import { DECORATION_CATALOG, CAT_CATALOG, THEME_CATALOG } from '@/../shared/state';
 import { COSMETIC_CATALOG } from '@/../shared/state'; // TEMP-DEMO: for cosmetics-as-decor test
+import { parentIdFor } from '@/entities/cat'; // TEMP-DEMO: for cosmetic frame derivation
 import { AssetKeys } from '@/constants/assets';
 import type { PlayerState } from '@/../shared/state';
 import { RemoveBadge } from '@/entities/remove-badge';
@@ -176,7 +177,10 @@ export class HouseEditor extends Scene {
     owned.forEach((cosId, i) => {
       // TEMP-DEMO: look up in COSMETIC_CATALOG instead of DECORATION_CATALOG
       const entry = COSMETIC_CATALOG.find((c) => c.id === cosId);
-      if (!entry || !entry.sourceFrame) return;
+      if (!entry) return; // TEMP-DEMO: frame is always derivable from id, no sourceFrame guard
+      // TEMP-DEMO: derive frame from parentIdFor (handles both base and tint-variant cosmetics)
+      const renderId = parentIdFor(entry) ?? entry.id;
+      const frame = `cosmetic_${renderId}_idle_00`;
       const col = i % 5;
       const row = Math.floor(i / 5);
       const x = startX + col * (cellW + gap) + cellW / 2;
@@ -188,8 +192,12 @@ export class HouseEditor extends Scene {
         .setInteractive({ useHandCursor: true });
       // TEMP-DEMO: use Cosmetics atlas instead of Decorations atlas
       const sprite = this.add
-        .sprite(x, y, AssetKeys.Atlas.Cosmetics, entry.sourceFrame)
+        .sprite(x, y, AssetKeys.Atlas.Cosmetics, frame)
         .setScale(0.5);
+      if (entry.tint) {
+        const colorInt = parseInt(entry.tint.replace('#', ''), 16);
+        sprite.setTint(colorInt);
+      }
       this.tabContent.add([bg, sprite]);
       if (isPlaced) {
         const tick = this.add.circle(x + cellW / 2 - 4, y - cellW / 2 + 4, 7, 0xffd34d, 1);

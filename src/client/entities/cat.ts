@@ -23,7 +23,7 @@ const RAINBOW_CYCLE_MS = 3000;
  * (`cosmetic_<parent>_idle_00`). Returns null for base cosmetics — they
  * render from their own atlas frames.
  */
-function parentIdFor(entry: { sourceFrame?: string } | undefined): string | null {
+export function parentIdFor(entry: { sourceFrame?: string } | undefined): string | null {
   const sf = entry?.sourceFrame;
   if (!sf) return null;
   const match = sf.match(/^cosmetic_(c\d+)_/);

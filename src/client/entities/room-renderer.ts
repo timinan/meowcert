@@ -1,7 +1,7 @@
 import { GameObjects, Scene, Scenes } from 'phaser';
 import { ThemeManager } from '@/entities/theme-manager';
 import { Decoration } from '@/entities/decoration';
-import { Cat } from '@/entities/cat';
+import { Cat, parentIdFor } from '@/entities/cat'; // TEMP-DEMO: parentIdFor for cosmetic frame derivation
 import { SCENE_SLOTS, SCENE_SEATS } from '@/constants/scene-slots';
 import { AssetKeys } from '@/constants/assets'; // TEMP-DEMO: for cosmetics atlas in cosmetics-as-decor fallback
 import { DECORATION_CATALOG, CAT_CATALOG, COSMETIC_CATALOG } from '@/../shared/state'; // TEMP-DEMO: COSMETIC_CATALOG for cosmetics-as-decor fallback
@@ -39,11 +39,18 @@ export class RoomRenderer {
       if (!decorationId) continue;
       // TEMP-DEMO: try COSMETIC_CATALOG first; render directly as a sprite using cosmetics atlas
       const cosEntry = COSMETIC_CATALOG.find((c) => c.id === decorationId);
-      if (cosEntry && cosEntry.sourceFrame) {
+      if (cosEntry) {
+        // TEMP-DEMO: derive frame from parentIdFor (handles both base and tint-variant cosmetics)
+        const renderId = parentIdFor(cosEntry) ?? cosEntry.id;
+        const frame = `cosmetic_${renderId}_idle_00`;
         const cosmeticSprite = this.scene.add
-          .sprite(slot.x, slot.y, AssetKeys.Atlas.Cosmetics, cosEntry.sourceFrame)
+          .sprite(slot.x, slot.y, AssetKeys.Atlas.Cosmetics, frame)
           .setOrigin(slot.anchor.x, slot.anchor.y)
           .setDepth(slot.y);
+        if (cosEntry.tint) {
+          const colorInt = parseInt(cosEntry.tint.replace('#', ''), 16);
+          cosmeticSprite.setTint(colorInt);
+        }
         // Track as a Decoration-like object — but cast to any since types differ
         // TEMP-DEMO: revert to proper decoration rendering when scenario testing done
         this.decorations.push(cosmeticSprite as unknown as Decoration);

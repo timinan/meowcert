@@ -83,7 +83,7 @@ export class Welcome extends Scene {
       .text(
         width / 2,
         height * 0.32,
-        "Your cat house is ready. Here's 300 coins to get you started — let's open your first boxes!",
+        "Your cat house is ready. Here's 600 coins to get you started — let's open your first boxes!",
         {
           fontFamily: 'Pixeloid Sans, sans-serif',
           fontSize: `${subtitleFontSize}px`,
@@ -121,7 +121,7 @@ export class Welcome extends Scene {
 
     if (step === 'cat') {
       this.subtitle.setText(
-        "Your cat house is ready. Here's 300 coins to get you started — let's open your first boxes!",
+        "Your cat house is ready. Here's 600 coins to get you started — let's open your first boxes!",
       );
       const cost = BOX_CATALOG.catCrate.cost;
       this.actionButton = this.createButton(

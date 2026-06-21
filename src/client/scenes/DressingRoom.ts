@@ -3,6 +3,7 @@ import { SceneKeys } from '@/constants/scenes';
 import { CAT_CATALOG, COSMETIC_CATALOG } from '@/../shared/state';
 import { AssetKeys } from '@/constants/assets';
 import { equipCosmetic } from '@/services/state-client';
+import { parentIdFor } from '@/entities/cat';
 import type { PlayerState, CatBreed } from '@/../shared/state';
 
 const COSMETICS_PER_PAGE = 19;
@@ -131,14 +132,21 @@ export class DressingRoom extends Scene {
     const cosId = this.playerState.equippedCosmetics[this.catId];
     if (!cosId) return;
     const cos = COSMETIC_CATALOG.find((c) => c.id === cosId);
-    if (!cos || !cos.sourceFrame) return;
+    if (!cos) return; // TEMP-DEMO: frame is always derivable from id, no sourceFrame guard needed
+    // TEMP-DEMO: derive frame from parentIdFor (handles both base and tint-variant cosmetics)
+    const renderId = parentIdFor(cos) ?? cos.id;
+    const frame = `cosmetic_${renderId}_idle_00`;
     // Use frame height × scaleY so the offset is correct even before
     // Phaser has computed displayHeight for the first time.
     const baseFrameHeight = this.heroSprite.frame?.height ?? 52;
     const yOffset = baseFrameHeight * this.heroSprite.scaleY * 0.5;
     this.heroCosmetic = this.add
-      .sprite(this.heroSprite.x, this.heroSprite.y - yOffset, AssetKeys.Atlas.Cosmetics, cos.sourceFrame)
+      .sprite(this.heroSprite.x, this.heroSprite.y - yOffset, AssetKeys.Atlas.Cosmetics, frame)
       .setScale(this.heroSprite.scaleX);
+    if (cos.tint) {
+      const colorInt = parseInt(cos.tint.replace('#', ''), 16);
+      this.heroCosmetic.setTint(colorInt);
+    }
   }
 
   private updateWearingLabel(): void {
@@ -158,7 +166,10 @@ export class DressingRoom extends Scene {
     const gridStartX = (this.scale.width - (cellSize * cols + gap * (cols - 1))) / 2;
     slice.forEach((cosId, i) => {
       const cos = COSMETIC_CATALOG.find((c) => c.id === cosId);
-      if (!cos || !cos.sourceFrame) return;
+      if (!cos) return; // TEMP-DEMO: frame is always derivable from id, no sourceFrame guard needed
+      // TEMP-DEMO: derive frame from parentIdFor (handles both base and tint-variant cosmetics)
+      const renderId = parentIdFor(cos) ?? cos.id;
+      const frame = `cosmetic_${renderId}_idle_00`;
       const col = i % cols;
       const row = Math.floor(i / cols);
       const x = gridStartX + col * (cellSize + gap) + cellSize / 2;
@@ -169,8 +180,12 @@ export class DressingRoom extends Scene {
         .setStrokeStyle(2, isEquipped ? 0xffd34d : 0xc0a0e6, isEquipped ? 1 : 0.3)
         .setInteractive({ useHandCursor: true });
       const sprite = this.add
-        .sprite(x, y, AssetKeys.Atlas.Cosmetics, cos.sourceFrame)
+        .sprite(x, y, AssetKeys.Atlas.Cosmetics, frame)
         .setScale(0.7);
+      if (cos.tint) {
+        const colorInt = parseInt(cos.tint.replace('#', ''), 16);
+        sprite.setTint(colorInt);
+      }
       this.gridContainer.add([bg, sprite]);
       bg.on('pointerdown', () => this.equip(cosId));
     });
