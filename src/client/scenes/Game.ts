@@ -160,6 +160,13 @@ export class Game extends Scene {
   }
 
   create() {
+    // Gate: at least one cat must be seated or the game has nothing to play.
+    const hasSeatedCat = Object.values(this.playerState?.seatedCats ?? {}).some((c) => !!c);
+    if (!hasSeatedCat) {
+      this.scene.start(SceneKeys.HouseEditor, { playerState: this.playerState });
+      return;
+    }
+
     // Background fills the canvas
     const bg = this.add.image(0, 0, AssetKeys.Image.GameBackground).setOrigin(0, 0);
     bg.displayWidth = this.scale.width;

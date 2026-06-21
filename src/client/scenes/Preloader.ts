@@ -75,10 +75,15 @@ export class Preloader extends Scene {
     }
 
     const goToWelcome = playerState !== null && !playerState.onboardingDone;
-    this.scene.start(
-      goToWelcome ? SceneKeys.Welcome : SceneKeys.Game,
-      { playerState },
-    );
+    if (goToWelcome) {
+      this.scene.start(SceneKeys.Welcome, { playerState });
+    } else {
+      const hasSeatedCat = Object.values(playerState?.seatedCats ?? {}).some((c) => !!c);
+      this.scene.start(
+        hasSeatedCat ? SceneKeys.Game : SceneKeys.HouseEditor,
+        { playerState },
+      );
+    }
   }
 
   private async loadFontsOrTimeout(timeoutMs: number): Promise<void> {
