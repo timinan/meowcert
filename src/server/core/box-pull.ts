@@ -2,21 +2,19 @@ import {
   BOX_CATALOG,
   CAT_CATALOG,
   COSMETIC_CATALOG,
-  DECORATION_CATALOG,
   THEME_CATALOG,
   DUPLICATE_REFUND,
   type BoxId,
   type CatBreed,
   type CosmeticId,
-  type DecorationId,
   type ThemeId,
   type PlayerState,
   type Rarity,
 } from '../../shared/state';
 
 export interface PullResult {
-  kind: 'cat' | 'cosmetic' | 'decoration' | 'theme';
-  itemId: CatBreed | CosmeticId | DecorationId | ThemeId;
+  kind: 'cat' | 'cosmetic' | 'theme';
+  itemId: CatBreed | CosmeticId | ThemeId;
   rarity: Rarity;
   /** True if the player already owned this item — refundCoins will be > 0. */
   duplicate: boolean;
@@ -84,37 +82,6 @@ export function pullBox(
       refundCoins: duplicate ? DUPLICATE_REFUND : 0,
     };
   }
-  if (box.rewardKind === 'decoration') {
-    throw new Error('Phase 5 WIP: decoration boxes removed in cleanup, decorCrate should not be openable');
-    // TODO Phase 5 Task 2: delete entire decoration branch
-    // @ts-ignore -- unreachable dead code preserved for Task 2 deletion
-    const ownedDecorations = new Set(state.house.ownedDecorations);
-    let decorPool = DECORATION_CATALOG.filter(
-      (d) => d.rarity === rarity && !ownedDecorations.has(d.id),
-    );
-    if (decorPool.length === 0) {
-      decorPool = DECORATION_CATALOG.filter((d) => !ownedDecorations.has(d.id));
-    }
-    if (decorPool.length === 0) {
-      // Player owns the entire catalog — legitimate duplicate-refund.
-      const fallbackPick = DECORATION_CATALOG[Math.floor(rng() * DECORATION_CATALOG.length)]!;
-      return {
-        kind: 'decoration',
-        itemId: fallbackPick.id,
-        rarity: fallbackPick.rarity,
-        duplicate: true,
-        refundCoins: DUPLICATE_REFUND,
-      };
-    }
-    const decorPick = decorPool[Math.floor(rng() * decorPool.length)]!;
-    return {
-      kind: 'decoration',
-      itemId: decorPick.id,
-      rarity: decorPick.rarity,
-      duplicate: false,
-      refundCoins: 0,
-    };
-  }
   // theme
   const ownedThemes = new Set(state.house.ownedThemes);
   let themePool = THEME_CATALOG.filter(
@@ -157,8 +124,6 @@ export function applyPullToState(state: PlayerState, pull: PullResult): void {
     state.ownedCats.push(pull.itemId as CatBreed);
   } else if (pull.kind === 'cosmetic') {
     state.ownedCosmetics.push(pull.itemId as CosmeticId);
-  } else if (pull.kind === 'decoration') {
-    state.house.ownedDecorations.push(pull.itemId as DecorationId);
   } else {
     state.house.ownedThemes.push(pull.itemId as ThemeId);
   }

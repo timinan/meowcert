@@ -1,40 +1,40 @@
 import { describe, it, expect } from 'vitest';
-import type { DecorationId, ThemeId, SlotId, DecorationEntry, ThemeEntry } from '@/../shared/state';
+import type { ThemeId, ThemeEntry, BackgroundId } from '@/../shared/state';
+import { BACKGROUND_CATALOG } from '@/../shared/state';
 
-describe('decoration + theme types', () => {
-  it('DecorationId is a string', () => {
-    const id: DecorationId = 'd1';
-    expect(typeof id).toBe('string');
-  });
-
+// Phase 5: decoration types removed. This file now tests the replacement types.
+describe('background + theme types', () => {
   it('ThemeId is a string', () => {
     const id: ThemeId = 'default';
     expect(typeof id).toBe('string');
-  });
-
-  it('SlotId is a string', () => {
-    const id: SlotId = 'window-sill';
-    expect(typeof id).toBe('string');
-  });
-
-  it('DecorationEntry has required fields', () => {
-    const e: DecorationEntry = {
-      id: 'd1',
-      displayName: 'Cozy Lamp',
-      frame: 'd1',
-      rarity: 'common',
-    };
-    expect(e.id).toBe('d1');
   });
 
   it('ThemeEntry has required fields', () => {
     const e: ThemeEntry = {
       id: 'default',
       displayName: 'Default',
-      backdropKey: 'theme-default-bg',
+      backdropKey: 'bg-default',
       musicKey: 'theme-default-music',
       rarity: 'common',
     };
     expect(e.id).toBe('default');
+  });
+
+  it('BackgroundId union covers the three base backgrounds', () => {
+    const ids: BackgroundId[] = ['default', 'cozy', 'spooky'];
+    expect(ids).toHaveLength(3);
+  });
+
+  it('BACKGROUND_CATALOG has entries for all three backgrounds', () => {
+    expect(BACKGROUND_CATALOG.default).toBeDefined();
+    expect(BACKGROUND_CATALOG.cozy).toBeDefined();
+    expect(BACKGROUND_CATALOG.spooky).toBeDefined();
+  });
+
+  it('each BACKGROUND_CATALOG entry has an id and backdropKey', () => {
+    for (const entry of Object.values(BACKGROUND_CATALOG)) {
+      expect(entry.id).toBeTruthy();
+      expect(entry.backdropKey).toBeTruthy();
+    }
   });
 });

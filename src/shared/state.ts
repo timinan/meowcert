@@ -23,7 +23,6 @@ export type BoxId =
   | 'premiumCatCrate'
   | 'stylePack'
   | 'premiumStylePack'
-  | 'decorCrate'
   | 'themePack';
 
 // -- Catalog entries ----------------------------------------------------
@@ -56,20 +55,10 @@ export interface CosmeticEntry {
   tintMode?: 'color' | 'hue' | 'multiply' | 'soft-light';
 }
 
-// -- Decorations + Themes ------------------------------------------------
+// -- Themes (Backgrounds) -----------------------------------------------
 
-export type DecorationId = string;
 export type ThemeId = string;
-export type SlotId = string;
 export type SeatId = string;
-
-export interface DecorationEntry {
-  id: DecorationId;
-  displayName: string;
-  /** Frame key in the decorations atlas */
-  frame: string;
-  rarity: Rarity;
-}
 
 export interface ThemeEntry {
   id: ThemeId;
@@ -84,7 +73,7 @@ export interface ThemeEntry {
 export interface BoxConfig {
   id: BoxId;
   cost: number;
-  rewardKind: 'cat' | 'cosmetic' | 'decoration' | 'theme';
+  rewardKind: 'cat' | 'cosmetic' | 'theme';
   /** Drop weights by rarity. Must sum to 100 (enforced by tests). */
   rates: Record<Rarity, number>;
 }
@@ -97,9 +86,7 @@ export interface BoxConfig {
 
 export { GENERATED_CAT_CATALOG as CAT_CATALOG } from './cats-catalog.generated';
 export { GENERATED_COSMETIC_CATALOG as COSMETIC_CATALOG } from './cosmetics-catalog.generated';
-// TODO Phase 5: DECORATION_CATALOG removed with decoration system (Task 2 cleans up data model)
-export const DECORATION_CATALOG: readonly DecorationEntry[] = [];
-export { GENERATED_THEME_CATALOG as THEME_CATALOG } from './themes-catalog.generated';
+export { GENERATED_THEME_CATALOG as THEME_CATALOG, BACKGROUND_CATALOG } from './themes-catalog.generated';
 
 // -- Box catalog --------------------------------------------------------
 
@@ -128,12 +115,6 @@ export const BOX_CATALOG: Record<BoxId, BoxConfig> = {
     rewardKind: 'cosmetic',
     rates: { common: 0, uncommon: 40, rare: 50, legendary: 10 },
   },
-  decorCrate: {
-    id: 'decorCrate',
-    cost: 50,
-    rewardKind: 'decoration',
-    rates: { common: 70, uncommon: 25, rare: 5, legendary: 0 },
-  },
   themePack: {
     id: 'themePack',
     cost: 50,
@@ -147,21 +128,59 @@ export const BOX_CATALOG: Record<BoxId, BoxConfig> = {
 /** Fresh users get this many coins on first state load. Enough for one
  * Cat Crate (200) + one Style Pack (50), with 50 left over. */
 // TEMP-DEMO: bumped from 300 to give 5 cosmetic boxes for testing
-// breakdown: 1 cat crate (200) + 5 style packs (250) + 1 decor crate (50) + 100 buffer = 600
+// breakdown: 1 cat crate (200) + 5 style packs (250) + 100 buffer = 550
 export const STARTER_COINS = 600;
 
 /** Duplicate pulls return this many coins as a soft refund. */
 export const DUPLICATE_REFUND = 50;
+
+// -- Chart data model ---------------------------------------------------
+
+export type LaneId = 0 | 1 | 2;
+
+export interface ChartStep {
+  lanes: LaneId[];
+}
+
+export interface Chart {
+  authorId: string;
+  title: string;
+  stepCount: 8;
+  bpm: number;
+  steps: ChartStep[];
+  updatedAt: number;
+}
+
+export type BackgroundId = 'default' | 'cozy' | 'spooky';
+
+export function emptyChart(authorId: string, title: string): Chart {
+  return {
+    authorId,
+    title,
+    stepCount: 8,
+    bpm: 120,
+    steps: Array.from({ length: 8 }, () => ({ lanes: [] })),
+    updatedAt: Date.now(),
+  };
+}
+
+export function validateChart(c: Chart): { ok: true } | { ok: false; reason: string } {
+  if (c.stepCount !== 8) return { ok: false, reason: 'stepCount must be 8' };
+  if (c.bpm < 60 || c.bpm > 200) return { ok: false, reason: 'bpm out of range' };
+  if (c.steps.length !== 8) return { ok: false, reason: 'steps length must equal stepCount' };
+  for (const s of c.steps) {
+    for (const l of s.lanes) {
+      if (l !== 0 && l !== 1 && l !== 2) return { ok: false, reason: `bad lane ${l}` };
+    }
+  }
+  return { ok: true };
+}
 
 // -- Player state -------------------------------------------------------
 
 export interface PlayerHouseState {
   /** Active theme — 'default' for fresh players */
   themeId: ThemeId;
-  /** Map of slot id → placed decoration id. Empty entries mean unfilled. */
-  decorations: Partial<Record<SlotId, DecorationId>>;
-  /** All decoration ids the player owns (in inventory) */
-  ownedDecorations: DecorationId[];
   /** All theme ids the player owns. Always includes 'default'. */
   ownedThemes: ThemeId[];
 }
@@ -183,6 +202,12 @@ export interface PlayerState {
   /** Map of seat id → seated cat breed. Empty entries mean unseated.
    *  Players explicitly choose who sits where; no auto-seating fallback. */
   seatedCats: Partial<Record<SeatId, CatBreed>>;
+  /** The player's current rhythm chart. */
+  chart: Chart;
+  /** Background ids the player owns. Always includes 'default'. */
+  ownedBackgrounds: BackgroundId[];
+  /** Currently active background. */
+  activeBackground: BackgroundId;
 }
 
 /**
@@ -201,10 +226,11 @@ export function createFreshPlayerState(username: string = ''): PlayerState {
     updatedAt: Date.now(),
     house: {
       themeId: 'default',
-      decorations: {},
-      ownedDecorations: [],
       ownedThemes: ['default'],
     },
     seatedCats: {},
+    chart: emptyChart(username, 'Untitled'),
+    ownedBackgrounds: ['default'],
+    activeBackground: 'default',
   };
 }

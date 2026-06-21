@@ -104,29 +104,31 @@ describe('player-state', () => {
 });
 
 describe('PlayerState.house', () => {
-  it('house has decorations map keyed by SlotId', () => {
-    const fresh = createFreshPlayerState();
-    expect(fresh.house).toBeDefined();
-    expect(fresh.house.decorations).toBeDefined();
-    expect(typeof fresh.house.decorations).toBe('object');
-  });
-
   it('house has themeId defaulting to "default"', () => {
     const fresh = createFreshPlayerState();
     expect(fresh.house.themeId).toBe('default');
   });
 
-  it('house starts with empty slot map', () => {
+  it('house has ownedThemes array starting with default', () => {
     const fresh = createFreshPlayerState();
-    expect(Object.keys(fresh.house.decorations).length).toBe(0);
-  });
-
-  it('house has ownedDecorations and ownedThemes arrays starting empty', () => {
-    const fresh = createFreshPlayerState();
-    expect(Array.isArray(fresh.house.ownedDecorations)).toBe(true);
-    expect(fresh.house.ownedDecorations.length).toBe(0);
     expect(Array.isArray(fresh.house.ownedThemes)).toBe(true);
     expect(fresh.house.ownedThemes).toEqual(['default']);
+  });
+});
+
+describe('PlayerState.chart + backgrounds', () => {
+  it('fresh state has a chart with 8 steps at 120 bpm', () => {
+    const fresh = createFreshPlayerState('alice');
+    expect(fresh.chart).toBeDefined();
+    expect(fresh.chart.stepCount).toBe(8);
+    expect(fresh.chart.bpm).toBe(120);
+    expect(fresh.chart.steps).toHaveLength(8);
+  });
+
+  it('fresh state owns default background and has it active', () => {
+    const fresh = createFreshPlayerState();
+    expect(fresh.ownedBackgrounds).toEqual(['default']);
+    expect(fresh.activeBackground).toBe('default');
   });
 });
 

@@ -3,32 +3,15 @@ import { pullBox, applyPullToState } from '../src/server/core/box-pull';
 import {
   CAT_CATALOG,
   COSMETIC_CATALOG,
-  // TODO Phase 5: DECORATION_CATALOG removed with decoration system
   THEME_CATALOG,
   DUPLICATE_REFUND,
-  STARTER_COINS,
   BOX_CATALOG,
   createFreshPlayerState,
   type PlayerState,
 } from '../src/shared/state';
 
 function emptyState(): PlayerState {
-  return {
-    username: 'tester',
-    coins: STARTER_COINS,
-    ownedCats: [],
-    ownedCosmetics: [],
-    equippedCosmetics: {},
-    bestScore: 0,
-    onboardingDone: false,
-    updatedAt: 0,
-    house: {
-      themeId: 'default',
-      decorations: {},
-      ownedDecorations: [],
-      ownedThemes: ['default'],
-    },
-  };
+  return createFreshPlayerState('tester');
 }
 
 /** Deterministic RNG that walks through a list of values then loops. */
@@ -177,10 +160,8 @@ describe('Phase 3 box catalog', () => {
     expect(box.rewardKind).toBe('theme');
   });
 
-  it('drop weights sum to 100 for new boxes', () => {
-    for (const id of ['decorCrate', 'themePack'] as const) {
-      const total = Object.values(BOX_CATALOG[id].rates).reduce((a, b) => a + b, 0);
-      expect(total).toBe(100);
-    }
+  it('drop weights sum to 100 for themePack', () => {
+    const total = Object.values(BOX_CATALOG.themePack.rates).reduce((a, b) => a + b, 0);
+    expect(total).toBe(100);
   });
 });

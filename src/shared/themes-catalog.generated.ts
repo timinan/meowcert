@@ -2,28 +2,16 @@
 // Do not edit by hand — your changes will be overwritten.
 // Edit tools/<tool>/*.json via the calibrator instead.
 
-import type { ThemeEntry } from './state';
+export const BACKGROUND_CATALOG = {
+  default: { id: 'default', displayName: 'Default', backdropKey: 'bg-default', musicKey: 'theme-default-music', rarity: 'common'  as const },
+  cozy:    { id: 'cozy',    displayName: 'Cozy',    backdropKey: 'bg-cozy',    musicKey: 'theme-cozy-music',    rarity: 'uncommon' as const },
+  spooky:  { id: 'spooky',  displayName: 'Spooky',  backdropKey: 'bg-spooky',  musicKey: 'theme-spooky-music',  rarity: 'rare'     as const },
+} as const;
 
-export const GENERATED_THEME_CATALOG: readonly ThemeEntry[] = [
-  {
-    id: "default",
-    displayName: "Default Room",
-    backdropKey: "theme-default-bg",
-    musicKey: "theme-default-music",
-    rarity: "common",
-  },
-  {
-    id: "cozy",
-    displayName: "Cozy Cabin",
-    backdropKey: "theme-cozy-bg",
-    musicKey: "theme-cozy-music",
-    rarity: "uncommon",
-  },
-  {
-    id: "spooky",
-    displayName: "Spooky Attic",
-    backdropKey: "theme-spooky-bg",
-    musicKey: "theme-spooky-music",
-    rarity: "rare",
-  },
-];
+// Legacy alias — keep so existing THEME_CATALOG consumers compile without a rename sweep.
+// TODO Phase 5 Task 15: remove this alias once all consumers migrate to BACKGROUND_CATALOG.
+export const GENERATED_THEME_CATALOG = [
+  BACKGROUND_CATALOG.default,
+  BACKGROUND_CATALOG.cozy,
+  BACKGROUND_CATALOG.spooky,
+] as const;

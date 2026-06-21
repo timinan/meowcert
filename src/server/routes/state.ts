@@ -7,7 +7,6 @@ import {
   type BoxId,
   type CatBreed,
   type CosmeticId,
-  // TODO Phase 5: DecorationId + SlotId removed with decoration system
   type ThemeId,
   type SeatId,
 } from '../../shared/state';

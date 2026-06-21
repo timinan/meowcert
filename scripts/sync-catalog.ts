@@ -162,32 +162,33 @@ async function genThemes(): Promise<number> {
   } catch {
     // file not found — write an empty catalog
   }
+  const entries = Object.entries(raw);
+  const catalogLines: string[] = [];
+  for (const [id, v] of entries) {
+    catalogLines.push(
+      `  ${id}: { id: ${JSON.stringify(id)}, displayName: ${JSON.stringify(v.displayName)}, backdropKey: ${JSON.stringify(v.backdropKey)}, musicKey: ${JSON.stringify(v.musicKey)}, rarity: ${JSON.stringify(v.rarity)} as const },`,
+    );
+  }
+  const arrayItems = entries.map(([id]) => `  BACKGROUND_CATALOG.${id},`);
   const lines: string[] = [
     BANNER,
-    `import type { ThemeEntry } from './state';`,
     '',
-    `export const GENERATED_THEME_CATALOG: readonly ThemeEntry[] = [`,
+    `export const BACKGROUND_CATALOG = {`,
+    ...catalogLines,
+    `} as const;`,
+    '',
+    `// Legacy alias — keep so existing THEME_CATALOG consumers compile without a rename sweep.`,
+    `// TODO Phase 5 Task 15: remove this alias once all consumers migrate to BACKGROUND_CATALOG.`,
+    `export const GENERATED_THEME_CATALOG = [`,
+    ...arrayItems,
+    `] as const;`,
+    '',
   ];
-  for (const [id, v] of Object.entries(raw)) {
-    lines.push('  {');
-    lines.push(
-      ...fieldLines({
-        id,
-        displayName: v.displayName,
-        backdropKey: v.backdropKey,
-        musicKey: v.musicKey,
-        rarity: v.rarity,
-      }),
-    );
-    lines.push('  },');
-  }
-  lines.push('];');
-  lines.push('');
   await fs.writeFile(
     path.join(OUT_DIR, 'themes-catalog.generated.ts'),
     lines.join('\n'),
   );
-  return Object.keys(raw).length;
+  return entries.length;
 }
 
 async function main(): Promise<void> {

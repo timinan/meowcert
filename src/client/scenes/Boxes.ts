@@ -49,12 +49,6 @@ const BOX_CARDS: BoxCardLayout[] = [
     accent: 0xffd34d,
   },
   {
-    boxId: 'decorCrate',
-    title: 'Decor Crate',
-    tagline: 'A new room prop to\ndress up your space.',
-    accent: 0x4dffb4,
-  },
-  {
     boxId: 'themePack',
     title: 'Theme Pack',
     tagline: 'A new look and\nsoundtrack for your house.',
@@ -183,9 +177,7 @@ export class Boxes extends Scene {
     const originX = width / 2 - gridW / 2;
     const originY = 50;
 
-    // TODO Phase 5: decorCrate hidden until decoration system is rebuilt
-    const visibleCards = BOX_CARDS.filter((c) => c.boxId !== 'decorCrate');
-    visibleCards.forEach((layout, idx) => {
+    BOX_CARDS.forEach((layout, idx) => {
       const col = idx % 2;
       const row = Math.floor(idx / 2);
       const cx = originX + col * (cardW + gapX) + cardW / 2;

@@ -2,17 +2,15 @@ import type {
   BoxId,
   CatBreed,
   CosmeticId,
-  DecorationId,
   PlayerState,
   Rarity,
   SeatId,
-  SlotId,
   ThemeId,
 } from '../../shared/state';
 
 export interface PullResult {
-  kind: 'cat' | 'cosmetic' | 'decoration' | 'theme';
-  itemId: CatBreed | CosmeticId | DecorationId | ThemeId;
+  kind: 'cat' | 'cosmetic' | 'theme';
+  itemId: CatBreed | CosmeticId | ThemeId;
   rarity: Rarity;
   duplicate: boolean;
   refundCoins: number;
@@ -75,20 +73,6 @@ export async function completeOnboarding(): Promise<PlayerState> {
   return data.state;
 }
 
-export async function setDecorationInSlot(
-  slotId: SlotId,
-  decorationId: DecorationId | null,
-): Promise<PlayerState> {
-  const r = await fetch('/api/house/decoration', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ slotId, decorationId }),
-  });
-  if (!r.ok) throw new Error(`setDecorationInSlot ${r.status}`);
-  const data = (await r.json()) as { state: PlayerState };
-  return data.state;
-}
-
 export async function setTheme(themeId: ThemeId): Promise<PlayerState> {
   const r = await fetch('/api/house/theme', {
     method: 'POST',
@@ -111,7 +95,7 @@ export async function setSeat(seatId: SeatId, catId: CatBreed | null): Promise<P
   return data.state;
 }
 
-export async function sellItem(kind: 'decoration' | 'cosmetic', id: string): Promise<PlayerState> {
+export async function sellItem(kind: 'cosmetic', id: string): Promise<PlayerState> {
   const r = await fetch('/api/inventory/sell', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
