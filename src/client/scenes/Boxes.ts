@@ -8,12 +8,12 @@ import {
   BOX_CATALOG,
   CAT_CATALOG,
   COSMETIC_CATALOG,
-  DECORATION_CATALOG,
+  // TODO Phase 5: DECORATION_CATALOG removed with decoration system
   THEME_CATALOG,
   type BoxId,
   type CatBreed,
   type CosmeticId,
-  type DecorationId,
+  // TODO Phase 5: DecorationId removed with decoration system
   type ThemeId,
   type PlayerState,
 } from '@/../shared/state';
@@ -356,22 +356,7 @@ export class Boxes extends Scene {
 
       const pull = result.pull;
 
-      if (pull.kind === 'decoration') {
-        const entry = DECORATION_CATALOG.find((d) => d.id === (pull.itemId as DecorationId));
-        playBoxOpenAnimation(
-          this,
-          {
-            textureKey: AssetKeys.Atlas.Decorations,
-            frame: entry?.frame ?? pull.itemId,
-            itemName: entry?.displayName ?? pull.itemId,
-            rarity: pull.rarity,
-            duplicate: pull.duplicate,
-            refundCoins: pull.refundCoins,
-          },
-          () => { this.busy = false; },
-        );
-        return;
-      }
+      // TODO Phase 5: decoration pull branch removed with decoration system
 
       if (pull.kind === 'theme') {
         const entry = THEME_CATALOG.find((t) => t.id === (pull.itemId as ThemeId));

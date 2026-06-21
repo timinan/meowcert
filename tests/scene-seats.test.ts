@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SCENE_SEATS } from '@/constants/scene-slots';
+import { SCENE_SEATS } from '@/constants/scene-seats';
 
 describe('SCENE_SEATS', () => {
   // TEMP-DEMO: skipped while SCENE_SEATS is reduced to 1 entry for scenario testing; revert before ship

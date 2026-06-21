@@ -7,8 +7,7 @@ import {
   type BoxId,
   type CatBreed,
   type CosmeticId,
-  type DecorationId,
-  type SlotId,
+  // TODO Phase 5: DecorationId + SlotId removed with decoration system
   type ThemeId,
   type SeatId,
 } from '../../shared/state';
@@ -105,29 +104,7 @@ state.post('/onboarding/complete', async (c) => {
   return c.json({ state: player });
 });
 
-/** POST /api/house/decoration — body: { slotId, decorationId | null }.
- * Pass null decorationId to clear the slot. */
-state.post('/house/decoration', async (c) => {
-  const { slotId, decorationId } = (await c.req.json()) as {
-    slotId: SlotId;
-    decorationId: DecorationId | null;
-  };
-  const username = await currentUsername();
-  const player = await loadOrInit(redis, username);
-  if (decorationId === null) {
-    delete player.house.decorations[slotId];
-  } else {
-    // TEMP-DEMO: accept cosmetic ids as decoration placements for testing
-    const isOwnedDecoration = player.house.ownedDecorations.includes(decorationId);
-    const isOwnedCosmetic = player.ownedCosmetics.includes(decorationId as CosmeticId);
-    if (!isOwnedDecoration && !isOwnedCosmetic) {
-      return c.json({ ok: false, reason: 'item_not_owned' }, 400);
-    }
-    player.house.decorations[slotId] = decorationId;
-  }
-  await save(redis, player);
-  return c.json({ ok: true, state: player });
-});
+// TODO Phase 5: /house/decoration handler removed with decoration system
 
 /** POST /api/house/theme — body: { themeId }. */
 state.post('/house/theme', async (c) => {
@@ -161,32 +138,22 @@ state.post('/house/seat', async (c) => {
 });
 
 // POST /inventory/sell — { kind, id }
+// TODO Phase 5: decoration branch removed; only cosmetic sells remain
 state.post('/inventory/sell', async (c) => {
-  const { kind, id } = await c.req.json() as {
-    kind: 'decoration' | 'cosmetic';
-    id: DecorationId | CosmeticId;
+  const { id } = await c.req.json() as {
+    kind: 'cosmetic'; // TODO Phase 5: kind check removed; decoration branch gone
+    id: CosmeticId;
   };
   const player = await loadOrInit(redis, await currentUsername());
 
-  if (kind === 'decoration') {
-    if (!player.house.ownedDecorations.includes(id as DecorationId)) {
-      return c.json({ ok: false, reason: 'decoration_not_owned' }, 400);
-    }
-    // Unplace if currently placed
-    for (const [slotId, decoId] of Object.entries(player.house.decorations)) {
-      if (decoId === id) delete player.house.decorations[slotId];
-    }
-    player.house.ownedDecorations = player.house.ownedDecorations.filter((d) => d !== id);
-  } else {
-    if (!player.ownedCosmetics.includes(id as CosmeticId)) {
-      return c.json({ ok: false, reason: 'cosmetic_not_owned' }, 400);
-    }
-    // Unequip from any cat
-    for (const [catId, cosId] of Object.entries(player.equippedCosmetics)) {
-      if (cosId === id) delete player.equippedCosmetics[catId];
-    }
-    player.ownedCosmetics = player.ownedCosmetics.filter((c2) => c2 !== id);
+  if (!player.ownedCosmetics.includes(id as CosmeticId)) {
+    return c.json({ ok: false, reason: 'cosmetic_not_owned' }, 400);
   }
+  // Unequip from any cat
+  for (const [catId, cosId] of Object.entries(player.equippedCosmetics)) {
+    if (cosId === id) delete player.equippedCosmetics[catId];
+  }
+  player.ownedCosmetics = player.ownedCosmetics.filter((c2) => c2 !== id);
 
   const SELL_PRICE = 25;
   player.coins += SELL_PRICE;

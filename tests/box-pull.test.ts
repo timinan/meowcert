@@ -3,7 +3,7 @@ import { pullBox, applyPullToState } from '../src/server/core/box-pull';
 import {
   CAT_CATALOG,
   COSMETIC_CATALOG,
-  DECORATION_CATALOG,
+  // TODO Phase 5: DECORATION_CATALOG removed with decoration system
   THEME_CATALOG,
   DUPLICATE_REFUND,
   STARTER_COINS,
@@ -136,32 +136,8 @@ describe('box-pull', () => {
   });
 });
 
-describe('box-pull: decoration + theme', () => {
-  const seededRng = () => 0.42; // deterministic
-
-  it('decorCrate pulls a decoration the player does not own', () => {
-    const state = createFreshPlayerState();
-    state.coins = 100;
-    const result = pullBox('decorCrate', state, seededRng);
-    expect(result.kind).toBe('decoration');
-    expect(DECORATION_CATALOG.find((d) => d.id === result.itemId)).toBeDefined();
-    expect(result.duplicate).toBe(false);
-    expect(result.refundCoins).toBe(0);
-    applyPullToState(state, result);
-    expect(state.house.ownedDecorations).toContain(result.itemId);
-  });
-
-  it('decorCrate returns a duplicate refund if all decorations owned', () => {
-    const state = createFreshPlayerState();
-    state.coins = 100;
-    state.house.ownedDecorations = DECORATION_CATALOG.map((d) => d.id);
-    const result = pullBox('decorCrate', state, seededRng);
-    expect(result.kind).toBe('decoration');
-    expect(result.duplicate).toBe(true);
-    expect(result.refundCoins).toBe(DUPLICATE_REFUND);
-    applyPullToState(state, result);
-    expect(state.coins).toBe(100 + DUPLICATE_REFUND);
-  });
+describe('box-pull: theme', () => {
+  // TODO Phase 5: decorCrate tests removed with decoration system
 
   it('themePack pulls a theme not already owned', () => {
     const state = createFreshPlayerState();
@@ -188,26 +164,11 @@ describe('box-pull: decoration + theme', () => {
     expect(['cozy', 'spooky']).toContain(result.itemId);
   });
 
-  it('decorCrate falls back to unowned decoration when common bucket is empty', () => {
-    const state = createFreshPlayerState();
-    // Own all three common decorations; uncommon and rare remain unowned.
-    state.house.ownedDecorations = ['d1', 'd2', 'd3'];
-    // rng=0.42 → common bucket (cumulative common=70 for decorCrate) → pool empty
-    // → fallback to any unowned → should pick an uncommon or rare decoration.
-    const result = pullBox('decorCrate', state, () => 0.42);
-    expect(result.kind).toBe('decoration');
-    expect(result.duplicate).toBe(false);
-    expect(['d4', 'd5', 'd6']).toContain(result.itemId);
-  });
+  // TODO Phase 5: decorCrate fallback test removed with decoration system
 });
 
 describe('Phase 3 box catalog', () => {
-  it('includes a Decor Crate at 50 coins for decorations', () => {
-    const box = BOX_CATALOG.decorCrate;
-    expect(box).toBeDefined();
-    expect(box.cost).toBe(50);
-    expect(box.rewardKind).toBe('decoration');
-  });
+  // TODO Phase 5: decorCrate test removed with decoration system
 
   it('includes a Theme Pack at 50 coins for themes', () => {
     const box = BOX_CATALOG.themePack;

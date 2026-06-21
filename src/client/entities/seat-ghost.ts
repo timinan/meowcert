@@ -1,6 +1,6 @@
 import { GameObjects, Scene } from 'phaser';
-import type { SeatPosition } from '@/constants/scene-slots';
-import { designToCanvas } from '@/constants/scene-slots';
+import type { SeatPosition } from '@/constants/scene-seats';
+import { designToCanvas } from '@/constants/scene-seats';
 
 /**
  * Dashed circle marker for cat seats. Same pattern as SlotGhost but a

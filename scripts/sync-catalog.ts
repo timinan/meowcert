@@ -17,7 +17,7 @@ import path from 'node:path';
 const PROJECT_ROOT = path.resolve(import.meta.dirname, '..');
 const COSMETICS_JSON = path.join(PROJECT_ROOT, 'tools', 'cosmetics', 'cosmetics.json');
 const CATS_JSON = path.join(PROJECT_ROOT, 'tools', 'cats', 'cats.json');
-const DECORATIONS_JSON = path.join(PROJECT_ROOT, 'tools', 'decorations', 'decorations.json');
+// TODO Phase 5: DECORATIONS_JSON removed with decoration system
 const THEMES_JSON = path.join(PROJECT_ROOT, 'tools', 'themes', 'themes.json');
 const OUT_DIR = path.join(PROJECT_ROOT, 'src', 'shared');
 
@@ -44,11 +44,7 @@ interface CatJsonEntry {
   tintMode?: string;
 }
 
-interface DecorationJsonEntry {
-  displayName: string;
-  frame: string;
-  rarity: string;
-}
+// TODO Phase 5: DecorationJsonEntry removed with decoration system
 
 interface ThemeJsonEntry {
   displayName: string;
@@ -156,40 +152,7 @@ async function genCats(): Promise<number> {
   return entries.length;
 }
 
-async function genDecorations(): Promise<number> {
-  let raw: Record<string, DecorationJsonEntry> = {};
-  try {
-    const text = await fs.readFile(DECORATIONS_JSON, 'utf8');
-    raw = JSON.parse(text) as Record<string, DecorationJsonEntry>;
-  } catch {
-    // file not found — write an empty catalog
-  }
-  const lines: string[] = [
-    BANNER,
-    `import type { DecorationEntry } from './state';`,
-    '',
-    `export const GENERATED_DECORATION_CATALOG: readonly DecorationEntry[] = [`,
-  ];
-  for (const [id, v] of Object.entries(raw)) {
-    lines.push('  {');
-    lines.push(
-      ...fieldLines({
-        id,
-        displayName: v.displayName,
-        frame: v.frame,
-        rarity: v.rarity,
-      }),
-    );
-    lines.push('  },');
-  }
-  lines.push('];');
-  lines.push('');
-  await fs.writeFile(
-    path.join(OUT_DIR, 'decorations-catalog.generated.ts'),
-    lines.join('\n'),
-  );
-  return Object.keys(raw).length;
-}
+// TODO Phase 5: genDecorations() removed with decoration system
 
 async function genThemes(): Promise<number> {
   let raw: Record<string, ThemeJsonEntry> = {};
@@ -229,8 +192,9 @@ async function genThemes(): Promise<number> {
 
 async function main(): Promise<void> {
   await fs.mkdir(OUT_DIR, { recursive: true });
-  const [cosCount, catCount, decCount, themCount] = await Promise.all([genCosmetics(), genCats(), genDecorations(), genThemes()]);
-  console.log(`[sync] cosmetics=${cosCount} cats=${catCount} decorations=${decCount} themes=${themCount}`);
+  // TODO Phase 5: genDecorations() removed from pipeline with decoration system
+  const [cosCount, catCount, themCount] = await Promise.all([genCosmetics(), genCats(), genThemes()]);
+  console.log(`[sync] cosmetics=${cosCount} cats=${catCount} themes=${themCount}`);
 }
 
 main().catch((err) => {

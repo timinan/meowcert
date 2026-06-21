@@ -34,7 +34,8 @@ export class Preloader extends Scene {
       'atlas/cosmetics.png',
       'atlas/cosmetics.json',
     );
-    this.load.atlas(AssetKeys.Atlas.Decorations, 'decorations.png', 'decorations.json');
+    // TODO Phase 5: decorations atlas removed with decoration system
+    // this.load.atlas(AssetKeys.Atlas.Decorations, 'decorations.png', 'decorations.json');
 
     this.load.image(AssetKeys.Image.GameBackground, 'images/gameBackground.png');
     this.load.image(AssetKeys.Image.MeowBarFill, 'images/meowBarFill.png');
