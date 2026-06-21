@@ -1,8 +1,15 @@
 import { Scene } from 'phaser';
 import { SceneKeys } from '@/constants/scenes';
 import { AssetKeys } from '@/constants/assets';
+import { Balance } from '@/constants/balance';
 import { fetchState } from '@/services/state-client';
 import type { PlayerState } from '@/../shared/state';
+
+// All logical cat breeds. 'rainbow' has no atlas frames of its own — it borrows
+// cat6's frames but registers them under its own animation keys so the Cat entity
+// can play them via `rainbow_idle`, `rainbow_happy`, `rainbow_hiss`.
+const CAT_BREEDS = ['cat1', 'cat2', 'cat3', 'cat4', 'cat5', 'cat6', 'rainbow'] as const;
+const RAINBOW_RENDER_BREED = 'cat6';
 
 export class Preloader extends Scene {
   constructor() {
@@ -60,6 +67,13 @@ export class Preloader extends Scene {
     // would shift when the font finishes loading.
     await this.loadFontsOrTimeout(2500);
 
+    // Register all cat animations globally so every downstream scene
+    // (Game, Decorate, DressingRoom, Purchase) can play them without each
+    // scene needing its own lazy-registration pass. The Cat entity's
+    // ensureAnimation() skips keys that already exist, so this is safe to
+    // run even if a scene also calls ensureAnimation().
+    this.registerCatAnimations();
+
     // Pull the player's persisted state from the server. New users with
     // `onboardingDone === false` head into the Welcome flow first; everyone
     // else goes straight to Game. If the fetch fails (server down, no
@@ -81,6 +95,55 @@ export class Preloader extends Scene {
         hasSeatedCat ? SceneKeys.Game : SceneKeys.Decorate,
         { playerState },
       );
+    }
+  }
+
+  /**
+   * Register idle/happy/hiss animations for every cat breed globally so all
+   * downstream scenes can play them without per-scene lazy registration.
+   *
+   * Frame naming convention: `${breed}_${anim}_NN` (e.g. `cat1_idle_00`).
+   * 'rainbow' has no atlas frames — it borrows cat6's and registers them under
+   * `rainbow_*` keys.
+   *
+   * Atlas state (June 2026):
+   *   idle  — all 6 breeds (cat1–cat6)
+   *   hiss  — all 6 breeds
+   *   happy — cat5 and cat6 only; cat1–cat4 lack happy frames in the atlas.
+   *            Cat.playHappy() guards with anims.exists(), so missing happy
+   *            keys are safe — the cat just holds its current frame and tints.
+   */
+  private registerCatAnimations(): void {
+    const atlas = this.textures.get(AssetKeys.Atlas.Cats);
+    const allFrameNames = atlas.getFrameNames();
+
+    for (const breed of CAT_BREEDS) {
+      const renderBreed = breed === 'rainbow' ? RAINBOW_RENDER_BREED : breed;
+
+      for (const anim of ['idle', 'happy', 'hiss'] as const) {
+        const key = `${breed}_${anim}`;
+        if (this.anims.exists(key)) continue;
+
+        const prefix = `${renderBreed}_${anim}_`;
+        const frames = allFrameNames
+          .filter((n) => n.startsWith(prefix))
+          .sort()
+          .map((frame) => ({ key: AssetKeys.Atlas.Cats, frame }));
+
+        if (frames.length === 0) {
+          // happy is expected to be missing for cat1–cat4; log but don't crash.
+          // eslint-disable-next-line no-console
+          console.error(`[Preloader] no frames for ${key} in cats atlas — animation NOT registered`);
+          continue;
+        }
+
+        this.anims.create({
+          key,
+          frames,
+          frameRate: Balance.catAnimationFrameRate,
+          repeat: anim === 'idle' ? -1 : 0,
+        });
+      }
     }
   }
 
