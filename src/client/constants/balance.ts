@@ -60,4 +60,13 @@ export const Balance = {
   // takes to traverse from one edge to the other (a full ping-pong cycle
   // is twice this).
   interactionMarkerTraversalMs: 1_400,
+
+  // Phase 5: vertical rhythm gameplay
+  perfectWindowMs: 50,
+  greatWindowMs: 100,
+  noteFallMs: 1500,
+  loopCount: 8,
+  pointsPerfect: 100,
+  pointsGreat: 50,
+  catReactionMs: 500,
 } as const;
