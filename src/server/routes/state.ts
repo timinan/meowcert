@@ -191,3 +191,29 @@ state.post('/inventory/sell', async (c) => {
   await save(redis, player);
   return c.json({ ok: true, state: player });
 });
+
+// POST /cats/rehome — { catId }
+state.post('/cats/rehome', async (c) => {
+  const { catId } = await c.req.json() as { catId: CatBreed };
+  const player = await loadOrInit(redis, await currentUsername());
+
+  if (!player.ownedCats.includes(catId)) {
+    return c.json({ ok: false, reason: 'cat_not_owned' }, 400);
+  }
+
+  // Unseat if seated
+  for (const [seatId, sCatId] of Object.entries(player.seatedCats)) {
+    if (sCatId === catId) delete player.seatedCats[seatId];
+  }
+
+  // Unequip cosmetic from this cat (cosmetic stays in player's inventory)
+  delete player.equippedCosmetics[catId];
+
+  // Remove cat
+  player.ownedCats = player.ownedCats.filter((c2) => c2 !== catId);
+
+  // No coin refund — rehome is destructive
+
+  await save(redis, player);
+  return c.json({ ok: true, state: player });
+});
