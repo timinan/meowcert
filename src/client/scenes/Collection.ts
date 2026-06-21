@@ -2,16 +2,20 @@ import * as Phaser from 'phaser';
 import { Scene, GameObjects } from 'phaser';
 import { SceneKeys } from '@/constants/scenes';
 import { AssetKeys } from '@/constants/assets';
-import { equipCosmetic, fetchState } from '@/services/state-client';
+import { equipCosmetic, fetchState, setDecorationInSlot } from '@/services/state-client';
 import { hslToInt } from '@/util/color';
 import { TopHud } from '@/ui/top-hud';
 import {
   CAT_CATALOG,
   COSMETIC_CATALOG,
+  DECORATION_CATALOG,
   type CatBreed,
   type CosmeticId,
+  type DecorationId,
   type PlayerState,
 } from '@/../shared/state';
+import { SCENE_SLOTS } from '@/constants/scene-slots';
+import type { SlotId } from '@/../shared/state';
 
 const RARITY_HEX: Record<string, number> = {
   common: 0xffffff,
@@ -59,6 +63,12 @@ export class Collection extends Scene {
   private selectedCat: CatBreed | null = null;
   private cosmeticPage = 0;
 
+  private activeTab: 'cosmetics' | 'decor' = 'cosmetics';
+  private selectedDecorationId: DecorationId | null = null;
+  private tabBarContainer: GameObjects.Container | null = null;
+  private cosmeticStripGroup: GameObjects.GameObject[] = [];
+  private decorTabContainer: GameObjects.Container | null = null;
+
   private topHud!: TopHud;
   private previewLayer!: GameObjects.Container;
   private equippedLabel!: GameObjects.Text;
@@ -78,6 +88,11 @@ export class Collection extends Scene {
     this.cosmeticPage = 0;
     this.catTiles = new Map();
     this.cosmeticTiles = [];
+    this.activeTab = 'cosmetics';
+    this.selectedDecorationId = null;
+    this.tabBarContainer = null;
+    this.cosmeticStripGroup = [];
+    this.decorTabContainer = null;
   }
 
   async create(): Promise<void> {
@@ -131,6 +146,7 @@ export class Collection extends Scene {
 
     this.drawBackButton();
     this.drawCatStrip();
+    this.drawTabBar();
     this.drawCosmeticStrip();
 
     this.refreshFromState();
@@ -148,7 +164,11 @@ export class Collection extends Scene {
   private refreshFromState(): void {
     this.refreshCoins();
     this.rebuildCatStrip();
-    this.rebuildCosmeticStrip();
+    if (this.activeTab === 'cosmetics') {
+      this.rebuildCosmeticStrip();
+    } else {
+      this.renderDecorTab();
+    }
     if (!this.selectedCat && this.playerState?.ownedCats.length) {
       this.selectedCat = this.playerState.ownedCats[0] ?? null;
     }
@@ -259,7 +279,7 @@ export class Collection extends Scene {
     //   "Your cosmetics" header at h-220
     const headerY = height - 220;
 
-    this.add
+    const headerText = this.add
       .text(SIDE_MARGIN, headerY, 'Your cosmetics', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
@@ -267,6 +287,7 @@ export class Collection extends Scene {
         color: '#c0a0e6',
       })
       .setOrigin(0, 0);
+    this.cosmeticStripGroup.push(headerText);
 
     // Pagination arrows sit at the edges, vertically centered on the row.
     const arrowY = height - 150;
@@ -275,21 +296,25 @@ export class Collection extends Scene {
     const leftBg = this.add.rectangle(leftX, arrowY, ARROW_W, ARROW_W, 0x261540, 0.95);
     leftBg.setStrokeStyle(2, 0xffffff);
     leftBg.setInteractive({ useHandCursor: true });
-    this.add.text(leftX, arrowY, '◀', {
+    this.cosmeticStripGroup.push(leftBg);
+    const leftArrow = this.add.text(leftX, arrowY, '◀', {
       fontFamily: 'Pixeloid Sans, sans-serif',
       fontSize: '18px',
       color: '#ffffff',
     }).setOrigin(0.5);
+    this.cosmeticStripGroup.push(leftArrow);
     leftBg.on('pointerdown', () => this.changeCosmeticPage(-1));
 
     const rightBg = this.add.rectangle(rightX, arrowY, ARROW_W, ARROW_W, 0x261540, 0.95);
     rightBg.setStrokeStyle(2, 0xffffff);
     rightBg.setInteractive({ useHandCursor: true });
-    this.add.text(rightX, arrowY, '▶', {
+    this.cosmeticStripGroup.push(rightBg);
+    const rightArrow = this.add.text(rightX, arrowY, '▶', {
       fontFamily: 'Pixeloid Sans, sans-serif',
       fontSize: '18px',
       color: '#ffffff',
     }).setOrigin(0.5);
+    this.cosmeticStripGroup.push(rightArrow);
     rightBg.on('pointerdown', () => this.changeCosmeticPage(1));
 
     this.pageLabel = this.add
@@ -299,6 +324,7 @@ export class Collection extends Scene {
         color: '#c0a0e6',
       })
       .setOrigin(0.5);
+    this.cosmeticStripGroup.push(this.pageLabel);
   }
 
   private cosmeticTilesPerPage(): number {
@@ -575,6 +601,218 @@ export class Collection extends Scene {
       delay: 600,
       onComplete: () => toast.destroy(),
     });
+  }
+
+  // -- Tab bar (Cosmetics / Decor) ------------------------------------
+
+  private drawTabBar(): void {
+    const { width, height } = this.scale;
+    // Tab bar sits just above the bottom content area (cosmetic strip header
+    // is at height-220; put the bar at height-248 to clear it).
+    const barY = height - 248;
+    const tabW = width / 2 - 4;
+
+    const container = this.add.container(0, barY);
+
+    const cosTab = this.add.rectangle(tabW / 2 + 2, 0, tabW, 28, 0x3a2060, 1);
+    cosTab.setStrokeStyle(2, 0xc0a0e6);
+    cosTab.setInteractive({ useHandCursor: true });
+    const cosLabel = this.add
+      .text(tabW / 2 + 2, 0, 'Cosmetics', {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontSize: '13px',
+        color: '#ffffff',
+      })
+      .setOrigin(0.5);
+
+    const decTab = this.add.rectangle(width / 2 + tabW / 2 + 2, 0, tabW, 28, 0x3a2060, 1);
+    decTab.setStrokeStyle(2, 0xc0a0e6);
+    decTab.setInteractive({ useHandCursor: true });
+    const decLabel = this.add
+      .text(width / 2 + tabW / 2 + 2, 0, 'Decor', {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontSize: '13px',
+        color: '#ffffff',
+      })
+      .setOrigin(0.5);
+
+    container.add([cosTab, cosLabel, decTab, decLabel]);
+    this.tabBarContainer = container;
+
+    cosTab.on('pointerdown', () => this.switchTab('cosmetics'));
+    decTab.on('pointerdown', () => this.switchTab('decor'));
+
+    this.refreshTabBar();
+  }
+
+  private refreshTabBar(): void {
+    // Re-read the tab bar children to update highlight.
+    // The container has [cosTab rect, cosLabel, decTab rect, decLabel].
+    if (!this.tabBarContainer) return;
+    const children = this.tabBarContainer.list;
+    const cosRect = children[0] as GameObjects.Rectangle;
+    const decRect = children[2] as GameObjects.Rectangle;
+    if (this.activeTab === 'cosmetics') {
+      cosRect.setFillStyle(0x6030b0, 1);
+      decRect.setFillStyle(0x3a2060, 1);
+    } else {
+      cosRect.setFillStyle(0x3a2060, 1);
+      decRect.setFillStyle(0x6030b0, 1);
+    }
+  }
+
+  private switchTab(tab: 'cosmetics' | 'decor'): void {
+    if (this.activeTab === tab) return;
+    this.activeTab = tab;
+    this.refreshTabBar();
+
+    if (tab === 'cosmetics') {
+      // Show cosmetic strip elements, hide decor container.
+      for (const obj of this.cosmeticStripGroup) {
+        (obj as GameObjects.GameObject & { setVisible: (v: boolean) => void }).setVisible(true);
+      }
+      this.decorTabContainer?.setVisible(false);
+      this.rebuildCosmeticStrip();
+    } else {
+      // Hide cosmetic strip elements, show decor.
+      for (const obj of this.cosmeticStripGroup) {
+        (obj as GameObjects.GameObject & { setVisible: (v: boolean) => void }).setVisible(false);
+      }
+      // Also hide individual cosmetic tiles which are rebuilt each time.
+      for (const tile of this.cosmeticTiles) tile.container.setVisible(false);
+      this.renderDecorTab();
+    }
+  }
+
+  // -- Decor tab -------------------------------------------------------
+
+  private renderDecorTab(): void {
+    // Destroy previous decor container if any.
+    this.decorTabContainer?.destroy(true);
+
+    const { width, height } = this.scale;
+    // Content area: from just below the tab bar down to just above the back button.
+    const topY = height - 240;
+    const leftX = 20;
+    const rightX = width / 2 + 10;
+    const colWidth = width / 2 - 30;
+
+    const container = this.add.container(0, topY);
+    this.decorTabContainer = container;
+
+    container.add(
+      this.add.text(leftX, 0, 'Owned', {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontSize: '13px',
+        color: '#c0a0e6',
+        fontStyle: 'bold',
+      }),
+    );
+    container.add(
+      this.add.text(rightX, 0, 'Slots', {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontSize: '13px',
+        color: '#c0a0e6',
+        fontStyle: 'bold',
+      }),
+    );
+
+    // Owned decorations list
+    const ownedDecos = this.playerState?.house.ownedDecorations ?? [];
+    let y = 22;
+    for (const decoId of ownedDecos) {
+      const entry = DECORATION_CATALOG.find((d) => d.id === decoId);
+      if (!entry) continue;
+      const isSelected = this.selectedDecorationId === decoId;
+      const row = this.add.container(leftX, y);
+      const bg = this.add
+        .rectangle(0, 0, colWidth, 28, isSelected ? 0x6030b0 : 0x2c1856, 0.9)
+        .setOrigin(0, 0);
+      bg.setStrokeStyle(1, isSelected ? 0xffd34d : 0x5040a0);
+      const sprite = this.add
+        .sprite(8, 14, AssetKeys.Atlas.Decorations, entry.frame)
+        .setScale(0.4)
+        .setOrigin(0, 0.5);
+      const label = this.add
+        .text(32, 14, entry.displayName, {
+          fontFamily: 'Pixeloid Sans, sans-serif',
+          fontSize: '11px',
+          color: '#ffffff',
+        })
+        .setOrigin(0, 0.5);
+      row.add([bg, sprite, label]);
+      bg.setInteractive({ useHandCursor: true });
+      bg.on('pointerdown', () => this.selectDecoration(decoId));
+      container.add(row);
+      y += 32;
+    }
+
+    if (ownedDecos.length === 0) {
+      container.add(
+        this.add.text(leftX, 22, '(none yet)', {
+          fontFamily: 'Pixeloid Sans, sans-serif',
+          fontSize: '11px',
+          color: '#888888',
+        }),
+      );
+    }
+
+    // Slots list
+    const decorations = this.playerState?.house.decorations ?? {};
+    y = 22;
+    for (const slot of SCENE_SLOTS) {
+      const row = this.add.container(rightX, y);
+      const placedId = decorations[slot.id];
+      const placedName = placedId
+        ? (DECORATION_CATALOG.find((d) => d.id === placedId)?.displayName ?? '?')
+        : '(empty)';
+      const bg = this.add
+        .rectangle(0, 0, colWidth, 28, 0x2c1856, 0.9)
+        .setOrigin(0, 0);
+      bg.setStrokeStyle(1, placedId ? 0x00cc66 : 0x5040a0);
+      const label = this.add
+        .text(8, 14, `${slot.label}: ${placedName}`, {
+          fontFamily: 'Pixeloid Sans, sans-serif',
+          fontSize: '10px',
+          color: placedId ? '#a0ffcc' : '#cccccc',
+        })
+        .setOrigin(0, 0.5);
+      row.add([bg, label]);
+      bg.setInteractive({ useHandCursor: true });
+      bg.on('pointerdown', () => void this.placeSelectedInSlot(slot.id));
+      container.add(row);
+      y += 32;
+    }
+
+    // Footer hint
+    const hintY = Math.max(y, 22 + SCENE_SLOTS.length * 32) + 4;
+    container.add(
+      this.add.text(leftX, hintY, 'Tap owned → tap slot to place. Tap filled slot to clear.', {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontSize: '10px',
+        color: '#c0a0e6',
+        wordWrap: { width: width - 40 },
+      }),
+    );
+  }
+
+  private selectDecoration(id: DecorationId): void {
+    this.selectedDecorationId = this.selectedDecorationId === id ? null : id;
+    this.renderDecorTab();
+  }
+
+  private async placeSelectedInSlot(slotId: SlotId): Promise<void> {
+    if (!this.playerState) return;
+    const current = this.playerState.house.decorations[slotId];
+    if (!this.selectedDecorationId && current) {
+      // Tap filled slot with nothing selected → clear it.
+      this.playerState = await setDecorationInSlot(slotId, null);
+    } else if (this.selectedDecorationId) {
+      // Place selected decoration in slot.
+      this.playerState = await setDecorationInSlot(slotId, this.selectedDecorationId);
+      this.selectedDecorationId = null;
+    }
+    this.renderDecorTab();
   }
 
   // -- Save / Back buttons --------------------------------------------
