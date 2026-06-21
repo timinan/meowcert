@@ -7,6 +7,9 @@ import {
   type BoxId,
   type CatBreed,
   type CosmeticId,
+  type DecorationId,
+  type SlotId,
+  type ThemeId,
 } from '../../shared/state';
 
 // DEV ONLY — every GET /api/state wipes the player's record and hands
@@ -99,4 +102,38 @@ state.post('/onboarding/complete', async (c) => {
   player.onboardingDone = true;
   await save(redis, player);
   return c.json({ state: player });
+});
+
+/** POST /api/house/decoration — body: { slotId, decorationId | null }.
+ * Pass null decorationId to clear the slot. */
+state.post('/house/decoration', async (c) => {
+  const { slotId, decorationId } = (await c.req.json()) as {
+    slotId: SlotId;
+    decorationId: DecorationId | null;
+  };
+  const username = await currentUsername();
+  const player = await loadOrInit(redis, username);
+  if (decorationId === null) {
+    delete player.house.decorations[slotId];
+  } else {
+    if (!player.house.ownedDecorations.includes(decorationId)) {
+      return c.json({ ok: false, reason: 'decoration_not_owned' }, 400);
+    }
+    player.house.decorations[slotId] = decorationId;
+  }
+  await save(redis, player);
+  return c.json({ ok: true, state: player });
+});
+
+/** POST /api/house/theme — body: { themeId }. */
+state.post('/house/theme', async (c) => {
+  const { themeId } = (await c.req.json()) as { themeId: ThemeId };
+  const username = await currentUsername();
+  const player = await loadOrInit(redis, username);
+  if (!player.house.ownedThemes.includes(themeId)) {
+    return c.json({ ok: false, reason: 'theme_not_owned' }, 400);
+  }
+  player.house.themeId = themeId;
+  await save(redis, player);
+  return c.json({ ok: true, state: player });
 });
