@@ -1,5 +1,5 @@
 import type { PlayerState } from '../../shared/state';
-import { STARTER_COINS, createFreshPlayerState } from '../../shared/state';
+import { createFreshPlayerState } from '../../shared/state';
 
 /**
  * Minimal interface to Redis — the only operations player-state needs.

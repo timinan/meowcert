@@ -2,6 +2,7 @@ export const AssetKeys = {
   Atlas: {
     Cats: 'cats-atlas',
     Cosmetics: 'cosmetics-atlas',
+    Decorations: 'decorations',
   },
   Image: {
     GameBackground: 'game-background',
@@ -12,9 +13,15 @@ export const AssetKeys = {
     PspspsElement: 'pspsps-element',
     PspspsElementBall: 'pspsps-element-ball',
     PspspsElementLetters: 'pspsps-element-letters',
+    ThemeDefaultBg: 'theme-default-bg',
+    ThemeCozyBg: 'theme-cozy-bg',
+    ThemeSpookyBg: 'theme-spooky-bg',
   },
   Audio: {
     Background: 'background-music',
     Pspsps: 'pspsps-sfx',
+    ThemeDefaultMusic: 'theme-default-music',
+    ThemeCozyMusic: 'theme-cozy-music',
+    ThemeSpookyMusic: 'theme-spooky-music',
   },
 } as const;
