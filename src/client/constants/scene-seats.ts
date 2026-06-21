@@ -33,7 +33,7 @@ const TOP_BAR = 44;
 const TRAY_HEIGHT = 170;
 
 /**
- * Convert design-space coords (320x480) to canvas-space coords mapped onto
+ * Convert design-space coords (320×480) to canvas-space coords mapped onto
  * the playable area between TopHud and the bottom tray.
  */
 export function designToCanvas(scene: Scene, designX: number, designY: number): { x: number; y: number } {
