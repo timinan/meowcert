@@ -54,6 +54,30 @@ export interface CosmeticEntry {
   tintMode?: 'color' | 'hue' | 'multiply' | 'soft-light';
 }
 
+// -- Decorations + Themes ------------------------------------------------
+
+export type DecorationId = string;
+export type ThemeId = string;
+export type SlotId = string;
+
+export interface DecorationEntry {
+  id: DecorationId;
+  displayName: string;
+  /** Frame key in the decorations atlas */
+  frame: string;
+  rarity: Rarity;
+}
+
+export interface ThemeEntry {
+  id: ThemeId;
+  displayName: string;
+  /** Phaser texture key for the backdrop image */
+  backdropKey: string;
+  /** Phaser audio key for the music track */
+  musicKey: string;
+  rarity: Rarity;
+}
+
 export interface BoxConfig {
   id: BoxId;
   cost: number;
