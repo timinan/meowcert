@@ -3,7 +3,7 @@ import { pullBox, applyPullToState } from '../src/server/core/box-pull';
 import {
   CAT_CATALOG,
   COSMETIC_CATALOG,
-  THEME_CATALOG,
+  BACKGROUND_CATALOG,
   DUPLICATE_REFUND,
   BOX_CATALOG,
   createFreshPlayerState,
@@ -25,54 +25,33 @@ function seqRng(values: number[]): () => number {
 }
 
 describe('box-pull', () => {
-  it('Cat Crate returns a cat ID at one of the configured rarities', () => {
-    const result = pullBox('catCrate', emptyState(), seqRng([0.0, 0.0]));
+  it('catBox returns a cat ID at one of the configured rarities', () => {
+    const result = pullBox('catBox', emptyState(), seqRng([0.0, 0.0]));
     expect(result.kind).toBe('cat');
     expect(CAT_CATALOG.map((c) => c.id)).toContain(result.itemId);
   });
 
-  it('Style Pack returns a cosmetic ID', () => {
-    const result = pullBox('stylePack', emptyState(), seqRng([0.0, 0.0]));
+  it('cosmeticBox returns a cosmetic ID', () => {
+    const result = pullBox('cosmeticBox', emptyState(), seqRng([0.0, 0.0]));
     expect(result.kind).toBe('cosmetic');
     expect(COSMETIC_CATALOG.map((c) => c.id)).toContain(result.itemId);
   });
 
-  it('Cat Crate NEVER drops a legendary cat over many pulls', () => {
+  it('catBox NEVER drops a legendary cat over many pulls', () => {
     let legendaryCount = 0;
     const rng = Math.random;
     for (let i = 0; i < 5000; i++) {
-      const r = pullBox('catCrate', emptyState(), rng);
+      const r = pullBox('catBox', emptyState(), rng);
       if (r.rarity === 'legendary') legendaryCount++;
     }
     expect(legendaryCount).toBe(0);
-  });
-
-  it('Premium Cat Crate drops legendary at roughly 10% over many pulls', () => {
-    let legendaryCount = 0;
-    const N = 5000;
-    for (let i = 0; i < N; i++) {
-      const r = pullBox('premiumCatCrate', emptyState(), Math.random);
-      if (r.rarity === 'legendary') legendaryCount++;
-    }
-    const rate = legendaryCount / N;
-    expect(rate).toBeGreaterThan(0.07);
-    expect(rate).toBeLessThan(0.13);
-  });
-
-  it('Premium Cat Crate never drops a common cat', () => {
-    let commonCount = 0;
-    for (let i = 0; i < 2000; i++) {
-      const r = pullBox('premiumCatCrate', emptyState(), Math.random);
-      if (r.rarity === 'common') commonCount++;
-    }
-    expect(commonCount).toBe(0);
   });
 
   it('a duplicate cat pull is flagged with a DUPLICATE_REFUND refund', () => {
     const state = emptyState();
     state.ownedCats = ['cat1', 'cat2', 'cat3'];
     // Force the common-tier branch with rng=0; pick is cat1 (first in pool).
-    const result = pullBox('catCrate', state, seqRng([0.0, 0.0]));
+    const result = pullBox('catBox', state, seqRng([0.0, 0.0]));
     expect(result.duplicate).toBe(true);
     expect(result.refundCoins).toBe(DUPLICATE_REFUND);
   });
@@ -80,13 +59,13 @@ describe('box-pull', () => {
   it('a duplicate cosmetic pull is flagged with a refund too', () => {
     const state = emptyState();
     state.ownedCosmetics = ['c1'];
-    const result = pullBox('stylePack', state, seqRng([0.0, 0.0]));
+    const result = pullBox('cosmeticBox', state, seqRng([0.0, 0.0]));
     expect(result.duplicate).toBe(true);
     expect(result.refundCoins).toBe(DUPLICATE_REFUND);
   });
 
   it('a non-duplicate pull has 0 refund', () => {
-    const result = pullBox('catCrate', emptyState(), seqRng([0.0, 0.0]));
+    const result = pullBox('catBox', emptyState(), seqRng([0.0, 0.0]));
     expect(result.duplicate).toBe(false);
     expect(result.refundCoins).toBe(0);
   });
@@ -119,44 +98,70 @@ describe('box-pull', () => {
   });
 });
 
-describe('box-pull: theme', () => {
-  it('themePack pulls a theme not already owned', () => {
+describe('box-pull: backgroundBox', () => {
+  it('backgroundBox pulls an unowned background and adds it to ownedBackgrounds', () => {
     const state = createFreshPlayerState();
-    state.coins = 100;
-    // rng=0.42 lands in the common bucket (roll=42, cumulative common=70).
-    // Fresh player owns 'default' (the only common theme), so the fix falls
-    // through to any unowned theme and returns cozy or spooky.
-    const result = pullBox('themePack', state, () => 0.42);
-    expect(result.kind).toBe('theme');
-    expect(THEME_CATALOG.find((t) => t.id === result.itemId)).toBeDefined();
+    // Fresh player owns only 'default'; cozy and spooky are unowned.
+    const result = pullBox('backgroundBox', state, seqRng([0.42, 0.0]));
+    expect(result.kind).toBe('background');
+    expect(Object.keys(BACKGROUND_CATALOG)).toContain(result.itemId);
     expect(result.duplicate).toBe(false);
-    expect(['cozy', 'spooky']).toContain(result.itemId);
+    expect(result.refundCoins).toBe(0);
     applyPullToState(state, result);
-    expect(state.house.ownedThemes).toContain(result.itemId);
+    expect(state.ownedBackgrounds).toContain(result.itemId);
   });
 
-  it('themePack falls back to unowned theme when common bucket is empty', () => {
+  it('backgroundBox refunds when all backgrounds already owned', () => {
     const state = createFreshPlayerState();
-    state.house.ownedThemes = ['default'];
-    // rng=0.42 → common bucket → pool empty (owns default) → fallback to any unowned
-    const result = pullBox('themePack', state, () => 0.42);
-    expect(result.kind).toBe('theme');
-    expect(result.duplicate).toBe(false);
-    expect(['cozy', 'spooky']).toContain(result.itemId);
+    state.ownedBackgrounds = Object.keys(BACKGROUND_CATALOG) as (keyof typeof BACKGROUND_CATALOG)[];
+    const startCoins = state.coins;
+    const result = pullBox('backgroundBox', state, seqRng([0.5, 0.5]));
+    expect(result.duplicate).toBe(true);
+    expect(result.refundCoins).toBe(DUPLICATE_REFUND);
+    applyPullToState(state, result);
+    expect(state.coins).toBe(startCoins + DUPLICATE_REFUND);
+    // ownedBackgrounds should be unchanged (no new item added)
+    expect(state.ownedBackgrounds).toEqual(Object.keys(BACKGROUND_CATALOG));
   });
 
+  it('backgroundBox distributes across unowned backgrounds over many pulls', () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 100; i++) {
+      const state = createFreshPlayerState(); // always only owns 'default'
+      const result = pullBox('backgroundBox', state, Math.random);
+      if (!result.duplicate) seen.add(result.itemId as string);
+    }
+    // With 2 unowned backgrounds (cozy, spooky), both should appear in 100 pulls
+    expect(seen.size).toBeGreaterThan(1);
+  });
 });
 
-describe('Phase 3 box catalog', () => {
-  it('includes a Theme Pack at 50 coins for themes', () => {
-    const box = BOX_CATALOG.themePack;
+describe('Phase 5 box catalog', () => {
+  it('includes catBox at 150 coins for cats', () => {
+    const box = BOX_CATALOG.catBox;
     expect(box).toBeDefined();
-    expect(box.cost).toBe(50);
-    expect(box.rewardKind).toBe('theme');
+    expect(box.price).toBe(150);
+    expect(box.rewardKind).toBe('cat');
   });
 
-  it('drop weights sum to 100 for themePack', () => {
-    const total = Object.values(BOX_CATALOG.themePack.rates).reduce((a, b) => a + b, 0);
-    expect(total).toBe(100);
+  it('includes cosmeticBox at 80 coins for cosmetics', () => {
+    const box = BOX_CATALOG.cosmeticBox;
+    expect(box).toBeDefined();
+    expect(box.price).toBe(80);
+    expect(box.rewardKind).toBe('cosmetic');
+  });
+
+  it('includes backgroundBox at 250 coins for backgrounds', () => {
+    const box = BOX_CATALOG.backgroundBox;
+    expect(box).toBeDefined();
+    expect(box.price).toBe(250);
+    expect(box.rewardKind).toBe('background');
+  });
+
+  it('drop weights sum to 100 for all boxes', () => {
+    for (const [id, box] of Object.entries(BOX_CATALOG)) {
+      const total = Object.values(box.rates).reduce((a, b) => a + b, 0);
+      expect(total, `${id} rates should sum to 100`).toBe(100);
+    }
   });
 });

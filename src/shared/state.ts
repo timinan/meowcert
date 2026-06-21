@@ -20,12 +20,7 @@ export type CosmeticId = string;
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'legendary';
 
-export type BoxId =
-  | 'catCrate'
-  | 'premiumCatCrate'
-  | 'stylePack'
-  | 'premiumStylePack'
-  | 'themePack';
+export type BoxId = 'catBox' | 'cosmeticBox' | 'backgroundBox';
 
 // -- Catalog entries ----------------------------------------------------
 
@@ -74,8 +69,10 @@ export interface ThemeEntry {
 
 export interface BoxConfig {
   id: BoxId;
-  cost: number;
-  rewardKind: 'cat' | 'cosmetic' | 'theme';
+  displayName: string;
+  description: string;
+  price: number;
+  rewardKind: 'cat' | 'cosmetic' | 'background';
   /** Drop weights by rarity. Must sum to 100 (enforced by tests). */
   rates: Record<Rarity, number>;
 }
@@ -93,34 +90,28 @@ export { GENERATED_THEME_CATALOG as THEME_CATALOG, BACKGROUND_CATALOG } from './
 // -- Box catalog --------------------------------------------------------
 
 export const BOX_CATALOG: Record<BoxId, BoxConfig> = {
-  catCrate: {
-    id: 'catCrate',
-    cost: 200,
+  catBox: {
+    id: 'catBox',
+    displayName: 'Cat Box',
+    description: 'Opens a random cat. Could be a new face for your stage.',
+    price: 150,
     rewardKind: 'cat',
     rates: { common: 70, uncommon: 25, rare: 5, legendary: 0 },
   },
-  premiumCatCrate: {
-    id: 'premiumCatCrate',
-    cost: 1000,
-    rewardKind: 'cat',
-    rates: { common: 0, uncommon: 40, rare: 50, legendary: 10 },
-  },
-  stylePack: {
-    id: 'stylePack',
-    cost: 50,
+  cosmeticBox: {
+    id: 'cosmeticBox',
+    displayName: 'Cosmetic Box',
+    description: 'Opens a random hat, bow, or accessory for the Dressing Room.',
+    price: 80,
     rewardKind: 'cosmetic',
     rates: { common: 70, uncommon: 25, rare: 5, legendary: 0 },
   },
-  premiumStylePack: {
-    id: 'premiumStylePack',
-    cost: 250,
-    rewardKind: 'cosmetic',
-    rates: { common: 0, uncommon: 40, rare: 50, legendary: 10 },
-  },
-  themePack: {
-    id: 'themePack',
-    cost: 50,
-    rewardKind: 'theme',
+  backgroundBox: {
+    id: 'backgroundBox',
+    displayName: 'Background Box',
+    description: 'Opens a random stage background.',
+    price: 250,
+    rewardKind: 'background',
     rates: { common: 70, uncommon: 25, rare: 5, legendary: 0 },
   },
 };

@@ -1,0 +1,338 @@
+import { Scene, GameObjects } from 'phaser';
+import { SceneKeys } from '@/constants/scenes';
+import { playBoxOpenAnimation } from '@/ui/box-open-animation';
+import { TopHud } from '@/ui/top-hud';
+import { openBox, fetchState } from '@/services/state-client';
+import {
+  BOX_CATALOG,
+  CAT_CATALOG,
+  COSMETIC_CATALOG,
+  BACKGROUND_CATALOG,
+  type BoxId,
+  type CatBreed,
+  type CosmeticId,
+  type BackgroundId,
+  type PlayerState,
+} from '@/../shared/state';
+
+// Box gradient colors: [topColor, bottomColor]
+const BOX_GRADIENTS: Record<BoxId, [number, number]> = {
+  catBox:        [0xff9bbf, 0xc44e87],
+  cosmeticBox:   [0xffd34d, 0xc8901f],
+  backgroundBox: [0x6fbcff, 0x2c63a6],
+};
+
+/**
+ * Purchase scene — three box cards stacked vertically, each roughly 1/3 of
+ * the canvas height. Tap to open via the server; the existing box-open-animation
+ * handles the reveal. Price chip goes red when the player can't afford the box.
+ */
+export class Purchase extends Scene {
+  private playerState: PlayerState | null = null;
+  private busy = false;
+
+  private topHud!: TopHud;
+  private uiRoot!: GameObjects.Container;
+
+  constructor() {
+    super(SceneKeys.Purchase);
+  }
+
+  init(data: { playerState?: PlayerState | null }): void {
+    this.playerState = data?.playerState ?? null;
+    this.busy = false;
+  }
+
+  async create(): Promise<void> {
+    const { width, height } = this.scale;
+
+    this.add.rectangle(0, 0, width, height, 0x1a0a2e, 1).setOrigin(0, 0);
+
+    // Subtle star field
+    const stars = this.add.graphics();
+    stars.fillStyle(0xffffff, 0.22);
+    for (let i = 0; i < 55; i++) {
+      stars.fillCircle(Math.random() * width, Math.random() * height, Math.random() * 1.4 + 0.4);
+    }
+
+    this.topHud = new TopHud(this, {
+      showStats: true,
+      items: [
+        {
+          label: 'Back to Game',
+          description: 'Return to the rhythm scene',
+          icon: '🎮',
+          onTap: () => this.scene.start(SceneKeys.Game, { playerState: this.playerState }),
+        },
+        {
+          label: 'Edit Home',
+          description: 'Decorate, seat, dress up',
+          icon: '🏠',
+          onTap: () => this.scene.start(SceneKeys.Decorate, { playerState: this.playerState }),
+        },
+      ],
+    });
+
+    const titleFontSize = width >= 520 ? 28 : width >= 380 ? 20 : 16;
+    this.add
+      .text(width / 2, TopHud.HEIGHT + 10, 'PURCHASE', {
+        fontFamily: 'Pixeloid Sans, monospace',
+        fontStyle: 'bold',
+        fontSize: `${titleFontSize}px`,
+        color: '#ffd34d',
+        stroke: '#000000',
+        strokeThickness: 4,
+        align: 'center',
+      })
+      .setOrigin(0.5, 0);
+
+    this.uiRoot = this.add.container(0, 0);
+    this.drawCards();
+    this.refreshCoins();
+    this.refreshAffordability();
+
+    if (!this.playerState) {
+      try {
+        this.playerState = await fetchState();
+        this.refreshCoins();
+        this.refreshAffordability();
+      } catch (e) {
+        console.warn('[purchase] fetchState failed', e);
+      }
+    }
+  }
+
+  private drawCards(): void {
+    const { width, height } = this.scale;
+    const hudH = TopHud.HEIGHT + 44; // HUD strip + title row
+    const bottomPad = 12;
+    const gap = 10;
+    const usableH = height - hudH - bottomPad;
+    const cardH = Math.floor((usableH - gap * 2) / 3);
+    const cardW = Math.min(width - 32, 480);
+    const cardX = width / 2;
+
+    const boxIds: BoxId[] = ['catBox', 'cosmeticBox', 'backgroundBox'];
+    boxIds.forEach((boxId, i) => {
+      const cardY = hudH + i * (cardH + gap) + cardH / 2;
+      this.drawCard(boxId, cardX, cardY, cardW, cardH);
+    });
+  }
+
+  private drawCard(boxId: BoxId, cx: number, cy: number, w: number, h: number): void {
+    const entry = BOX_CATALOG[boxId];
+    const [topColor, bottomColor] = BOX_GRADIENTS[boxId];
+    const container = this.add.container(cx, cy);
+    this.uiRoot.add(container);
+
+    // Card background
+    const bg = this.add.rectangle(0, 0, w, h, 0x1e0f35, 0.97);
+    bg.setStrokeStyle(2, topColor);
+    bg.setInteractive({ useHandCursor: true });
+
+    // Left art block: colored gradient rectangle with bow emoji
+    const artW = Math.min(80, h - 16);
+    const artX = -w / 2 + 12 + artW / 2;
+    const artBlock = this.add.graphics();
+    artBlock.fillGradientStyle(topColor, topColor, bottomColor, bottomColor, 1);
+    artBlock.fillRoundedRect(artX - artW / 2, -artW / 2, artW, artW, 8);
+
+    const bowFontSize = Math.max(20, Math.min(32, artW - 12));
+    const bowEmoji = this.add
+      .text(artX, 0, '🎀', {
+        fontSize: `${bowFontSize}px`,
+        align: 'center',
+      })
+      .setOrigin(0.5);
+
+    // Right text area starts just past the art block
+    const textX = artX + artW / 2 + 14;
+    const rightW = w / 2 - 10 - (textX - cx + w / 2 - cx);
+
+    const nameFontSize = w >= 360 ? 16 : 13;
+    const accentCss = '#' + topColor.toString(16).padStart(6, '0');
+    const nameText = this.add
+      .text(textX, -h / 2 + 14, entry.displayName, {
+        fontFamily: 'Pixeloid Sans, monospace',
+        fontStyle: 'bold',
+        fontSize: `${nameFontSize}px`,
+        color: accentCss,
+        wordWrap: { width: Math.max(rightW, 80) },
+      })
+      .setOrigin(0, 0);
+
+    const descFontSize = w >= 360 ? 12 : 10;
+    const descText = this.add
+      .text(textX, nameText.y + nameFontSize + 6, entry.description, {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontSize: `${descFontSize}px`,
+        color: '#a090c0',
+        wordWrap: { width: Math.max(rightW, 80) },
+      })
+      .setOrigin(0, 0);
+
+    // Price chip — bottom-right of card
+    const chipText = this.add
+      .text(w / 2 - 10, h / 2 - 12, `🪙 ${entry.price}`, {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontStyle: 'bold',
+        fontSize: '15px',
+        color: '#ffd34d',
+        backgroundColor: '#1a0a2e',
+        padding: { x: 6, y: 3 },
+      })
+      .setOrigin(1, 1);
+
+    // Thin accent stripe down the center
+    const stripe = this.add.graphics();
+    stripe.fillStyle(topColor, 0.15);
+    stripe.fillRect(-1, -h / 2 + 4, 2, h - 8);
+
+    container.add([bg, artBlock, bowEmoji, nameText, descText, stripe, chipText]);
+
+    // Tag this container so refreshAffordability can find it
+    const tagged = container as TaggedContainer;
+    tagged._boxId = boxId;
+    tagged._bg = bg;
+    tagged._chipText = chipText;
+    tagged._topColor = topColor;
+
+    bg.on('pointerdown', () => {
+      if (this.busy) return;
+      if (!this.canAfford(boxId)) {
+        this.flashTooPoor(container);
+        return;
+      }
+      this.tweens.add({ targets: container, scale: 0.97, duration: 70, yoyo: true });
+      void this.onOpenBox(boxId);
+    });
+  }
+
+  private canAfford(boxId: BoxId): boolean {
+    return (this.playerState?.coins ?? 0) >= BOX_CATALOG[boxId].price;
+  }
+
+  private refreshCoins(): void {
+    this.topHud?.setCoins(this.playerState?.coins ?? 0);
+  }
+
+  private refreshAffordability(): void {
+    for (const child of this.uiRoot.list as TaggedContainer[]) {
+      if (!child._boxId) continue;
+      const boxId = child._boxId;
+      const affordable = this.canAfford(boxId);
+      child.setAlpha(affordable ? 1 : 0.45);
+      child._bg?.setStrokeStyle(2, affordable ? (child._topColor ?? 0xffffff) : 0x444444);
+      const entry = BOX_CATALOG[boxId];
+      if (child._chipText) {
+        if (affordable) {
+          child._chipText.setText(`🪙 ${entry.price}`).setColor('#ffd34d');
+        } else {
+          const need = entry.price - (this.playerState?.coins ?? 0);
+          child._chipText.setText(`🪙 ${entry.price} · need ${need}`).setColor('#cc4444');
+        }
+      }
+    }
+  }
+
+  private flashTooPoor(container: GameObjects.Container): void {
+    this.tweens.add({
+      targets: container,
+      x: container.x - 6,
+      duration: 50,
+      yoyo: true,
+      repeat: 3,
+    });
+  }
+
+  private async onOpenBox(boxId: BoxId): Promise<void> {
+    if (this.busy) return;
+    this.busy = true;
+
+    try {
+      const result = await openBox(boxId);
+      if (!result.ok) {
+        console.warn('[purchase] open failed:', result.reason);
+        this.busy = false;
+        return;
+      }
+      this.playerState = result.state;
+      this.refreshCoins();
+      this.refreshAffordability();
+
+      const pull = result.pull;
+
+      if (pull.kind === 'background') {
+        const bgId = pull.itemId as BackgroundId;
+        const bgEntry = BACKGROUND_CATALOG[bgId];
+        playBoxOpenAnimation(
+          this,
+          {
+            textureKey: bgEntry?.backdropKey ?? 'theme-default-bg',
+            frame: '',
+            itemName: bgEntry?.displayName ?? bgId,
+            rarity: pull.rarity,
+            duplicate: pull.duplicate,
+            refundCoins: pull.refundCoins,
+          },
+          () => { this.busy = false; },
+        );
+        return;
+      }
+
+      const isCat = pull.kind === 'cat';
+      const catEntry = isCat ? CAT_CATALOG.find((c) => c.id === (pull.itemId as CatBreed)) : undefined;
+      const cosEntry = !isCat ? COSMETIC_CATALOG.find((c) => c.id === (pull.itemId as CosmeticId)) : undefined;
+      const itemName = catEntry?.name ?? cosEntry?.name ?? pull.itemId;
+      const { frame, rainbow, tint } = resolveFrame(pull.itemId, isCat);
+
+      playBoxOpenAnimation(
+        this,
+        {
+          textureKey: isCat ? 'cats' : 'cosmetics',
+          frame,
+          itemName,
+          rarity: pull.rarity,
+          ...(rainbow ? { rainbow: true } : {}),
+          ...(tint ? { tint: parseInt(tint.replace('#', ''), 16) } : {}),
+          duplicate: pull.duplicate,
+          refundCoins: pull.refundCoins,
+        },
+        () => { this.busy = false; },
+      );
+    } catch (e) {
+      console.warn('[purchase] open error', e);
+      this.busy = false;
+    }
+  }
+
+  shutdown(): void {
+    this.tweens.killAll();
+    this.uiRoot?.destroy();
+  }
+}
+
+// -- helpers ---------------------------------------------------------------
+
+interface TaggedContainer extends GameObjects.Container {
+  _boxId?: BoxId;
+  _bg?: GameObjects.Rectangle;
+  _chipText?: GameObjects.Text;
+  _topColor?: number;
+}
+
+function resolveFrame(
+  itemId: CatBreed | CosmeticId,
+  isCat: boolean,
+): { frame: string; rainbow?: boolean; tint?: string } {
+  if (!isCat) {
+    const entry = COSMETIC_CATALOG.find((c) => c.id === itemId);
+    const renderId = entry?.sourceFrame?.match(/^cosmetic_(c\d+)_/)?.[1] ?? itemId;
+    return {
+      frame: `cosmetic_${renderId}_idle_00`,
+      ...(entry?.tint ? { tint: entry.tint } : {}),
+    };
+  }
+  if (itemId === 'rainbow') return { frame: 'cat6_idle_00', rainbow: true };
+  return { frame: `${itemId}_idle_00` };
+}

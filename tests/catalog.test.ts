@@ -41,19 +41,16 @@ describe('shared catalog', () => {
     }
   });
 
-  it('Cat Crate cannot drop legendary; Premium Cat Crate can', () => {
-    expect(BOX_CATALOG.catCrate.rates.legendary).toBe(0);
-    expect(BOX_CATALOG.premiumCatCrate.rates.legendary).toBeGreaterThan(0);
+  it('catBox cannot drop legendary cats', () => {
+    expect(BOX_CATALOG.catBox.rates.legendary).toBe(0);
   });
 
-  it('Style Pack cannot drop legendary; Premium Style Pack can', () => {
-    expect(BOX_CATALOG.stylePack.rates.legendary).toBe(0);
-    expect(BOX_CATALOG.premiumStylePack.rates.legendary).toBeGreaterThan(0);
+  it('cosmeticBox cannot drop legendary cosmetics', () => {
+    expect(BOX_CATALOG.cosmeticBox.rates.legendary).toBe(0);
   });
 
-  it('premium boxes cost strictly more than their basic counterparts', () => {
-    expect(BOX_CATALOG.premiumCatCrate.cost).toBeGreaterThan(BOX_CATALOG.catCrate.cost);
-    expect(BOX_CATALOG.premiumStylePack.cost).toBeGreaterThan(BOX_CATALOG.stylePack.cost);
+  it('backgroundBox costs more than cosmeticBox', () => {
+    expect(BOX_CATALOG.backgroundBox.price).toBeGreaterThan(BOX_CATALOG.cosmeticBox.price);
   });
 
   it('every cat / cosmetic id is unique within its catalog', () => {
@@ -61,11 +58,14 @@ describe('shared catalog', () => {
     expect(new Set(COSMETIC_CATALOG.map((c) => c.id)).size).toBe(COSMETIC_CATALOG.length);
   });
 
-  it('for each rarity, all four boxes plus the catalogs are internally consistent', () => {
+  it('for each rarity, cat/cosmetic boxes are internally consistent with their catalogs', () => {
     // If a box's rate > 0 for a given rarity, the corresponding catalog
     // must have at least one entry of that rarity — otherwise the pull
     // logic would have nothing to pick from.
+    // Background boxes pull from BACKGROUND_CATALOG which has no rarity-based filtering,
+    // so we skip that check for background boxes.
     for (const box of Object.values(BOX_CATALOG)) {
+      if (box.rewardKind === 'background') continue;
       const catalog = box.rewardKind === 'cat' ? CAT_CATALOG : COSMETIC_CATALOG;
       for (const r of ['common', 'uncommon', 'rare', 'legendary'] as Rarity[]) {
         if (box.rates[r] > 0) {

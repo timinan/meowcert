@@ -11,8 +11,8 @@ import type {
 } from '../../shared/state';
 
 export interface PullResult {
-  kind: 'cat' | 'cosmetic' | 'theme';
-  itemId: CatBreed | CosmeticId | ThemeId;
+  kind: 'cat' | 'cosmetic' | 'background';
+  itemId: CatBreed | CosmeticId | BackgroundId;
   rarity: Rarity;
   duplicate: boolean;
   refundCoins: number;

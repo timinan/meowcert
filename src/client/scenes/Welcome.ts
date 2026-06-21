@@ -123,19 +123,19 @@ export class Welcome extends Scene {
       this.subtitle.setText(
         "Your cat house is ready. Here's 600 coins to get you started — let's open your first boxes!",
       );
-      const cost = BOX_CATALOG.catCrate.cost;
+      const cost = BOX_CATALOG.catBox.price;
       this.actionButton = this.createButton(
-        `Open Cat Crate · ${cost}🪙`,
+        `Open Cat Box · ${cost}🪙`,
         0x6fbcff,
-        () => this.onOpenBox('catCrate'),
+        () => this.onOpenBox('catBox'),
       );
     } else if (step === 'cosmetic') {
       this.subtitle.setText('Nice! One more — pick a style for your crew.');
-      const cost = BOX_CATALOG.stylePack.cost;
+      const cost = BOX_CATALOG.cosmeticBox.price;
       this.actionButton = this.createButton(
-        `Open Style Pack · ${cost}🪙`,
+        `Open Cosmetic Box · ${cost}🪙`,
         0xc678ff,
-        () => this.onOpenBox('stylePack'),
+        () => this.onOpenBox('cosmeticBox'),
       );
     } else {
       this.title.setText("You're all set!");
@@ -255,7 +255,7 @@ export class Welcome extends Scene {
         },
         () => {
           this.busy = false;
-          this.showStep(boxId === 'catCrate' ? 'cosmetic' : 'done');
+          this.showStep(boxId === 'catBox' ? 'cosmetic' : 'done');
         },
       );
     } catch (e) {

@@ -45,10 +45,10 @@ state.post('/box/open', async (c) => {
   }
   const username = await currentUsername();
   const player = await loadOrInit(redis, username);
-  if (player.coins < box.cost) {
+  if (player.coins < box.price) {
     return c.json({ ok: false, reason: 'insufficient_coins' }, 400);
   }
-  player.coins -= box.cost;
+  player.coins -= box.price;
   const pull = pullBox(boxId, player);
   applyPullToState(player, pull);
   await save(redis, player);

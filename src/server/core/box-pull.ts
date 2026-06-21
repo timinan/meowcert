@@ -2,19 +2,19 @@ import {
   BOX_CATALOG,
   CAT_CATALOG,
   COSMETIC_CATALOG,
-  THEME_CATALOG,
+  BACKGROUND_CATALOG,
   DUPLICATE_REFUND,
   type BoxId,
   type CatBreed,
   type CosmeticId,
-  type ThemeId,
+  type BackgroundId,
   type PlayerState,
   type Rarity,
 } from '../../shared/state';
 
 export interface PullResult {
-  kind: 'cat' | 'cosmetic' | 'theme';
-  itemId: CatBreed | CosmeticId | ThemeId;
+  kind: 'cat' | 'cosmetic' | 'background';
+  itemId: CatBreed | CosmeticId | BackgroundId;
   rarity: Rarity;
   /** True if the player already owned this item — refundCoins will be > 0. */
   duplicate: boolean;
@@ -58,6 +58,7 @@ export function pullBox(
 ): PullResult {
   const box = BOX_CATALOG[boxId];
   const rarity = rollRarity(box.rates, rng);
+
   if (box.rewardKind === 'cat') {
     const pool = CAT_CATALOG.filter((c) => c.rarity === rarity);
     const pick = pool[Math.floor(rng() * pool.length)]!;
@@ -70,6 +71,7 @@ export function pullBox(
       refundCoins: duplicate ? DUPLICATE_REFUND : 0,
     };
   }
+
   if (box.rewardKind === 'cosmetic') {
     const pool = COSMETIC_CATALOG.filter((c) => c.rarity === rarity);
     const pick = pool[Math.floor(rng() * pool.length)]!;
@@ -82,30 +84,30 @@ export function pullBox(
       refundCoins: duplicate ? DUPLICATE_REFUND : 0,
     };
   }
-  // theme
-  const ownedThemes = new Set(state.house.ownedThemes);
-  let themePool = THEME_CATALOG.filter(
-    (t) => t.rarity === rarity && !ownedThemes.has(t.id),
-  );
-  if (themePool.length === 0) {
-    themePool = THEME_CATALOG.filter((t) => !ownedThemes.has(t.id));
-  }
-  if (themePool.length === 0) {
-    // Player owns the entire catalog — legitimate duplicate-refund.
-    const fallbackPick = THEME_CATALOG[Math.floor(rng() * THEME_CATALOG.length)]!;
+
+  // background
+  const allBackgroundIds = Object.keys(BACKGROUND_CATALOG) as BackgroundId[];
+  const unowned = allBackgroundIds.filter((id) => !state.ownedBackgrounds.includes(id));
+
+  if (unowned.length === 0) {
+    // Player owns every background — refund instead of adding a duplicate.
+    const fallbackPick = allBackgroundIds[Math.floor(rng() * allBackgroundIds.length)]!;
+    const entry = BACKGROUND_CATALOG[fallbackPick];
     return {
-      kind: 'theme',
-      itemId: fallbackPick.id,
-      rarity: fallbackPick.rarity,
+      kind: 'background',
+      itemId: fallbackPick,
+      rarity: entry.rarity,
       duplicate: true,
       refundCoins: DUPLICATE_REFUND,
     };
   }
-  const themePick = themePool[Math.floor(rng() * themePool.length)]!;
+
+  const pick = unowned[Math.floor(rng() * unowned.length)]!;
+  const entry = BACKGROUND_CATALOG[pick];
   return {
-    kind: 'theme',
-    itemId: themePick.id,
-    rarity: themePick.rarity,
+    kind: 'background',
+    itemId: pick,
+    rarity: entry.rarity,
     duplicate: false,
     refundCoins: 0,
   };
@@ -125,6 +127,6 @@ export function applyPullToState(state: PlayerState, pull: PullResult): void {
   } else if (pull.kind === 'cosmetic') {
     state.ownedCosmetics.push(pull.itemId as CosmeticId);
   } else {
-    state.house.ownedThemes.push(pull.itemId as ThemeId);
+    state.ownedBackgrounds.push(pull.itemId as BackgroundId);
   }
 }

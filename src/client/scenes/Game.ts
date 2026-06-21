@@ -324,7 +324,7 @@ export class Game extends Scene {
           label: 'Buy Boxes',
           description: 'Unlock cats and cosmetics',
           icon: '📦',
-          onTap: () => this.scene.start(SceneKeys.Boxes, { playerState: this.playerState }),
+          onTap: () => this.scene.start(SceneKeys.Purchase, { playerState: this.playerState }),
         },
       ],
     });
