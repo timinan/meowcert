@@ -3,6 +3,10 @@ import { SceneKeys } from '@/constants/scenes';
 import { AssetKeys } from '@/constants/assets';
 import { Balance } from '@/constants/balance';
 import { Cat } from '@/entities/cat';
+import { ThemeManager } from '@/entities/theme-manager';
+import { Decoration } from '@/entities/decoration';
+import { SCENE_SLOTS } from '@/constants/scene-slots';
+import { DECORATION_CATALOG } from '@/../shared/state';
 import { ScoreSystem } from '@/systems/score-system';
 import { MeowBarSystem } from '@/systems/meow-bar-system';
 import { RhythmSystem } from '@/systems/rhythm-system';
@@ -107,7 +111,9 @@ interface PspspsLane {
 export class Game extends Scene {
   private playerState: PlayerState | null = null;
 
+  private themeManager!: ThemeManager;
   private cats: Cat[] = [];
+  private decorations: Decoration[] = [];
   private score!: ScoreSystem;
   private meow!: MeowBarSystem;
   private interaction!: InteractionSystem;
@@ -210,6 +216,27 @@ export class Game extends Scene {
 
     // Pre-create the pspsps sfx instance so we can replay it fast on every hit
     this.pspspsSfx = this.sound.add(AssetKeys.Audio.Pspsps, { volume: 0.7 });
+
+    // Reset on every create() — survives scene restarts cleanly.
+    this.decorations = [];
+
+    // Apply the player's active theme (backdrop + music) before cats so the
+    // backdrop sits behind all house content.
+    this.themeManager = new ThemeManager(this);
+    if (this.playerState?.house?.themeId) {
+      this.themeManager.applyTheme(this.playerState.house.themeId);
+    }
+
+    // Place decoration sprites for each filled slot in the player's house.
+    for (const slot of SCENE_SLOTS) {
+      const decorationId = this.playerState?.house?.decorations[slot.id];
+      if (!decorationId) continue;
+      const entry = DECORATION_CATALOG.find((d) => d.id === decorationId);
+      if (!entry) continue;
+      const deco = new Decoration(this, slot, entry);
+      this.add.existing(deco);
+      this.decorations.push(deco);
+    }
 
     // Seat every owned cat (up to baseCatsOnScreen) so equips made in
     // Collection are visible. Cosmetics are read from playerState's
@@ -1212,6 +1239,9 @@ export class Game extends Scene {
     }
     this.music?.stop();
     this.music = null;
+    this.themeManager?.destroy();
+    for (const d of this.decorations) d.destroy();
+    this.decorations = [];
     this.topHud?.destroy();
     for (const lane of this.lanes) {
       for (const sprite of lane.elementSprites.values()) sprite.destroy();
