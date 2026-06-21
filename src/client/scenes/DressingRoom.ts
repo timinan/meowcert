@@ -132,17 +132,15 @@ export class DressingRoom extends Scene {
     const cosId = this.playerState.equippedCosmetics[this.catId];
     if (!cosId) return;
     const cos = COSMETIC_CATALOG.find((c) => c.id === cosId);
-    if (!cos) return; // TEMP-DEMO: frame is always derivable from id, no sourceFrame guard needed
-    // TEMP-DEMO: derive frame from parentIdFor (handles both base and tint-variant cosmetics)
+    if (!cos) return;
     const renderId = parentIdFor(cos) ?? cos.id;
     const frame = `cosmetic_${renderId}_idle_00`;
-    // Use frame height × scaleY so the offset is correct even before
-    // Phaser has computed displayHeight for the first time.
-    const baseFrameHeight = this.heroSprite.frame?.height ?? 52;
-    const yOffset = baseFrameHeight * this.heroSprite.scaleY * 0.5;
+    // Cosmetic atlas frames are drawn on the same canvas as the cat sprite.
+    // Position, scale, and origin all mirror the hero — no Y offset needed.
     this.heroCosmetic = this.add
-      .sprite(this.heroSprite.x, this.heroSprite.y - yOffset, AssetKeys.Atlas.Cosmetics, frame)
-      .setScale(this.heroSprite.scaleX);
+      .sprite(this.heroSprite.x, this.heroSprite.y, AssetKeys.Atlas.Cosmetics, frame)
+      .setScale(this.heroSprite.scaleX, this.heroSprite.scaleY)
+      .setOrigin(this.heroSprite.originX, this.heroSprite.originY);
     if (cos.tint) {
       const colorInt = parseInt(cos.tint.replace('#', ''), 16);
       this.heroCosmetic.setTint(colorInt);

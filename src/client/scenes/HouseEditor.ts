@@ -58,7 +58,23 @@ export class HouseEditor extends Scene {
     }
 
     // TopHud in edit mode
-    this.topHud = new TopHud(this, { items: [], showStats: true });
+    this.topHud = new TopHud(this, {
+      items: [
+        {
+          label: 'Boxes',
+          description: 'spend coins, pull rewards',
+          icon: '📦',
+          onTap: () => this.scene.start(SceneKeys.Boxes),
+        },
+        {
+          label: 'Back to Game',
+          description: 'play your house',
+          icon: '▶️',
+          onTap: () => this.exitToGame(),
+        },
+      ],
+      showStats: true,
+    });
     this.topHud.setMode('edit', { onDone: () => this.exitToGame() });
 
     // Room (theme + decorations + seated cats)

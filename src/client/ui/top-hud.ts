@@ -135,12 +135,10 @@ export class TopHud {
       return;
     }
 
-    // Hide normal HUD
+    // Hide stats but keep hamburger visible in edit/placing modes
     this.scoreText?.setVisible(false);
     this.coinsText?.setVisible(false);
     this.bestText?.setVisible(false);
-    this.hamburgerBg?.setVisible(false);
-    this.hamburgerText?.setVisible(false);
 
     const w = this.scene.scale.width;
     this.modeContainer = this.scene.add.container(0, 0).setDepth(100);
@@ -164,14 +162,15 @@ export class TopHud {
     const btnTextColor = mode === 'edit' ? '#0b041a' : '#c0a0e6';
     const btnW = mode === 'edit' ? 48 : 60;
 
+    // DONE/CANCEL sits to the left of the hamburger (hamburger lives at w-28)
     const btnBg = this.scene.add
-      .rectangle(w - btnW / 2 - 12, TopHud.HEIGHT / 2, btnW, 26, btnColor, 1)
+      .rectangle(w - btnW / 2 - 56, TopHud.HEIGHT / 2, btnW, 26, btnColor, 1)
       .setInteractive({ useHandCursor: true });
     if (mode === 'placing') {
       btnBg.setStrokeStyle(1, 0xc0a0e6, 0.4);
     }
     const btnLabel = this.scene.add
-      .text(w - btnW / 2 - 12, TopHud.HEIGHT / 2, btnText, {
+      .text(w - btnW / 2 - 56, TopHud.HEIGHT / 2, btnText, {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
         fontSize: '11px',

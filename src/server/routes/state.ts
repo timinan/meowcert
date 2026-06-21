@@ -17,7 +17,7 @@ import {
 // back a fresh one with DEV_STARTER_COINS. Onboarding re-runs each page
 // load and you have plenty of coins to test premium boxes. Flip
 // DEV_RESET_ON_LOAD to false (or delete this block) before shipping.
-const DEV_RESET_ON_LOAD = true;
+const DEV_RESET_ON_LOAD = false;
 const DEV_STARTER_COINS = 5000;
 
 export const state = new Hono();
