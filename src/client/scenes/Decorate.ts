@@ -22,6 +22,8 @@ const SEAT_ORDER: SeatId[] = ['seat-left', 'seat-center', 'seat-right'];
 const THUMB_COLS = 4;
 const THUMB_ROWS = 2;
 const MAX_TRAY = THUMB_COLS * THUMB_ROWS; // 8
+/** Reserved height for the always-visible pagination footer in CATS / BACKGROUNDS trays. */
+const PAGE_FOOTER_H = 36;
 const THUMB_LABEL_MAX = 11; // characters before ellipsis
 
 type ActiveTab = 'CATS' | 'BACKGROUNDS';
@@ -546,12 +548,15 @@ export class Decorate extends Scene {
     const panelH = height - panelTop;
     const tabH = 38;
     const trayH = panelH - tabH;
+    // Reserve the bottom strip for the always-visible pagination footer so
+    // the thumbnail grid never overlaps with it.
+    const gridH = trayH - PAGE_FOOTER_H;
 
     const padding = 10;
     const gapX = 6;
     const gapY = 6;
     const thumbW = (width - padding * 2 - gapX * (THUMB_COLS - 1)) / THUMB_COLS;
-    const thumbH = (trayH - padding * 2 - gapY * (THUMB_ROWS - 1)) / THUMB_ROWS;
+    const thumbH = (gridH - padding * 2 - gapY * (THUMB_ROWS - 1)) / THUMB_ROWS;
 
     // ownedCats is now OwnedCat[]. Iterate instances directly.
     const ownedCats = this.playerState?.ownedCats ?? [];
@@ -684,14 +689,24 @@ export class Decorate extends Scene {
     currentPage: number,
     onChange: (delta: -1 | 1) => void,
   ): void {
-    if (totalPages <= 1) return;
+    // Footer is ALWAYS rendered. When there's only one page, the buttons
+    // grey out so the player gets a visual cue without the footer disappearing.
     const { width, height } = this.scale;
     const scaleY = height / L.DESIGN_H;
     const panelTop = 252 * scaleY;
     const panelH = height - panelTop;
     const tabH = 38;
     const trayH = panelH - tabH;
-    const y = trayH - 18;
+    const y = trayH - PAGE_FOOTER_H / 2;
+
+    // Background strip so the footer reads as a footer, not floating buttons.
+    const footerBg = this.add
+      .rectangle(0, trayH - PAGE_FOOTER_H, width, PAGE_FOOTER_H, 0x0b041a, 1)
+      .setOrigin(0, 0);
+    const footerBorder = this.add
+      .rectangle(0, trayH - PAGE_FOOTER_H, width, 1, 0xc0a0e6, 0.15)
+      .setOrigin(0, 0);
+    this.trayContainer.add([footerBg, footerBorder]);
 
     const makeBtn = (
       bx: number,
@@ -753,12 +768,14 @@ export class Decorate extends Scene {
     const panelH = height - panelTop;
     const tabH = 38;
     const trayH = panelH - tabH;
+    // Same footer reserve as CATS tray so the pagination strip lines up.
+    const gridH = trayH - PAGE_FOOTER_H;
 
     const padding = 10;
     const gapX = 6;
     const gapY = 6;
     const thumbW = (width - padding * 2 - gapX * (THUMB_COLS - 1)) / THUMB_COLS;
-    const thumbH = (trayH - padding * 2 - gapY * (THUMB_ROWS - 1)) / THUMB_ROWS;
+    const thumbH = (gridH - padding * 2 - gapY * (THUMB_ROWS - 1)) / THUMB_ROWS;
 
     const ownedBgs = this.playerState?.ownedBackgrounds ?? (['default'] as BackgroundId[]);
     const activeBg = this.playerState?.activeBackground ?? ('default' as BackgroundId);

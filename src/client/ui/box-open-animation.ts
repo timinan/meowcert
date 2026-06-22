@@ -155,15 +155,21 @@ export function playBoxOpenAnimation(
       });
     }
 
+    // Wrap inside the canvas so longer adoption sentences ("A common cat has
+    // been adopted") don't get clipped by the screen edges. Shrink font on
+    // very narrow viewports so it stays legible.
+    const sceneW = scene.scale.width;
+    const nameFontSize = sceneW >= 520 ? 28 : sceneW >= 380 ? 22 : 18;
     const nameText = scene.add
       .text(cx, cy + 150, opts.itemName, {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
-        fontSize: '28px',
+        fontSize: `${nameFontSize}px`,
         color: '#ffffff',
         stroke: '#000000',
         strokeThickness: 5,
         align: 'center',
+        wordWrap: { width: sceneW - 40 },
       })
       .setOrigin(0.5)
       .setAlpha(0)
