@@ -4,6 +4,12 @@ import { Cat } from '@/entities/cat';
 import { Note } from '@/entities/note';
 import { BackgroundManager } from '@/entities/background-manager';
 import { ChartPlayer } from '@/systems/chart-player';
+import {
+  DIFFICULTY_LEVELS,
+  DIFFICULTY_PRESETS,
+  makeChartForDifficulty,
+  type DifficultyLevel,
+} from '@/systems/difficulty-charts';
 import { ScoreSystem } from '@/systems/score-system';
 import { SongPlayer } from '@/systems/song-player';
 import { TopHud } from '@/ui/top-hud';
@@ -58,6 +64,11 @@ export class Game extends Scene {
    *  isn't fighting the modal for user attention. */
   private pendingStart = true;
   private readyModal: Phaser.GameObjects.Container | null = null;
+  /** Difficulty selected on the Ready modal. The modal's PLAY button
+   *  swaps the chart out for `makeChartForDifficulty(selectedDifficulty)`
+   *  so playtesting the curve is one click away. Defaults to level 2 —
+   *  Tim's calibration point for "the current generated chart feel". */
+  private selectedDifficulty: DifficultyLevel = 2;
 
   // -----------------------------------------------------------------------
   // Live hit / miss feedback (one floating "PERFECT" / "GREAT" / "MISS"
@@ -94,6 +105,7 @@ export class Game extends Scene {
     this.songStarted = false;
     this.pendingStart = true;
     this.readyModal = null;
+    this.selectedDifficulty = 2;
   }
 
   async create(): Promise<void> {
@@ -283,11 +295,13 @@ export class Game extends Scene {
 
   /**
    * Pre-round modal — gates chart advance + tap input until the player
-   * taps PLAY. The PLAY click serves two purposes: (1) it's the user
-   * gesture Tone.js needs to unlock the WebAudio context, and (2) the
-   * preload window before this click is when the lofi mp3 actually
-   * downloads, so bg music kicks in immediately on round start instead
-   * of after a 3s blocking fetch.
+   * picks a difficulty and taps PLAY. The PLAY click serves three
+   * purposes: (1) it's the user gesture Tone.js needs to unlock the
+   * WebAudio context, (2) the preload window before this click is when
+   * the lofi mp3 actually downloads (so music kicks in immediately
+   * instead of after a 3 s blocking fetch), and (3) it tells us which
+   * difficulty chart to actually play, so we can swap out whatever
+   * chart initChartPlayer loaded with a curated preset.
    */
   private showReadyModal(): void {
     if (!this.scene.isActive()) return;
@@ -299,22 +313,22 @@ export class Game extends Scene {
     // summary (300) and anything else that might land on this scene.
     const container = this.add.container(0, 0).setDepth(1000);
 
-    // Full-screen click eater — also interactive so taps OUTSIDE the
-    // PLAY button still don't fall through to disabled tap zones.
+    // Full-screen click eater so taps outside the PLAY button don't
+    // fall through to (disabled) tap zones underneath.
     const backdrop = this.add
       .rectangle(cx, cy, width, height, 0x000000, 0.75)
       .setInteractive();
     container.add(backdrop);
 
-    const panelW = Math.min(260, width - 32);
-    const panelH = 200;
+    const panelW = Math.min(280, width - 32);
+    const panelH = 280;
     const panel = this.add.rectangle(cx, cy, panelW, panelH, 0x1a0a2e, 1);
     panel.setStrokeStyle(2, 0xc678ff, 0.8);
     container.add(panel);
 
     const fontBase = { fontFamily: 'Pixeloid Sans, sans-serif' };
 
-    const title = this.add.text(cx, cy - 64, 'READY?', {
+    const title = this.add.text(cx, cy - 116, 'READY?', {
       ...fontBase,
       fontStyle: 'bold',
       fontSize: '22px',
@@ -322,7 +336,7 @@ export class Game extends Scene {
     }).setOrigin(0.5);
     container.add(title);
 
-    const subtitle = this.add.text(cx, cy - 24, 'Tap the falling balls\non the beat', {
+    const subtitle = this.add.text(cx, cy - 78, 'Tap the falling balls\non the beat', {
       ...fontBase,
       fontSize: '11px',
       color: '#c0a0e6',
@@ -330,31 +344,94 @@ export class Game extends Scene {
     }).setOrigin(0.5);
     container.add(subtitle);
 
-    const btnY = cy + 40;
-    const btnW = 140;
-    const btnH = 44;
-    const btnBg = this.add.rectangle(cx, btnY, btnW, btnH, 0xffd34d, 1);
-    const btnText = this.add.text(cx, btnY, 'PLAY', {
+    const diffLabel = this.add.text(cx, cy - 34, 'DIFFICULTY', {
+      ...fontBase,
+      fontSize: '10px',
+      color: '#c0a0e6',
+    }).setOrigin(0.5);
+    container.add(diffLabel);
+
+    // Row of 5 number buttons. Selected = filled yellow, unselected =
+    // outlined. updateSelection() repaints whenever the choice changes.
+    const btnSize = 30;
+    const gap = 8;
+    const rowW = btnSize * 5 + gap * 4;
+    const rowStartX = cx - rowW / 2 + btnSize / 2;
+    const diffY = cy - 8;
+    const diffButtons: Phaser.GameObjects.Rectangle[] = [];
+    const diffTexts: Phaser.GameObjects.Text[] = [];
+
+    const presetNameText = this.add.text(cx, cy + 28, '', {
+      ...fontBase,
+      fontStyle: 'bold',
+      fontSize: '14px',
+      color: '#ffd34d',
+    }).setOrigin(0.5);
+    container.add(presetNameText);
+
+    const updateSelection = (level: DifficultyLevel): void => {
+      this.selectedDifficulty = level;
+      for (let i = 0; i < DIFFICULTY_LEVELS.length; i++) {
+        const lvl = DIFFICULTY_LEVELS[i]!;
+        const isSel = lvl === level;
+        diffButtons[i]!.setFillStyle(isSel ? 0xffd34d : 0x2c1856, 1);
+        diffButtons[i]!.setStrokeStyle(1, 0xffd34d, isSel ? 1 : 0.6);
+        diffTexts[i]!.setColor(isSel ? '#1a0a2e' : '#ffd34d');
+      }
+      presetNameText.setText(DIFFICULTY_PRESETS[level].label);
+    };
+
+    for (let i = 0; i < DIFFICULTY_LEVELS.length; i++) {
+      const lvl = DIFFICULTY_LEVELS[i]!;
+      const x = rowStartX + i * (btnSize + gap);
+      const btn = this.add.rectangle(x, diffY, btnSize, btnSize, 0x2c1856, 1);
+      btn.setStrokeStyle(1, 0xffd34d, 0.6);
+      const txt = this.add.text(x, diffY, String(lvl), {
+        ...fontBase,
+        fontStyle: 'bold',
+        fontSize: '14px',
+        color: '#ffd34d',
+      }).setOrigin(0.5);
+      container.add([btn, txt]);
+      diffButtons.push(btn);
+      diffTexts.push(txt);
+    }
+    updateSelection(this.selectedDifficulty);
+
+    const playY = cy + 88;
+    const playW = 140;
+    const playH = 44;
+    const playBg = this.add.rectangle(cx, playY, playW, playH, 0xffd34d, 1);
+    const playText = this.add.text(cx, playY, 'PLAY', {
       ...fontBase,
       fontStyle: 'bold',
       fontSize: '18px',
       color: '#1a0a2e',
     }).setOrigin(0.5);
-    container.add([btnBg, btnText]);
+    container.add([playBg, playText]);
 
-    // Defer making the button interactive for 200ms. Phaser fires
+    // Defer making the buttons interactive for 200ms — Phaser fires
     // pointerup on whatever object sits under the finger at release,
     // and the hamburger-row tap that opened this scene often ends with
-    // the finger somewhere on the playfield — without the delay, that
-    // residual pointerup destroys the modal instantly and the player
-    // never sees it.
+    // the finger somewhere on the playfield. Without the delay, that
+    // residual pointerup destroys the modal instantly.
     this.time.delayedCall(200, () => {
-      btnBg.setInteractive({ useHandCursor: true });
-      btnBg.on('pointerover', () => btnBg.setFillStyle(0xffe680, 1));
-      btnBg.on('pointerout', () => btnBg.setFillStyle(0xffd34d, 1));
-      btnBg.on('pointerup', () => {
-        // The click is the user gesture WebAudio needs. Kick off audio,
-        // tear down the modal, and release input + chart advance.
+      for (let i = 0; i < DIFFICULTY_LEVELS.length; i++) {
+        const lvl = DIFFICULTY_LEVELS[i]!;
+        const btn = diffButtons[i]!;
+        btn.setInteractive({ useHandCursor: true });
+        btn.on('pointerup', () => updateSelection(lvl));
+      }
+
+      playBg.setInteractive({ useHandCursor: true });
+      playBg.on('pointerover', () => playBg.setFillStyle(0xffe680, 1));
+      playBg.on('pointerout', () => playBg.setFillStyle(0xffd34d, 1));
+      playBg.on('pointerup', () => {
+        // Swap whatever chart initChartPlayer loaded for the selected
+        // difficulty preset — that's the whole point of this modal for
+        // now (curated difficulty curve playtesting before chart-editor
+        // work resumes).
+        this.applySelectedDifficulty();
         void this.ensureSongStarted();
         this.readyModal?.destroy(true);
         this.readyModal = null;
@@ -365,6 +442,21 @@ export class Game extends Scene {
     });
 
     this.readyModal = container;
+  }
+
+  /**
+   * Replace the ChartPlayer (built by initChartPlayer with whatever
+   * chart was available) with one running the difficulty preset the
+   * player picked on the Ready modal. SongPlayer is left alone — Game
+   * runs autoSchedule=false so its chart field doesn't drive playback.
+   */
+  private applySelectedDifficulty(): void {
+    const chart = makeChartForDifficulty(this.selectedDifficulty);
+    this.player = new ChartPlayer(chart, {
+      loopCount: Balance.loopCount,
+      noteFallMs: Balance.noteFallMs,
+    });
+    this.player.onSpawn((lane, hitAt) => this.spawnNote(lane, hitAt));
   }
 
   private buildSummaryOverlay(): void {
