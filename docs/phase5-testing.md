@@ -16,7 +16,7 @@ Living tracker for end-to-end testing of the Phase 5 redesign. Each flow gets te
 | 1 — Purchase (boxes → inventory) | ✅ GREEN (in passing) | `f5e5578` | Box reveals work, debug panel shows inventory deltas; cleared as a side-effect of Flow 2 testing |
 | 2 — Decorate + DressingRoom + Effects | ✅ GREEN | `f5e5578` → `e964f65` | Per-instance cats + cosmetics, validated naming, multi-slot dressing room, 16 effect cosmetics, seat→lane mapping fix |
 | 3 — Play (random fallback chart) | ✅ GREEN | `7e1bc00` → `edd40c7` | Position-based hit/miss, multi-touch doubles, 16fps reactions, off-screen fall, effect reveal fix — random chart limits round depth so closing out and moving to Flow 4 for real-song playtest |
-| 4 — Editor (author chart) | 🟡 NEXT | — | Authoring real charts so Flow 3 can be retested with real songs |
+| 4 — Editor (author chart) | 🟡 NEXT | — | Authoring real charts so Flow 3 can be retested with real songs. **Audio added 2026-06-22 night** (`ee6e8cf`) — Editor's ▶ PLAY now also fires pitched meows (C/E/G triad), Game's first lane tap starts the same meow melody synced to the round. Procedural Tone.Synth fallback until real meow WAVs land in `public/assets/audio/meows/`. |
 
 ---
 
