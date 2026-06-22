@@ -52,6 +52,12 @@ export class Game extends Scene {
   private songStarted = false;
   private startTimeMs = 0;
   private roundOver = false;
+  /** True between scene boot and the player tapping PLAY on the Ready
+   *  modal. While set, update() skips chart advance and the lane tap
+   *  zones are disabled, so notes don't start falling and bg music
+   *  isn't fighting the modal for user attention. */
+  private pendingStart = true;
+  private readyModal: Phaser.GameObjects.Container | null = null;
 
   // -----------------------------------------------------------------------
   // Live hit / miss feedback (one floating "PERFECT" / "GREAT" / "MISS"
@@ -86,6 +92,8 @@ export class Game extends Scene {
     this.cleanedUp = false;
     this.songPlayer = null;
     this.songStarted = false;
+    this.pendingStart = true;
+    this.readyModal = null;
   }
 
   async create(): Promise<void> {
@@ -119,15 +127,24 @@ export class Game extends Scene {
 
     await this.initChartPlayer();
 
-    this.bindInput();
+    // Start the meow + lofi downloads RIGHT NOW so they're in the browser
+    // cache by the time the player taps PLAY. Without this, the user
+    // gesture → start() → Tone.loaded() chain blocks ~3 seconds while
+    // the 2.9 MB lofi mp3 streams.
+    this.songPlayer?.preload();
 
-    this.startTimeMs = this.time.now;
+    this.bindInput();
+    // Tap zones live but disabled until PLAY is pressed. The modal
+    // re-enables them in its onPlay handler.
+    for (const z of this.tapZones) z.disableInteractive();
 
     this.events.on(Scenes.Events.SHUTDOWN, () => this.cleanup());
+
+    this.showReadyModal();
   }
 
   override update(_time: number, delta: number): void {
-    if (this.roundOver) return;
+    if (this.pendingStart || this.roundOver) return;
     this.player.advance(delta);
     this.checkMisses();
     if (this.player.isFinished()) this.endRound();
@@ -262,6 +279,77 @@ export class Game extends Scene {
         .setOrigin(0.5, 0);
       this.seatedNameLabels.push(nameLabel);
     }
+  }
+
+  /**
+   * Pre-round modal — gates chart advance + tap input until the player
+   * taps PLAY. The PLAY click serves two purposes: (1) it's the user
+   * gesture Tone.js needs to unlock the WebAudio context, and (2) the
+   * preload window before this click is when the lofi mp3 actually
+   * downloads, so bg music kicks in immediately on round start instead
+   * of after a 3s blocking fetch.
+   */
+  private showReadyModal(): void {
+    const { width, height } = this.scale;
+    const cx = width / 2;
+    const cy = height / 2;
+
+    const container = this.add.container(0, 0).setDepth(400);
+
+    const backdrop = this.add.rectangle(cx, cy, width, height, 0x000000, 0.75);
+    container.add(backdrop);
+
+    const panelW = Math.min(260, width - 32);
+    const panelH = 200;
+    const panel = this.add.rectangle(cx, cy, panelW, panelH, 0x1a0a2e, 1);
+    panel.setStrokeStyle(2, 0xc678ff, 0.8);
+    container.add(panel);
+
+    const fontBase = { fontFamily: 'Pixeloid Sans, sans-serif' };
+
+    const title = this.add.text(cx, cy - 64, 'READY?', {
+      ...fontBase,
+      fontStyle: 'bold',
+      fontSize: '22px',
+      color: '#ffd34d',
+    }).setOrigin(0.5);
+    container.add(title);
+
+    const subtitle = this.add.text(cx, cy - 24, 'Tap the falling balls\non the beat', {
+      ...fontBase,
+      fontSize: '11px',
+      color: '#c0a0e6',
+      align: 'center',
+    }).setOrigin(0.5);
+    container.add(subtitle);
+
+    const btnY = cy + 40;
+    const btnW = 140;
+    const btnH = 44;
+    const btnBg = this.add.rectangle(cx, btnY, btnW, btnH, 0xffd34d, 1)
+      .setInteractive({ useHandCursor: true });
+    const btnText = this.add.text(cx, btnY, 'PLAY', {
+      ...fontBase,
+      fontStyle: 'bold',
+      fontSize: '18px',
+      color: '#1a0a2e',
+    }).setOrigin(0.5);
+    container.add([btnBg, btnText]);
+
+    btnBg.on('pointerover', () => btnBg.setFillStyle(0xffe680, 1));
+    btnBg.on('pointerout', () => btnBg.setFillStyle(0xffd34d, 1));
+    btnBg.on('pointerdown', () => {
+      // The click is the user gesture WebAudio needs. Kick off audio,
+      // tear down the modal, and release input + chart advance.
+      void this.ensureSongStarted();
+      this.readyModal?.destroy(true);
+      this.readyModal = null;
+      for (const z of this.tapZones) z.setInteractive();
+      this.startTimeMs = this.time.now;
+      this.pendingStart = false;
+    });
+
+    this.readyModal = container;
   }
 
   private buildSummaryOverlay(): void {
@@ -922,6 +1010,10 @@ export class Game extends Scene {
     tearDown('summary', () => {
       this.summary?.destroy(true);
       this.summary = null;
+    });
+    tearDown('ready-modal', () => {
+      this.readyModal?.destroy(true);
+      this.readyModal = null;
     });
 
     // Destroy entities BEFORE tweens.killAll so each owner can cleanly

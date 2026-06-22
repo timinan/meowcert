@@ -155,6 +155,25 @@ export class SongPlayer {
     this.chart = opts.chart;
   }
 
+  /** Kick off downloading the meow sample + backing track via the browser
+   *  HTTP cache, so by the time start() actually constructs Tone.Sampler
+   *  / Tone.Player they fetch from cache instantly instead of blocking
+   *  Tone.loaded() for a full network round-trip (~3s for the 2.9 MB
+   *  lofi mp3). Call this as early as possible — e.g. immediately after
+   *  `new SongPlayer(...)` while showing a Ready modal. Safe to call
+   *  multiple times; the browser dedupes the requests. No user gesture
+   *  required. */
+  preload(): void {
+    if (this.opts.backingTrackUrl) {
+      void fetch(this.opts.backingTrackUrl).catch(() => {});
+    }
+    if (this.opts.meowSamples) {
+      for (const url of Object.values(this.opts.meowSamples)) {
+        if (url) void fetch(url).catch(() => {});
+      }
+    }
+  }
+
   /** Tone.start() requires a user gesture (tap / click / key press). The
    *  Game scene calls this from the FIRST lane tap, before any meow is
    *  scheduled to fire. Safe to call repeatedly.
