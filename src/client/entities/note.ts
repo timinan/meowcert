@@ -20,10 +20,12 @@ export class Note extends GameObjects.Container {
 
   constructor(scene: Scene) {
     super(scene, 0, 0);
+    // 54px — matches the 50% bump applied to the lane hit targets (48 → 72)
+    // so the falling notes read at the same visual weight as the target.
     this.ball = scene.add.image(0, 0, AssetKeys.Image.PspspsElementBall);
-    this.ball.setDisplaySize(36, 36);
+    this.ball.setDisplaySize(54, 54);
     this.letters = scene.add.image(0, 0, AssetKeys.Image.PspspsElementLetters);
-    this.letters.setDisplaySize(36, 36);
+    this.letters.setDisplaySize(54, 54);
     this.add([this.ball, this.letters]);
     this.setActive(false).setVisible(false);
   }
@@ -36,6 +38,11 @@ export class Note extends GameObjects.Container {
     fallMs: number,
     hitAtMs: number,
   ): void {
+    // Kill any in-flight tween from the pool's previous use FIRST. If we
+    // set position before killing, a still-running fall tween from the
+    // prior life can re-write y in the same frame and the note appears
+    // to "teleport down" instead of starting at startY.
+    this.scene.tweens.killTweensOf(this);
     this.laneId = laneId;
     this.hitAtMs = hitAtMs;
     this.consumed = false;
@@ -46,7 +53,6 @@ export class Note extends GameObjects.Container {
     this.ball.setTint(LANE_COLORS[laneId]);
     // Letters stay white so the "PS" reads clearly on top of any lane tint.
     this.letters.clearTint();
-    this.scene.tweens.killTweensOf(this);
     this.scene.tweens.add({
       targets: this,
       y: endY,

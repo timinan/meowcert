@@ -70,7 +70,11 @@ export const Balance = {
   // to the hit line. Pairs with the slower 90bpm random chart so density
   // stays around 6 notes on screen at peak instead of 9–10.
   noteFallMs: 2400,
-  loopCount: 8,
+  // 32 loops × 8 steps × ~333ms/step (90bpm) ≈ 85s of play. Bumped from 8
+  // because the previous ~21s round felt like notes stopped spawning mid-
+  // session — they actually had, the chart had finished. 85s is closer to
+  // a real song length and matches how Phase 1 played continuously.
+  loopCount: 32,
   pointsPerfect: 100,
   pointsGreat: 50,
   catReactionMs: 500,
