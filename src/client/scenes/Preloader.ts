@@ -54,6 +54,11 @@ export class Preloader extends Scene {
     this.load.image(AssetKeys.Image.ThemeSpookyBg, 'themes/spooky-bg.png');
     this.load.image(AssetKeys.Image.ThemeStageBg, 'themes/stage-bg.png');
     this.load.image(AssetKeys.Image.ThemeForestBg, 'themes/forest-bg.png');
+    this.load.image(AssetKeys.Image.ThemeBedroomBg, 'themes/bedroom-bg.png');
+    this.load.image(AssetKeys.Image.ThemeBeachBg, 'themes/beach-bg.png');
+    this.load.image(AssetKeys.Image.ThemeBlossomBg, 'themes/blossom-bg.png');
+    this.load.image(AssetKeys.Image.ThemeCyberpunkBg, 'themes/cyberpunk-bg.png');
+    this.load.image(AssetKeys.Image.ThemeCabinBg, 'themes/cabin-bg.png');
 
     this.load.audio(AssetKeys.Audio.Background, ['sounds/background.mp3']);
     this.load.audio(AssetKeys.Audio.Pspsps, ['sounds/pspsps.mp3']);
