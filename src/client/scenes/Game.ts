@@ -10,7 +10,7 @@ import * as L from '@/constants/scene-layout';
 import { AssetKeys } from '@/constants/assets';
 import { Balance } from '@/constants/balance';
 import { fetchState, loadChart } from '@/services/state-client';
-import { CAT_CATALOG, emptyChart } from '@/../shared/state';
+import { CAT_CATALOG } from '@/../shared/state';
 import type { PlayerState, LaneId, Chart, SeatId } from '@/../shared/state';
 import type { CatModel } from '@/types/game';
 
@@ -124,11 +124,14 @@ export class Game extends Scene {
       const cx = L.laneCenterX(i as 0 | 1 | 2, width);
       const color = L.LANE_COLORS[i]!;
 
-      // Lane backdrop: the original rhythm bar track stretched vertically
-      // and tinted per-lane (blue / purple / yellow).
+      // Lane backdrop: the original Phase 1 rhythm bar track rotated 90° so
+      // its long axis runs vertical. Pre-rotation displayWidth/Height are
+      // swapped from the visual we want — after rotation the texture's
+      // horizontal axis becomes the lane's vertical axis.
       const bar = this.add.image(cx, laneTopY + laneH / 2, AssetKeys.Image.RhythmBarBackground);
-      bar.displayWidth = colW;
-      bar.displayHeight = laneH;
+      bar.displayWidth = laneH;
+      bar.displayHeight = colW;
+      bar.setRotation(Math.PI / 2);
       bar.setTint(color);
       this.laneRects.push(bar as unknown as Phaser.GameObjects.Rectangle);
 
@@ -488,17 +491,13 @@ export class Game extends Scene {
       }
     }
 
-    if (!chart) {
-      // dev fallback chart — gives the player something to hit during local dev
-      const dev = emptyChart('dev', 'test');
-      dev.steps[0] = { lanes: [0] };
-      dev.steps[2] = { lanes: [1] };
-      dev.steps[4] = { lanes: [2] };
-      dev.steps[6] = { lanes: [0, 2] };
-      chart = dev;
-    }
+    // If we got a chart but it's empty (player hasn't authored one yet),
+    // generate a random pattern so they can play immediately. Authored
+    // charts (with any non-empty step) bypass this and play as-is.
+    const isEmptyChart = !chart || chart.steps.every((s) => s.lanes.length === 0);
+    const playChart: Chart = isEmptyChart ? makeRandomChart() : chart!;
 
-    this.player = new ChartPlayer(chart, {
+    this.player = new ChartPlayer(playChart, {
       loopCount: Balance.loopCount,
       noteFallMs: Balance.noteFallMs,
     });
@@ -618,4 +617,34 @@ export class Game extends Scene {
     this.summary?.destroy(true);
     this.summary = null;
   }
+}
+
+/**
+ * Generate a random 8-step chart for players who haven't authored one yet.
+ * Faithful to the Phase 1 RhythmSystem feel — 80% of steps fire a note,
+ * lanes chosen randomly. Replays deterministically once loaded into
+ * ChartPlayer (the player just sees one fresh pattern per round).
+ */
+function makeRandomChart(): Chart {
+  const steps: { lanes: LaneId[] }[] = [];
+  for (let i = 0; i < 8; i++) {
+    const lanes: LaneId[] = [];
+    if (Math.random() < 0.8) {
+      lanes.push(Math.floor(Math.random() * 3) as LaneId);
+      // Occasionally double up so dense steps exist too.
+      if (Math.random() < 0.18) {
+        const second = Math.floor(Math.random() * 3) as LaneId;
+        if (!lanes.includes(second)) lanes.push(second);
+      }
+    }
+    steps.push({ lanes });
+  }
+  return {
+    authorId: 'random',
+    title: 'random',
+    stepCount: 8,
+    bpm: 120,
+    steps,
+    updatedAt: Date.now(),
+  };
 }

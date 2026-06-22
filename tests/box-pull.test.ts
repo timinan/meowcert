@@ -96,14 +96,15 @@ describe('box-pull', () => {
       refundCoins: 0,
       instanceId: 'test-instance-1',
     });
-    expect(state.ownedCats).toHaveLength(1);
-    expect(state.ownedCats[0]!.id).toBe('test-instance-1');
-    expect(state.ownedCats[0]!.breed).toBe('cat4');
-    expect(typeof state.ownedCats[0]!.name).toBe('string');
+    const added = state.ownedCats[state.ownedCats.length - 1]!;
+    expect(added.id).toBe('test-instance-1');
+    expect(added.breed).toBe('cat4');
+    expect(typeof added.name).toBe('string');
   });
 
   it('applyPullToState allows multiple instances of the same breed', () => {
     const state = emptyState();
+    const before = state.ownedCats.length;
     for (let i = 0; i < 3; i++) {
       applyPullToState(state, {
         kind: 'cat',
@@ -114,10 +115,10 @@ describe('box-pull', () => {
         instanceId: `inst-${i}`,
       });
     }
-    expect(state.ownedCats).toHaveLength(3);
-    expect(state.ownedCats.every((c) => c.breed === 'cat1')).toBe(true);
-    // All instance ids are different.
-    const ids = state.ownedCats.map((c) => c.id);
+    const added = state.ownedCats.slice(before);
+    expect(added).toHaveLength(3);
+    expect(added.every((c) => c.breed === 'cat1')).toBe(true);
+    const ids = added.map((c) => c.id);
     expect(new Set(ids).size).toBe(3);
   });
 

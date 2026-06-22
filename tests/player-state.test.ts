@@ -25,20 +25,23 @@ describe('player-state', () => {
     redis = new FakeRedis();
   });
 
-  it('initializes a fresh user with starter coins, empty collections and onboardingDone=false', async () => {
+  it('initializes a fresh user with starter coins, three seated cats, and onboardingDone=true', async () => {
     const state = await loadOrInit(redis, 'alice');
     expect(state.username).toBe('alice');
     expect(state.coins).toBe(STARTER_COINS);
-    expect(state.ownedCats).toEqual([]);
-    // Fresh state auto-grants one of each EFFECT cosmetic so the player can
-    // immediately test glow / particle / tween cosmetics in the DressingRoom.
-    // Atlas-backed cosmetics still come from box pulls.
+    // Fresh state auto-grants three starter cats (cat1/cat2/cat3) and seats
+    // them so the player lands in Decorate with a complete house. Welcome
+    // tutorial is skipped via onboardingDone: true.
+    expect(state.ownedCats).toHaveLength(3);
+    expect(state.ownedCats.map((c) => c.breed)).toEqual(['cat1', 'cat2', 'cat3']);
+    expect(Object.keys(state.seatedCats)).toHaveLength(3);
+    // Auto-grants one of each EFFECT cosmetic for immediate DressingRoom testing.
     expect(state.ownedCosmetics.length).toBeGreaterThan(0);
     expect(state.ownedCosmetics.every((c) => c.type.startsWith('effect-'))).toBe(true);
     expect(state.equippedCosmetics).toEqual({});
     expect(state.equippedCosmeticTypes).toEqual({});
     expect(state.bestScore).toBe(0);
-    expect(state.onboardingDone).toBe(false);
+    expect(state.onboardingDone).toBe(true);
     expect(state.updatedAt).toBeGreaterThan(0);
   });
 
@@ -92,7 +95,8 @@ describe('player-state', () => {
     await redis.set('pspsps:state:carol', 'this-is-not-json');
     const state = await loadOrInit(redis, 'carol');
     expect(state.coins).toBe(STARTER_COINS);
-    expect(state.onboardingDone).toBe(false);
+    // Fresh users skip onboarding and land in Decorate immediately.
+    expect(state.onboardingDone).toBe(true);
   });
 
   it('backfills new fields onto an older stored state', async () => {
@@ -151,11 +155,20 @@ describe('PlayerState.seatedCats', () => {
     expect(typeof id).toBe('string');
   });
 
-  it('fresh state has empty seatedCats map', () => {
+  it('fresh state seats three starter cats by default', () => {
     const fresh = createFreshPlayerState();
     expect(fresh.seatedCats).toBeDefined();
     expect(typeof fresh.seatedCats).toBe('object');
-    expect(Object.keys(fresh.seatedCats).length).toBe(0);
+    expect(Object.keys(fresh.seatedCats).sort()).toEqual([
+      'seat-center',
+      'seat-left',
+      'seat-right',
+    ]);
+    // Each seated value points to an actual owned cat instance.
+    const ownedIds = new Set(fresh.ownedCats.map((c) => c.id));
+    for (const id of Object.values(fresh.seatedCats)) {
+      expect(ownedIds.has(id!)).toBe(true);
+    }
   });
 
   it('seatedCats key is SeatId and value is a cat instance id string', () => {

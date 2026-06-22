@@ -111,6 +111,7 @@ export interface BoxConfig {
 // edit the generated arrays by hand — the calibrators are the source
 // of truth.
 
+import { GENERATED_CAT_CATALOG } from './cats-catalog.generated';
 export { GENERATED_CAT_CATALOG as CAT_CATALOG } from './cats-catalog.generated';
 export { GENERATED_THEME_CATALOG as THEME_CATALOG, BACKGROUND_CATALOG } from './themes-catalog.generated';
 
@@ -287,10 +288,31 @@ export interface PlayerState {
  * Used by tests and the server-side state initializer.
  */
 export function createFreshPlayerState(username: string = ''): PlayerState {
+  // Auto-grant the first three catalog cats and seat them so the player
+  // lands in Decorate with a complete house and can hit Play immediately.
+  // Each cat is named after its catalog display name; the player can rename
+  // anytime via the future rename flow. This replaces the Welcome
+  // onboarding tutorial — `onboardingDone: true` skips that scene.
+  const STARTER_BREEDS = ['cat1', 'cat2', 'cat3'] as const;
+  const SEAT_IDS = ['seat-left', 'seat-center', 'seat-right'] as const;
+  const starterCats: OwnedCat[] = STARTER_BREEDS.map((breed) => {
+    const entry = GENERATED_CAT_CATALOG.find((c) => c.id === breed);
+    return {
+      id: makeInstanceId(),
+      breed,
+      name: entry?.name ?? breed,
+    };
+  });
+  const seatedCats: Partial<Record<SeatId, string>> = {};
+  starterCats.forEach((cat, i) => {
+    const seatId = SEAT_IDS[i];
+    if (seatId) seatedCats[seatId] = cat.id;
+  });
+
   return {
     username,
     coins: STARTER_COINS,
-    ownedCats: [],
+    ownedCats: starterCats,
     // Auto-grant one instance of each EFFECT cosmetic so the player can test
     // them in the DressingRoom EFFECT tab without going through the
     // cosmetic-box RNG. Atlas-backed cosmetics still come from box pulls.
@@ -301,13 +323,14 @@ export function createFreshPlayerState(username: string = ''): PlayerState {
     equippedCosmetics: {},
     equippedCosmeticTypes: {},
     bestScore: 0,
-    onboardingDone: false,
+    // Skip the Welcome tutorial — players land straight in Decorate.
+    onboardingDone: true,
     updatedAt: Date.now(),
     house: {
       themeId: 'default',
       ownedThemes: ['default'],
     },
-    seatedCats: {},
+    seatedCats,
     chart: emptyChart(username, 'Untitled'),
     ownedBackgrounds: ['default'],
     activeBackground: 'default',

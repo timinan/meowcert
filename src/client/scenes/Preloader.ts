@@ -90,11 +90,11 @@ export class Preloader extends Scene {
     if (goToWelcome) {
       this.scene.start(SceneKeys.Welcome, { playerState });
     } else {
-      const hasSeatedCat = Object.values(playerState?.seatedCats ?? {}).some((c) => !!c);
-      this.scene.start(
-        hasSeatedCat ? SceneKeys.Game : SceneKeys.Decorate,
-        { playerState },
-      );
+      // Always land in Decorate post-onboarding — that's where the player
+      // sees their cat house. They can hit Play from the hamburger when
+      // they're ready. (Fresh state seeds 3 cats + seats them so this
+      // works immediately without an empty Decorate screen.)
+      this.scene.start(SceneKeys.Decorate, { playerState });
     }
   }
 
