@@ -24,6 +24,37 @@ import type { Chart, LaneId } from '@/../shared/state';
 /** Lane → musical note. Index by LaneId (0/1/2). */
 const LANE_TO_NOTE = ['A3', 'C4', 'E4'] as const;
 
+/**
+ * Find the first non-silent sample in a loaded Tone.Player's buffer and
+ * return its time offset in seconds (with a 10 ms soft lead-in so the
+ * attack doesn't click). Used to skip the dead air baked into the
+ * prototype's lofi mp3 so the music starts the moment the round does.
+ * Returns 0 when the buffer is empty or audible from sample 0.
+ */
+function detectLeadingSilenceSec(player: Tone.Player): number {
+  const buf = player.buffer?.get();
+  if (!buf) return 0;
+  const data = buf.getChannelData(0);
+  // Scan at most 10 s — anything past that probably isn't leading silence.
+  const scanLen = Math.min(data.length, buf.sampleRate * 10);
+  let peak = 0;
+  for (let i = 0; i < scanLen; i++) {
+    const v = Math.abs(data[i]!);
+    if (v > peak) peak = v;
+  }
+  if (peak < 0.01) return 0;
+  const threshold = peak * 0.05;
+  let firstLoud = 0;
+  for (let i = 0; i < scanLen; i++) {
+    if (Math.abs(data[i]!) >= threshold) {
+      firstLoud = i;
+      break;
+    }
+  }
+  const lead = Math.floor(0.01 * buf.sampleRate);
+  return Math.max(0, (firstLoud - lead) / buf.sampleRate);
+}
+
 export type MeowNote = (typeof LANE_TO_NOTE)[number];
 
 /** Compute the musical note for a given lane. Exported for tests. */
@@ -47,6 +78,28 @@ export function buildSchedule(chart: Chart): Array<{ timeSec: number; note: Meow
     }
   }
   return out;
+}
+
+/**
+ * Same data as buildSchedule but grouped: one entry per unique time, with
+ * an array of every note that fires at that moment. A double-tap step
+ * (two lanes in `step.lanes`) becomes `{ timeSec, notes: [A3, C4] }` so
+ * the Part callback can fire both meows from a single event instead of
+ * relying on Tone.Part's behavior with duplicate-time events. Exported
+ * for tests.
+ */
+export function buildGroupedSchedule(
+  chart: Chart,
+): Array<{ timeSec: number; notes: MeowNote[] }> {
+  const byTime = new Map<number, MeowNote[]>();
+  for (const { timeSec, note } of buildSchedule(chart)) {
+    const arr = byTime.get(timeSec);
+    if (arr) arr.push(note);
+    else byTime.set(timeSec, [note]);
+  }
+  return [...byTime.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([timeSec, notes]) => ({ timeSec, notes }));
 }
 
 export interface SongPlayerOpts {
@@ -74,6 +127,7 @@ export class SongPlayer {
   private chart: Chart;
   private synth: Tone.PolySynth | null = null;
   private sampler: Tone.Sampler | null = null;
+  private meowFilter: Tone.Filter | null = null;
   private backing: Tone.Player | null = null;
   private part: Tone.Part | null = null;
   private started = false;
@@ -101,17 +155,24 @@ export class SongPlayer {
     if (this.started || this.destroyed) return;
     this.started = true;
 
-    const meowVol = this.opts.meowVolumeDb ?? -6;
-    const backingVol = this.opts.backingVolumeDb ?? -10;
+    const meowVol = this.opts.meowVolumeDb ?? -14;
+    const backingVol = this.opts.backingVolumeDb ?? -12;
 
     if (this.opts.meowSamples && Object.keys(this.opts.meowSamples).length > 0) {
       // Real cat audio path — Tim drops WAVs into public/assets/audio/meows/
-      // and the sampler picks them up via Preloader. release=0.1 trims the
-      // tail of the source clip so meows land as punctuation, not 1s drones.
+      // and the sampler picks them up via Preloader. release=0.15 softens
+      // the tail; routing through a low-pass filter at 2.2 kHz rolls off
+      // the harsh high end of the source clip so the meow reads as soft
+      // chirps rather than sharp shrieks.
+      this.meowFilter = new Tone.Filter({
+        type: 'lowpass',
+        frequency: 2200,
+        Q: 0.7,
+      }).toDestination();
       this.sampler = new Tone.Sampler({
         urls: this.opts.meowSamples,
-        release: 0.1,
-      }).toDestination();
+        release: 0.15,
+      }).connect(this.meowFilter);
       this.sampler.volume.value = meowVol;
     } else {
       // Procedural meow placeholder — a "mreee" shaped synth note that's
@@ -155,22 +216,36 @@ export class SongPlayer {
     // ChartPlayer kept looping the visual notes 80 times for the full
     // round. Tone.Part with loopEnd = chart duration re-fires every step
     // on every loop.
-    const schedule = buildSchedule(this.chart);
+    //
+    // Grouped schedule: each event carries every meow that fires at the
+    // same Transport time, so a double-tap step triggers both meows from
+    // one callback (Tone.Part can swallow duplicate-time events).
+    const grouped = buildGroupedSchedule(this.chart);
     const msPerStep = 60000 / (this.chart.bpm * 2);
     const chartDurSec = (msPerStep * this.chart.steps.length) / 1000;
     this.part = new Tone.Part(
-      (time, value: { note: MeowNote }) => {
-        this.triggerMeow(value.note, time);
+      (time, value: { notes: MeowNote[] }) => {
+        for (const note of value.notes) {
+          this.triggerMeow(note, time);
+        }
       },
-      schedule.map(({ timeSec, note }) => ({ time: timeSec, note })),
+      grouped.map(({ timeSec, notes }) => ({ time: timeSec, notes })),
     );
     this.part.loop = true;
     this.part.loopEnd = chartDurSec;
     this.part.start(0);
 
     // Sync the backing track to Transport so play/pause stays locked.
+    // Detect any leading silence in the buffer (the prototype lofi mp3
+    // has ~1.2 s of dead air before the first hit) and offset start +
+    // loopStart past it so the music kicks in immediately on round
+    // start and every loop iteration.
     if (this.backing) {
-      this.backing.sync().start(0);
+      const startOffset = detectLeadingSilenceSec(this.backing);
+      if (startOffset > 0.05) {
+        this.backing.loopStart = startOffset;
+      }
+      this.backing.sync().start(0, startOffset);
     }
     Tone.Transport.start();
   }
@@ -208,9 +283,11 @@ export class SongPlayer {
     this.destroyed = true;
     this.stop();
     this.sampler?.dispose();
+    this.meowFilter?.dispose();
     this.synth?.dispose();
     this.backing?.dispose();
     this.sampler = null;
+    this.meowFilter = null;
     this.synth = null;
     this.backing = null;
   }

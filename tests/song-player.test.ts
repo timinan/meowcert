@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { buildSchedule, noteForLane } from '../src/client/systems/song-player';
+import {
+  buildGroupedSchedule,
+  buildSchedule,
+  noteForLane,
+} from '../src/client/systems/song-player';
 import { emptyChart, type Chart } from '../src/shared/state';
 
 // SongPlayer's Tone.js side-effects are out of scope for unit tests
@@ -64,6 +68,15 @@ describe('SongPlayer scheduling math', () => {
       expect(out[0]!.timeSec).toBeCloseTo(0, 5);
       // 60000 / (90 * 2) = 333.33ms = 0.333s
       expect(out[1]!.timeSec).toBeCloseTo(0.333, 2);
+    });
+
+    it('groups simultaneous lanes into a single event (chord support)', () => {
+      const c = chartFromLanes([[0, 1, 2], [], [1, 2], [], [], [], [], []], 120);
+      const out = buildGroupedSchedule(c);
+      expect(out).toEqual([
+        { timeSec: 0, notes: ['A3', 'C4', 'E4'] },
+        { timeSec: 0.5, notes: ['C4', 'E4'] },
+      ]);
     });
 
     it('handles longer charts (default 32-step paged chart)', () => {
