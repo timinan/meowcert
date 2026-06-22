@@ -7,7 +7,7 @@ import { RemoveBadge } from '@/entities/remove-badge';
 import { TopHud } from '@/ui/top-hud';
 import { ContextMenu, buildCatMenu } from '@/ui/context-menu';
 import * as L from '@/constants/scene-layout';
-import { CAT_CATALOG, BACKGROUND_CATALOG } from '@/../shared/state';
+import { CAT_CATALOG, COSMETIC_CATALOG, BACKGROUND_CATALOG } from '@/../shared/state';
 import { fetchState, setSeat, setBackground } from '@/services/state-client';
 import type { PlayerState, CatBreed, SeatId, BackgroundId, CatEntry } from '@/../shared/state';
 import type { CatModel } from '@/types/game';
@@ -51,8 +51,11 @@ export class Decorate extends Scene {
   private placingCatId: CatBreed | null = null;
   private placementZones: GameObjects.Container | null = null;
 
-  // Tab state
+  // Tab state — each tab tracks its own page index so swapping back-and-forth
+  // doesn't lose your spot.
   private activeTab: ActiveTab = 'CATS';
+  private catsPage = 0;
+  private bgsPage = 0;
   private tabCatsText!: GameObjects.Text;
   private tabCatsLine!: GameObjects.Rectangle;
   private tabBgText!: GameObjects.Text;
@@ -71,6 +74,8 @@ export class Decorate extends Scene {
     this.placingCatId = null;
     this.placementZones = null;
     this.activeTab = 'CATS';
+    this.catsPage = 0;
+    this.bgsPage = 0;
   }
 
   async create(): Promise<void> {
@@ -536,8 +541,12 @@ export class Decorate extends Scene {
     const ownedCats = this.playerState?.ownedCats ?? [];
     const seatedCats = this.playerState?.seatedCats ?? {};
 
-    // First 8 owned cats from the catalog (maintains catalog order)
-    const items = CAT_CATALOG.filter((c) => ownedCats.includes(c.id)).slice(0, MAX_TRAY);
+    // Owned cats from the catalog (maintains catalog order), paginated.
+    const allItems = CAT_CATALOG.filter((c) => ownedCats.includes(c.id));
+    const totalPages = Math.max(1, Math.ceil(allItems.length / MAX_TRAY));
+    if (this.catsPage >= totalPages) this.catsPage = totalPages - 1;
+    const start = this.catsPage * MAX_TRAY;
+    const items = allItems.slice(start, start + MAX_TRAY);
 
     for (let i = 0; i < items.length; i++) {
       const entry = items[i]!;
@@ -565,15 +574,39 @@ export class Decorate extends Scene {
       const { frame, tint } = catThumbFrame(entry);
       const sprite = this.add.image(
         x + thumbW / 2,
-        y + thumbH / 2 - 8,
+        y + thumbH / 2 - 14,
         AssetKeys.Atlas.Cats,
         frame,
       );
-      // Fill ~92% of the smaller cell dimension so the cat reads at a glance.
-      const maxSize = Math.min(thumbW, thumbH) * 0.92;
+      // Fill most of the smaller cell dimension so the cat dominates the
+      // thumb. The 0.4-rest at the bottom is for the name label.
+      const maxSize = Math.min(thumbW, thumbH * 0.78);
       const scale = Math.min(maxSize / sprite.width, maxSize / sprite.height);
       sprite.setScale(scale);
       if (tint !== undefined) sprite.setTint(tint);
+
+      this.trayContainer.add([thumb, sprite]);
+
+      // Layer this cat's equipped cosmetics ON TOP of the thumbnail so the
+      // tray clearly distinguishes cats wearing hats / glasses / scarves.
+      const equippedSlots = this.playerState?.equippedCosmetics?.[entry.id] ?? {};
+      let cosmeticDepth = 1;
+      for (const cosId of Object.values(equippedSlots)) {
+        if (!cosId) continue;
+        const cos = COSMETIC_CATALOG.find((c) => c.id === cosId);
+        if (!cos) continue;
+        const cosParent = cos.sourceFrame?.match(/^cosmetic_(c\d+)_/)?.[1] ?? cos.id;
+        const cosFrame = `cosmetic_${cosParent}_idle_00`;
+        const cosSprite = this.add
+          .image(sprite.x, sprite.y, AssetKeys.Atlas.Cosmetics, cosFrame)
+          .setScale(scale)
+          .setOrigin(sprite.originX, sprite.originY)
+          .setDepth(cosmeticDepth++);
+        if (cos.tint) {
+          cosSprite.setTint(parseInt(cos.tint.replace('#', ''), 16));
+        }
+        this.trayContainer.add(cosSprite);
+      }
 
       const label = this.add.text(x + thumbW / 2, y + thumbH - 8, entry.name.toUpperCase(), {
         fontFamily: '"Courier New", monospace',
@@ -582,7 +615,7 @@ export class Decorate extends Scene {
         color: '#ffffff',
       }).setOrigin(0.5, 1);
 
-      this.trayContainer.add([thumb, sprite, label]);
+      this.trayContainer.add(label);
 
       if (isSeated) {
         const badge = this.add.circle(x + thumbW - 6, y + 6, 7, 0xffd34d, 1);
@@ -613,6 +646,78 @@ export class Decorate extends Scene {
         },
       );
     }
+
+    this.drawTrayPagination(totalPages, this.catsPage, (delta) => {
+      this.catsPage = Math.max(0, Math.min(totalPages - 1, this.catsPage + delta));
+      this.renderTray();
+    });
+  }
+
+  /**
+   * Render Prev/Next pagination buttons + page label centered at the bottom
+   * of the tray. Called by both renderCatsTray and renderBackgroundsTray.
+   */
+  private drawTrayPagination(
+    totalPages: number,
+    currentPage: number,
+    onChange: (delta: -1 | 1) => void,
+  ): void {
+    if (totalPages <= 1) return;
+    const { width, height } = this.scale;
+    const scaleY = height / L.DESIGN_H;
+    const panelTop = 252 * scaleY;
+    const panelH = height - panelTop;
+    const tabH = 38;
+    const trayH = panelH - tabH;
+    const y = trayH - 18;
+
+    const makeBtn = (
+      bx: number,
+      label: string,
+      disabled: boolean,
+      delta: -1 | 1,
+    ): void => {
+      const btn = this.add
+        .rectangle(bx, y, 36, 26, 0x2c1856, 1)
+        .setStrokeStyle(1, 0xc0a0e6, 0.5)
+        .setAlpha(disabled ? 0.35 : 1);
+      const txt = this.add
+        .text(bx, y, label, {
+          fontFamily: '"Courier New", monospace',
+          fontStyle: 'bold',
+          fontSize: '14px',
+          color: '#ffd34d',
+        })
+        .setOrigin(0.5);
+      this.trayContainer.add([btn, txt]);
+      if (!disabled) {
+        btn.setInteractive({ useHandCursor: true });
+        btn.on(
+          'pointerdown',
+          (
+            _p: Phaser.Input.Pointer,
+            _x: number,
+            _y: number,
+            event: Phaser.Types.Input.EventData,
+          ) => {
+            event.stopPropagation();
+            onChange(delta);
+          },
+        );
+      }
+    };
+
+    makeBtn(30, '◀', currentPage === 0, -1);
+    makeBtn(width - 30, '▶', currentPage === totalPages - 1, 1);
+
+    const pageLabel = this.add
+      .text(width / 2, y, `page ${currentPage + 1} / ${totalPages}`, {
+        fontFamily: '"Courier New", monospace',
+        fontSize: '10px',
+        color: '#c0a0e6',
+      })
+      .setOrigin(0.5);
+    this.trayContainer.add(pageLabel);
   }
 
   // ---------------------------------------------------------------------------
@@ -643,8 +748,14 @@ export class Decorate extends Scene {
       ownedBgs.includes(entry.id as BackgroundId),
     );
 
-    for (let i = 0; i < allBgs.length && i < MAX_TRAY; i++) {
-      const entry = allBgs[i]!;
+    // Pagination
+    const totalBgPages = Math.max(1, Math.ceil(allBgs.length / MAX_TRAY));
+    if (this.bgsPage >= totalBgPages) this.bgsPage = totalBgPages - 1;
+    const bgStart = this.bgsPage * MAX_TRAY;
+    const pageBgs = allBgs.slice(bgStart, bgStart + MAX_TRAY);
+
+    for (let i = 0; i < pageBgs.length; i++) {
+      const entry = pageBgs[i]!;
       const col = i % THUMB_COLS;
       const row = Math.floor(i / THUMB_COLS);
       const x = padding + col * (thumbW + gapX);
@@ -704,6 +815,11 @@ export class Decorate extends Scene {
         this.trayContainer.add([thumb, lock, label]);
       }
     }
+
+    this.drawTrayPagination(totalBgPages, this.bgsPage, (delta) => {
+      this.bgsPage = Math.max(0, Math.min(totalBgPages - 1, this.bgsPage + delta));
+      this.renderTray();
+    });
   }
 
   private bgThumbColor(id: BackgroundId): number {
