@@ -42,7 +42,13 @@ export function parentIdFor(entry: { sourceFrame?: string } | undefined): string
  */
 export class Cat {
   readonly sprite: GameObjects.Sprite;
-  private cosmeticSprite: GameObjects.Sprite | null = null;
+  /**
+   * Cosmetic sprites keyed by slot ('head' / 'neck' / 'body' / etc). Each
+   * slot independently renders one cosmetic sprite stacked on the cat. We
+   * own them as a plain object instead of a Container so position-syncing
+   * via POST_UPDATE keeps working without an extra parent.
+   */
+  private cosmeticSprites: Record<string, GameObjects.Sprite> = {};
   private readonly postUpdate: () => void;
   private rainbowTween: Phaser.Tweens.Tween | null = null;
   private revertTimer: Phaser.Time.TimerEvent | undefined;
@@ -78,8 +84,8 @@ export class Cat {
       this.startRainbowCycle();
     }
 
-    if (model.equippedCosmetic) {
-      this.setCosmetic(model.equippedCosmetic);
+    if (model.equippedCosmetics) {
+      this.setCosmetics(model.equippedCosmetics);
     }
   }
 
@@ -95,46 +101,55 @@ export class Cat {
   }
 
   /**
-   * Show or update the cosmetic worn above this cat. Passing `null`
-   * removes whatever it's currently wearing. The cosmetic is rendered
-   * just above the cat sprite and matches the cat's scale + position.
+   * Equip / un-equip a cosmetic in one slot. Passing `null` removes the
+   * cosmetic currently in that slot. Each slot owns its own sprite stacked
+   * over the cat.
    */
-  setCosmetic(cosmeticId: CosmeticId | null): void {
-    if (cosmeticId) {
-      this.model.equippedCosmetic = cosmeticId;
-    } else {
-      delete this.model.equippedCosmetic;
-    }
+  setCosmetic(slot: string, cosmeticId: CosmeticId | null): void {
+    if (!this.model.equippedCosmetics) this.model.equippedCosmetics = {};
 
     if (!cosmeticId) {
-      this.cosmeticSprite?.destroy();
-      this.cosmeticSprite = null;
+      delete this.model.equippedCosmetics[slot];
+      this.cosmeticSprites[slot]?.destroy();
+      delete this.cosmeticSprites[slot];
       return;
     }
 
-    // Catalog entry can be a base (just an id) or a generated tint
-    // variant (with sourceFrame + tint). For variants, we render the
-    // parent's atlas frames and apply the tint via setTint(). The
-    // animation key used here is keyed on the SOURCE id, not the variant
-    // id, so multiple variants share the same animation entry.
+    this.model.equippedCosmetics[slot] = cosmeticId;
+
+    // Tint variants (sourceFrame + tint) render the parent's atlas frames
+    // and apply the tint via setTint(). Animation keys are keyed on the
+    // SOURCE id so variants share their parent's animation entries.
     const entry = COSMETIC_CATALOG.find((c) => c.id === cosmeticId);
     const renderId = parentIdFor(entry) ?? cosmeticId;
     const idleFrame = `cosmetic_${renderId}_idle_00`;
-    if (!this.cosmeticSprite) {
-      this.cosmeticSprite = this.scene.add.sprite(0, 0, AssetKeys.Atlas.Cosmetics, idleFrame);
-      this.cosmeticSprite.setOrigin(0.5, 1); // match cat — bottom-center anchor
+    let sprite = this.cosmeticSprites[slot];
+    if (!sprite) {
+      sprite = this.scene.add.sprite(0, 0, AssetKeys.Atlas.Cosmetics, idleFrame);
+      sprite.setOrigin(0.5, 1); // match cat — bottom-center anchor
+      this.cosmeticSprites[slot] = sprite;
     } else {
-      this.cosmeticSprite.setTexture(AssetKeys.Atlas.Cosmetics, idleFrame);
+      sprite.setTexture(AssetKeys.Atlas.Cosmetics, idleFrame);
     }
-    // Apply the catalog tint (or clear any previous one).
     if (entry?.tint) {
       const colorInt = parseInt(entry.tint.replace('#', ''), 16);
-      this.cosmeticSprite.setTint(colorInt);
+      sprite.setTint(colorInt);
     } else {
-      this.cosmeticSprite.clearTint();
+      sprite.clearTint();
     }
-    this.playCosmeticAnimation(this.model.animation);
-    this.syncCosmeticPosition();
+    this.playCosmeticAnimationForSlot(slot, cosmeticId, this.model.animation);
+    this.syncOneCosmetic(slot, sprite);
+  }
+
+  /** Replace ALL cosmetics in one shot — clears anything not in the map. */
+  setCosmetics(map: Partial<Record<string, CosmeticId>>): void {
+    const incomingSlots = new Set(Object.keys(map));
+    for (const slot of Object.keys(this.cosmeticSprites)) {
+      if (!incomingSlots.has(slot)) this.setCosmetic(slot, null);
+    }
+    for (const [slot, cosId] of Object.entries(map)) {
+      this.setCosmetic(slot, cosId ?? null);
+    }
   }
 
   playHappy(durationMs = 500): void {
@@ -182,8 +197,10 @@ export class Cat {
     this.rainbowTween?.stop();
     this.rainbowTween?.remove();
     this.rainbowTween = null;
-    this.cosmeticSprite?.destroy();
-    this.cosmeticSprite = null;
+    for (const slot of Object.keys(this.cosmeticSprites)) {
+      this.cosmeticSprites[slot]?.destroy();
+    }
+    this.cosmeticSprites = {};
     this.sprite.destroy();
   }
 
@@ -202,13 +219,18 @@ export class Cat {
   }
 
   private syncCosmeticPosition(): void {
-    if (!this.cosmeticSprite) return;
-    // Cosmetic sprite uses the same canvas size + origin as the cat, so
-    // copying the cat's position and scale puts it in lock-step. No more
-    // per-cosmetic offset hack needed.
-    this.cosmeticSprite.setScale(this.sprite.scaleX);
-    this.cosmeticSprite.setPosition(this.sprite.x, this.sprite.y);
-    this.cosmeticSprite.setDepth(this.sprite.depth + 1);
+    let i = 1;
+    for (const slot of Object.keys(this.cosmeticSprites)) {
+      const sprite = this.cosmeticSprites[slot];
+      if (!sprite) continue;
+      this.syncOneCosmetic(slot, sprite, i++);
+    }
+  }
+
+  private syncOneCosmetic(_slot: string, sprite: GameObjects.Sprite, depthOffset = 1): void {
+    sprite.setScale(this.sprite.scaleX);
+    sprite.setPosition(this.sprite.x, this.sprite.y);
+    sprite.setDepth(this.sprite.depth + depthOffset);
   }
 
   private playAnimation(animation: CatAnimationState): void {
@@ -223,23 +245,32 @@ export class Cat {
   }
 
   private playCosmeticAnimation(animation: CatAnimationState): void {
-    if (!this.cosmeticSprite || !this.model.equippedCosmetic) return;
-    // Resolve the render id — for tint variants we play the PARENT's
-    // animation (the tint stays applied across frames).
-    const entry = COSMETIC_CATALOG.find((c) => c.id === this.model.equippedCosmetic);
-    const renderId = parentIdFor(entry) ?? this.model.equippedCosmetic;
+    const equipped = this.model.equippedCosmetics ?? {};
+    for (const [slot, cosId] of Object.entries(equipped)) {
+      if (!cosId) continue;
+      this.playCosmeticAnimationForSlot(slot, cosId, animation);
+    }
+  }
+
+  private playCosmeticAnimationForSlot(
+    slot: string,
+    cosmeticId: CosmeticId,
+    animation: CatAnimationState,
+  ): void {
+    const sprite = this.cosmeticSprites[slot];
+    if (!sprite) return;
+    const entry = COSMETIC_CATALOG.find((c) => c.id === cosmeticId);
+    const renderId = parentIdFor(entry) ?? cosmeticId;
     const key = Cat.cosmeticAnimationKey(renderId, animation);
     this.ensureCosmeticAnimation(renderId, animation);
     if (this.scene.anims.exists(key)) {
-      this.cosmeticSprite.play(key, true);
+      sprite.play(key, true);
       return;
     }
-    // Cosmetic doesn't ship this animation — fall back to idle. Every
-    // cosmetic ships an idle frame so this branch is safe.
     const idleKey = Cat.cosmeticAnimationKey(renderId, 'idle');
     this.ensureCosmeticAnimation(renderId, 'idle');
     if (this.scene.anims.exists(idleKey)) {
-      this.cosmeticSprite.play(idleKey, true);
+      sprite.play(idleKey, true);
     }
   }
 

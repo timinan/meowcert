@@ -58,12 +58,13 @@ export async function syncCoins(
 
 export async function equipCosmetic(
   breed: CatBreed,
+  slot: string,
   cosmeticId: CosmeticId | null,
 ): Promise<EquipResult> {
   const r = await fetch('/api/cosmetic/equip', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ breed, cosmeticId }),
+    body: JSON.stringify({ breed, slot, cosmeticId }),
   });
   return (await r.json()) as EquipResult;
 }

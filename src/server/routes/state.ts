@@ -73,12 +73,20 @@ state.post('/coins/sync', async (c) => {
   return c.json({ state: player });
 });
 
-/** POST /api/cosmetic/equip — body: { breed, cosmeticId | null }. */
+/**
+ * POST /api/cosmetic/equip — body: { breed, slot, cosmeticId | null }.
+ * Equips a cosmetic into one slot on one cat. Pass cosmeticId=null to clear
+ * that slot. Each cat can wear one cosmetic per slot simultaneously.
+ */
 state.post('/cosmetic/equip', async (c) => {
-  const { breed, cosmeticId } = (await c.req.json()) as {
+  const { breed, slot, cosmeticId } = (await c.req.json()) as {
     breed: CatBreed;
+    slot: string;
     cosmeticId: CosmeticId | null;
   };
+  if (!slot || typeof slot !== 'string') {
+    return c.json({ ok: false, reason: 'missing_slot' }, 400);
+  }
   const username = await currentUsername();
   const player = await loadOrInit(redis, username);
   if (!player.ownedCats.includes(breed)) {
@@ -87,10 +95,16 @@ state.post('/cosmetic/equip', async (c) => {
   if (cosmeticId !== null && !player.ownedCosmetics.includes(cosmeticId)) {
     return c.json({ ok: false, reason: 'cosmetic_not_owned' }, 400);
   }
+  const slots = player.equippedCosmetics[breed] ?? {};
   if (cosmeticId === null) {
+    delete slots[slot];
+  } else {
+    slots[slot] = cosmeticId;
+  }
+  if (Object.keys(slots).length === 0) {
     delete player.equippedCosmetics[breed];
   } else {
-    player.equippedCosmetics[breed] = cosmeticId;
+    player.equippedCosmetics[breed] = slots;
   }
   await save(redis, player);
   return c.json({ ok: true, state: player });
@@ -147,9 +161,15 @@ state.post('/inventory/sell', async (c) => {
   if (!player.ownedCosmetics.includes(id as CosmeticId)) {
     return c.json({ ok: false, reason: 'cosmetic_not_owned' }, 400);
   }
-  // Unequip from any cat
-  for (const [catId, cosId] of Object.entries(player.equippedCosmetics)) {
-    if (cosId === id) delete player.equippedCosmetics[catId];
+  // Unequip from any cat — search every slot on every cat for matches.
+  for (const [catId, slots] of Object.entries(player.equippedCosmetics)) {
+    if (!slots) continue;
+    for (const slotKey of Object.keys(slots)) {
+      if (slots[slotKey] === id) delete slots[slotKey];
+    }
+    if (Object.keys(slots).length === 0) {
+      delete player.equippedCosmetics[catId];
+    }
   }
   player.ownedCosmetics = player.ownedCosmetics.filter((c2) => c2 !== id);
 

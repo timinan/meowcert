@@ -185,8 +185,15 @@ export interface PlayerState {
   coins: number;
   ownedCats: CatBreed[];
   ownedCosmetics: CosmeticId[];
-  /** Map of catBreed -> cosmeticId currently worn by that cat. */
-  equippedCosmetics: Partial<Record<CatBreed, CosmeticId>>;
+  /**
+   * Per-cat equipped cosmetics keyed by slot ('head' / 'neck' / 'body' / etc).
+   * A cat wears at most one cosmetic per slot, so a cat can wear a hat AND a
+   * scarf AND a sweater simultaneously. Slot strings come from
+   * COSMETIC_CATALOG[cosId].slot — unknown slots default to 'misc'.
+   *
+   * Stored as Partial<Record<CatBreed, Partial<Record<Slot, CosmeticId>>>>.
+   */
+  equippedCosmetics: Partial<Record<CatBreed, Partial<Record<string, CosmeticId>>>>;
   bestScore: number;
   /** True after the player has completed the Welcome scene. */
   onboardingDone: boolean;

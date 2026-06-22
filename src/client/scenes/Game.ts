@@ -176,9 +176,9 @@ export class Game extends Scene {
         y: catY,
       };
       // Equip cosmetic if the player has one for this cat.
-      const equippedCosmetic = this.playerState?.equippedCosmetics?.[catId];
-      if (equippedCosmetic) {
-        model.equippedCosmetic = equippedCosmetic;
+      const slots = this.playerState?.equippedCosmetics?.[catId];
+      if (slots && Object.keys(slots).length > 0) {
+        model.equippedCosmetics = { ...slots };
       }
 
       const cat = new Cat(this, model);

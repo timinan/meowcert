@@ -22,9 +22,11 @@ export interface CatModel {
   restingAnimation: CatAnimationState;
   x: number; // 0–100 percent of background width
   y: number; // 0–100 percent of background height
-  /** Cosmetic worn by this cat (rendered above its head). `undefined` = no
-   *  accessory. */
-  equippedCosmetic?: CosmeticId;
+  /**
+   * Cosmetics worn by this cat, keyed by slot ('head' / 'neck' / 'body' / etc).
+   * Each rendered as a sprite stacked on the cat. Empty / undefined = naked.
+   */
+  equippedCosmetics?: Partial<Record<string, CosmeticId>>;
 }
 
 export type InteractionType = 'pet' | 'chinScratch' | 'bellyRub';

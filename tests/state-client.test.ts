@@ -98,12 +98,12 @@ describe('state-client', () => {
     });
     vi.stubGlobal('fetch', spy);
 
-    await equipCosmetic('cat1', 'c9');
+    await equipCosmetic('cat1', 'head', 'c9');
     expect(spy).toHaveBeenCalledWith(
       '/api/cosmetic/equip',
       expect.objectContaining({
         method: 'POST',
-        body: JSON.stringify({ breed: 'cat1', cosmeticId: 'c9' }),
+        body: JSON.stringify({ breed: 'cat1', slot: 'head', cosmeticId: 'c9' }),
       }),
     );
   });
@@ -116,11 +116,11 @@ describe('state-client', () => {
     });
     vi.stubGlobal('fetch', spy);
 
-    await equipCosmetic('cat1', null);
+    await equipCosmetic('cat1', 'head', null);
     expect(spy).toHaveBeenCalledWith(
       '/api/cosmetic/equip',
       expect.objectContaining({
-        body: JSON.stringify({ breed: 'cat1', cosmeticId: null }),
+        body: JSON.stringify({ breed: 'cat1', slot: 'head', cosmeticId: null }),
       }),
     );
   });

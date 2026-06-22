@@ -165,9 +165,9 @@ export class Decorate extends Scene {
         x: cx,
         y: catY,
       };
-      const equippedCosmetic = this.playerState?.equippedCosmetics?.[catId];
-      if (equippedCosmetic) {
-        model.equippedCosmetic = equippedCosmetic;
+      const slots = this.playerState?.equippedCosmetics?.[catId];
+      if (slots && Object.keys(slots).length > 0) {
+        model.equippedCosmetics = { ...slots };
       }
 
       const cat = new Cat(this, model);
