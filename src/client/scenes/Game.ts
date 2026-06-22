@@ -5,6 +5,7 @@ import { Note } from '@/entities/note';
 import { BackgroundManager } from '@/entities/background-manager';
 import { ChartPlayer } from '@/systems/chart-player';
 import { ScoreSystem } from '@/systems/score-system';
+import { SongPlayer } from '@/systems/song-player';
 import { TopHud } from '@/ui/top-hud';
 import * as L from '@/constants/scene-layout';
 import { AssetKeys } from '@/constants/assets';
@@ -44,6 +45,11 @@ export class Game extends Scene {
   private hud!: TopHud;
   private player!: ChartPlayer;
   private score!: ScoreSystem;
+  /** Step-1 audio system. Reads the same chart ChartPlayer plays back and
+   *  fires a pitched meow on every active step. Starts on the player's
+   *  first lane tap (mobile / iframe audio context unlock). */
+  private songPlayer: SongPlayer | null = null;
+  private songStarted = false;
   private startTimeMs = 0;
   private roundOver = false;
 
@@ -78,6 +84,8 @@ export class Game extends Scene {
     this.roundOver = false;
     this.startTimeMs = 0;
     this.cleanedUp = false;
+    this.songPlayer = null;
+    this.songStarted = false;
   }
 
   async create(): Promise<void> {
@@ -601,7 +609,25 @@ export class Game extends Scene {
       const n = this.notes[i]!;
       if (n.active) n.recycle();
     }
+    // Stop the meow melody — Transport.cancel inside SongPlayer.stop
+    // wipes pending scheduled events so a long round doesn't keep
+    // firing meows after the summary appears.
+    this.songPlayer?.stop();
     this.showSummary();
+  }
+
+  /** Unlock + start the SongPlayer on the first player tap. Subsequent
+   *  taps no-op cheaply because both unlock() and start() early-return
+   *  once they've run. */
+  private async ensureSongStarted(): Promise<void> {
+    if (this.songStarted || !this.songPlayer) return;
+    this.songStarted = true;
+    try {
+      await this.songPlayer.unlock();
+      await this.songPlayer.start();
+    } catch (err) {
+      console.warn('[Game] SongPlayer start failed:', err);
+    }
   }
 
   private showSummary(): void {
@@ -687,6 +713,18 @@ export class Game extends Scene {
     });
 
     this.player.onSpawn((lane, hitAt) => this.spawnNote(lane, hitAt));
+
+    // Spin up the SongPlayer on the same chart. It stays silent until
+    // the player taps a lane — Tone.js refuses to start audio without a
+    // user gesture in the iframe.
+    if (Balance.audioEnabled) {
+      try {
+        this.songPlayer = new SongPlayer({ chart: playChart });
+      } catch (err) {
+        console.warn('[Game] SongPlayer init failed:', err);
+        this.songPlayer = null;
+      }
+    }
   }
 
   // -----------------------------------------------------------------------
@@ -727,6 +765,11 @@ export class Game extends Scene {
 
   private registerTap(laneId: LaneId): void {
     if (this.roundOver) return;
+    // First tap unlocks the WebAudio context + starts the SongPlayer.
+    // Tone.js requires a user gesture before any audio can play, and
+    // every lane tap counts. After the first call this is cheap (early
+    // returns inside SongPlayer.start).
+    void this.ensureSongStarted();
     const now = this.time.now - this.startTimeMs;
     const note = this.activeNoteInLane(laneId, now);
 
@@ -892,6 +935,10 @@ export class Game extends Scene {
       this.seatedNameLabels = [];
     });
     tearDown('background', () => this.bg?.destroy());
+    tearDown('song-player', () => {
+      this.songPlayer?.destroy();
+      this.songPlayer = null;
+    });
 
     // Now safe to wipe any remaining tweens / timers / input.
     tearDown('tweens', () => this.tweens.killAll());
