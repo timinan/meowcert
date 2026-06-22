@@ -170,7 +170,9 @@ export class Decorate extends Scene {
 
     const { width, height } = this.scale;
     const scaleY = height / L.DESIGN_H;
-    const catY = (L.TOP_HUD_H + L.CAT_STAGE_H * 0.88) * scaleY;
+    // Matches Game scene's seated-cat Y so cats don't pop up/down when
+    // switching between Decorate and Play. Both scenes scale cats 1.4×.
+    const catY = (L.TOP_HUD_H + L.CAT_STAGE_H * 0.78) * scaleY;
 
     const seatedCats = this.playerState?.seatedCats ?? {};
 
@@ -349,7 +351,9 @@ export class Decorate extends Scene {
     if (this.placementZones) this.placementZones.destroy(true);
     const { width, height } = this.scale;
     const scaleY = height / L.DESIGN_H;
-    const catY = (L.TOP_HUD_H + L.CAT_STAGE_H * 0.88) * scaleY;
+    // Matches Game scene's seated-cat Y so cats don't pop up/down when
+    // switching between Decorate and Play. Both scenes scale cats 1.4×.
+    const catY = (L.TOP_HUD_H + L.CAT_STAGE_H * 0.78) * scaleY;
     const panelSize = Math.min(96, L.CAT_STAGE_H * 0.55 * scaleY);
     const panelCenterY = catY - panelSize * 0.4;
 

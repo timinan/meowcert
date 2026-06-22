@@ -84,10 +84,12 @@ export class Game extends Scene {
     // Reset score per round
     this.score = new ScoreSystem();
 
-    // Background
+    // Background — read from playerState (same source as Decorate). The
+    // registry fallback drifted from Decorate's playerState.activeBackground
+    // so the player saw two different backgrounds across screens.
     this.bg = new BackgroundManager(this);
     this.bg.create();
-    const activeBg = this.registry.get('activeBackground') ?? 'default';
+    const activeBg = this.playerState?.activeBackground ?? 'default';
     this.bg.setBackground(activeBg);
 
     this.drawLanes();
@@ -727,27 +729,39 @@ export class Game extends Scene {
     if (this.roundOver) return;
     const now = this.time.now - this.startTimeMs;
     const note = this.activeNoteInLane(laneId, now);
-    if (!note) return; // empty lane — no penalty, just no-op
 
     // Position-based hit detection. The big target is 72px and the small
     // note is 54px (radii 36 and 27). dy is the gap between centers:
     //   dy <= ~15  → perfect (small ball nestled inside the target)
     //   dy <= ~60  → great   (sprites are visually touching)
-    //   dy >  ~60  → no hit  (small ball nowhere near the target)
+    //   dy >  ~60  → miss    (tap penalty, but note keeps falling)
+    // No active note in the lane at all → also miss. Taps now always
+    // commit to a judgment so spamming the lane costs combo.
     const scaleY = this.scale.height / L.DESIGN_H;
     const targetY = L.HIT_LINE_Y * scaleY;
-    const dy = Math.abs(note.y - targetY);
     const maxHitDistance = 60;
     const perfectDistance = 15;
-    if (dy > maxHitDistance) return; // ball isn't touching the target yet
 
-    const grade: 'perfect' | 'great' = dy <= perfectDistance ? 'perfect' : 'great';
+    let grade: 'perfect' | 'great' | 'miss' = 'miss';
+    if (note) {
+      const dy = Math.abs(note.y - targetY);
+      if (dy <= perfectDistance) grade = 'perfect';
+      else if (dy <= maxHitDistance) grade = 'great';
+    }
+
     this.score.registerHit(grade);
-    this.cats[laneId]?.playMeow(Balance.catReactionMs);
-    note.consumed = true;
-    note.recycle();
     this.showHitFeedback(laneId, grade);
     this.flashTarget(laneId, grade);
+    if (grade === 'miss') {
+      this.cats[laneId]?.playAngry(Balance.catReactionMs);
+      // Intentionally don't consume the note — the player can still land
+      // a real hit on it when it actually reaches the target. Premature
+      // tap costs combo but doesn't burn the note.
+    } else {
+      this.cats[laneId]?.playMeow(Balance.catReactionMs);
+      note!.consumed = true;
+      note!.recycle();
+    }
     this.pulseCombo();
     this.updateHud();
   }
