@@ -23,6 +23,22 @@ export interface EffectHandle {
  * read — animations aren't required. */
 export type EffectTarget = GameObjects.Sprite | GameObjects.Image;
 
+/**
+ * Compute the on-screen foot position of a target regardless of its origin.
+ *
+ * Seated cats use origin (0.5, 1) so `target.y` IS the feet. The DressingRoom
+ * hero is an `Image` with the Phaser default origin (0.5, 0.5), which puts
+ * `target.y` at the sprite's center. Without this helper, ground-anchored
+ * effects (flame aura, particles spawning from the body) would float
+ * relative to whatever origin the consumer picked.
+ */
+function footPosition(target: EffectTarget): { x: number; y: number } {
+  return {
+    x: target.x,
+    y: target.y + target.displayHeight * (1 - target.originY),
+  };
+}
+
 export interface CatEffect {
   /** Stable catalog id, e.g. 'effect-red-glow'. Used as the CosmeticId. */
   id: string;
@@ -77,9 +93,12 @@ function makeGlow(color: number): CatEffect['apply'] {
     graphics.setDepth(sprite.depth - 1);
 
     const sync = (): void => {
-      // Anchor at sprite.y exactly — that's the feet (origin 0.5, 1). Flame
-      // rises upward from here, never below.
-      graphics.setPosition(sprite.x, sprite.y);
+      // Compute the on-screen foot position regardless of the target's
+      // origin so the flame base sits exactly at the cat's feet whether
+      // the target is a seated Sprite (origin 0.5, 1) or the modal hero
+      // Image (origin 0.5, 0.5).
+      const foot = footPosition(sprite);
+      graphics.setPosition(foot.x, foot.y);
     };
     sync();
 
@@ -169,10 +188,12 @@ function makeParticles(opts: ParticleOpts): CatEffect['apply'] {
     const spawnOne = (): void => {
       const offsetX = (Math.random() - 0.5) * opts.spreadX;
       // Spawn near the cat's body (mid-torso) so particles look like they're
-      // coming FROM the cat, not floating above its head.
-      const startY = sprite.y - sprite.displayHeight * 0.45;
+      // coming FROM the cat, not floating above its head. Use the foot
+      // position helper so the origin (Sprite vs Image) doesn't matter.
+      const foot = footPosition(sprite);
+      const startY = foot.y - sprite.displayHeight * 0.45;
       const t = scene.add
-        .text(sprite.x + offsetX, startY, opts.emoji, {
+        .text(foot.x + offsetX, startY, opts.emoji, {
           fontSize: `${opts.size}px`,
         })
         .setOrigin(0.5)
