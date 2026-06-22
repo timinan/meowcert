@@ -60,6 +60,8 @@ export class Decorate extends Scene {
 
   // Per-seated-cat remove badges (red ✕ in the top-right of each cat)
   private removeBadges: RemoveBadge[] = [];
+  /** Name labels rendered below each seated cat. */
+  private seatedNameLabels: GameObjects.Text[] = [];
 
   // Tap-menu + placement state
   private contextMenu!: ContextMenu;
@@ -156,12 +158,14 @@ export class Decorate extends Scene {
   // Private — preview cats
   // ---------------------------------------------------------------------------
 
-  /** Destroys existing cat sprites + tap zones, then re-renders from playerState. */
+  /** Destroys existing cat sprites + tap zones + name labels, then re-renders from playerState. */
   private seatCats(): void {
     for (const c of this.cats) c.destroy();
     this.cats = [];
     for (const z of this.catZones) z.destroy();
     this.catZones = [];
+    for (const l of this.seatedNameLabels) l.destroy();
+    this.seatedNameLabels = [];
 
     const { width, height } = this.scale;
     const scaleY = height / L.DESIGN_H;
@@ -220,6 +224,19 @@ export class Decorate extends Scene {
       const cat = new Cat(this, model);
       cat.setPosition(cx, catY);
       this.cats.push(cat);
+
+      // Name label right under the cat's feet so players see who is who.
+      const nameLabel = this.add
+        .text(cx, catY + 4, catInstance.name.toUpperCase(), {
+          fontFamily: '"Courier New", monospace',
+          fontStyle: 'bold',
+          fontSize: '10px',
+          color: '#ffffff',
+          stroke: '#000000',
+          strokeThickness: 3,
+        })
+        .setOrigin(0.5, 0);
+      this.seatedNameLabels.push(nameLabel);
 
       // Invisible tap zone over the whole cat column → opens the cat context menu.
       const zone = this.add.rectangle(cx, stageMidY, colW, stageH, 0x000000, 0);
@@ -879,6 +896,8 @@ export class Decorate extends Scene {
     this.catZones = [];
     for (const b of this.removeBadges) b.destroy();
     this.removeBadges = [];
+    for (const l of this.seatedNameLabels) l.destroy();
+    this.seatedNameLabels = [];
     this.root?.destroy(true);
     this.hud?.destroy();
   }

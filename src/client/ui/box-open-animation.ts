@@ -38,6 +38,13 @@ export interface BoxOpenAnimationOpts {
   /** When true and refundCoins > 0, shows a "Duplicate · +N coins" hint. */
   duplicate?: boolean;
   refundCoins?: number;
+  /**
+   * When set, renders the headline as `${prefix}${RARITY_LABEL}${suffix}` with
+   * the rarity label inlined and colored, AND suppresses the separate rarity
+   * badge below. Use this for the cat-adoption reveal so we don't say
+   * "uncommon" twice.
+   */
+  inlineRarityTemplate?: { prefix: string; suffix: string };
 }
 
 /**
@@ -155,38 +162,76 @@ export function playBoxOpenAnimation(
       });
     }
 
-    // Wrap inside the canvas so longer adoption sentences ("A common cat has
-    // been adopted") don't get clipped by the screen edges. Shrink font on
-    // very narrow viewports so it stays legible.
+    // Wrap inside the canvas so longer adoption sentences don't get clipped.
+    // Shrink font on narrow viewports so it stays legible.
     const sceneW = scene.scale.width;
-    const nameFontSize = sceneW >= 520 ? 28 : sceneW >= 380 ? 22 : 18;
-    const nameText = scene.add
-      .text(cx, cy + 150, opts.itemName, {
+    let nameFontSize = sceneW >= 520 ? 28 : sceneW >= 380 ? 22 : 18;
+
+    const nameTexts: GameObjects.Text[] = [];
+    let rarityText: GameObjects.Text | null = null;
+
+    if (opts.inlineRarityTemplate) {
+      // Three-part sentence with the rarity label inline and colored. We
+      // measure each piece, shrink the font if the whole line overflows,
+      // and lay them out horizontally centered.
+      const tpl = opts.inlineRarityTemplate;
+      const baseStyle = {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
-        fontSize: `${nameFontSize}px`,
-        color: '#ffffff',
         stroke: '#000000',
         strokeThickness: 5,
-        align: 'center',
-        wordWrap: { width: sceneW - 40 },
-      })
-      .setOrigin(0.5)
-      .setAlpha(0)
-      .setDepth(TEXT_DEPTH);
+      };
+      const makeRow = (size: number): { pre: GameObjects.Text; mid: GameObjects.Text; suf: GameObjects.Text; totalW: number } => {
+        const pre = scene.add.text(0, 0, tpl.prefix, { ...baseStyle, fontSize: `${size}px`, color: '#ffffff' }).setOrigin(0, 0.5);
+        const mid = scene.add.text(0, 0, rarity.label, { ...baseStyle, fontSize: `${size}px`, color: rarity.css }).setOrigin(0, 0.5);
+        const suf = scene.add.text(0, 0, tpl.suffix, { ...baseStyle, fontSize: `${size}px`, color: '#ffffff' }).setOrigin(0, 0.5);
+        return { pre, mid, suf, totalW: pre.width + mid.width + suf.width };
+      };
+      let row = makeRow(nameFontSize);
+      const maxW = sceneW - 32;
+      while (row.totalW > maxW && nameFontSize > 12) {
+        row.pre.destroy(); row.mid.destroy(); row.suf.destroy();
+        nameFontSize -= 2;
+        row = makeRow(nameFontSize);
+      }
+      let xc = cx - row.totalW / 2;
+      for (const t of [row.pre, row.mid, row.suf]) {
+        t.setPosition(xc, cy + 150);
+        xc += t.width;
+        t.setAlpha(0).setDepth(TEXT_DEPTH);
+        nameTexts.push(t);
+      }
+    } else {
+      // Default single-line headline + separate rarity badge.
+      const nameText = scene.add
+        .text(cx, cy + 150, opts.itemName, {
+          fontFamily: 'Pixeloid Sans, sans-serif',
+          fontStyle: 'bold',
+          fontSize: `${nameFontSize}px`,
+          color: '#ffffff',
+          stroke: '#000000',
+          strokeThickness: 5,
+          align: 'center',
+          wordWrap: { width: sceneW - 40 },
+        })
+        .setOrigin(0.5)
+        .setAlpha(0)
+        .setDepth(TEXT_DEPTH);
+      nameTexts.push(nameText);
 
-    const rarityText = scene.add
-      .text(cx, cy + 186, rarity.label, {
-        fontFamily: 'Pixeloid Sans, sans-serif',
-        fontStyle: 'bold',
-        fontSize: '16px',
-        color: rarity.css,
-        stroke: '#000000',
-        strokeThickness: 4,
-      })
-      .setOrigin(0.5)
-      .setAlpha(0)
-      .setDepth(TEXT_DEPTH);
+      rarityText = scene.add
+        .text(cx, cy + 186, rarity.label, {
+          fontFamily: 'Pixeloid Sans, sans-serif',
+          fontStyle: 'bold',
+          fontSize: '16px',
+          color: rarity.css,
+          stroke: '#000000',
+          strokeThickness: 4,
+        })
+        .setOrigin(0.5)
+        .setAlpha(0)
+        .setDepth(TEXT_DEPTH);
+    }
 
     let dupText: GameObjects.Text | null = null;
     if (opts.duplicate && opts.refundCoins && opts.refundCoins > 0) {
@@ -203,7 +248,8 @@ export function playBoxOpenAnimation(
         .setDepth(TEXT_DEPTH);
     }
 
-    const labels: GameObjects.Text[] = [nameText, rarityText];
+    const labels: GameObjects.Text[] = [...nameTexts];
+    if (rarityText) labels.push(rarityText);
     if (dupText) labels.push(dupText);
     scene.tweens.add({
       targets: labels,
@@ -249,14 +295,14 @@ export function playBoxOpenAnimation(
       rainbowTween?.remove();
 
       scene.tweens.add({
-        targets: [item, glow, nameText, rarityText, hint, dim, ...(dupText ? [dupText] : [])],
+        targets: [item, glow, ...nameTexts, ...(rarityText ? [rarityText] : []), hint, dim, ...(dupText ? [dupText] : [])],
         alpha: 0,
         duration: 240,
         onComplete: () => {
           item.destroy();
           glow.destroy();
-          nameText.destroy();
-          rarityText.destroy();
+          for (const t of nameTexts) t.destroy();
+          if (rarityText) rarityText.destroy();
           hint.destroy();
           dim.destroy();
           if (dupText) dupText.destroy();

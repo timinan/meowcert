@@ -339,7 +339,8 @@ export class Purchase extends Scene {
         {
           textureKey: isCat ? AssetKeys.Atlas.Cats : AssetKeys.Atlas.Cosmetics,
           frame,
-          itemName: isCat ? `A ${pull.rarity} cat has been adopted` : itemName,
+          itemName: isCat ? '' : itemName,
+          ...(isCat ? { inlineRarityTemplate: { prefix: 'A ', suffix: ' cat has been adopted' } } : {}),
           rarity: pull.rarity,
           ...(rainbow ? { rainbow: true } : {}),
           ...(tint ? { tint: parseInt(tint.replace('#', ''), 16) } : {}),

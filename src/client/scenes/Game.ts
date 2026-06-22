@@ -30,6 +30,8 @@ export class Game extends Scene {
   private playerState: PlayerState | null = null;
   private bg!: BackgroundManager;
   private cats: Cat[] = [];
+  /** Name labels rendered below each seated cat (matches Decorate preview). */
+  private seatedNameLabels: Phaser.GameObjects.Text[] = [];
   private laneRects: Phaser.GameObjects.Rectangle[] = [];
   private tapZones: Phaser.GameObjects.Rectangle[] = [];
   private notes: Note[] = [];
@@ -53,6 +55,7 @@ export class Game extends Scene {
   init(data: { playerState?: PlayerState | null }): void {
     this.playerState = data?.playerState ?? null;
     this.cats = [];
+    this.seatedNameLabels = [];
     this.laneRects = [];
     this.tapZones = [];
     this.notes = [];
@@ -195,6 +198,20 @@ export class Game extends Scene {
       const cat = new Cat(this, model);
       cat.setPosition(cx, catY);
       this.cats.push(cat);
+
+      // Cat's custom name right under their feet so players can match the
+      // lane they're tapping to the cat reacting above it.
+      const nameLabel = this.add
+        .text(cx, catY + 4, catInstance.name.toUpperCase(), {
+          fontFamily: '"Courier New", monospace',
+          fontStyle: 'bold',
+          fontSize: '10px',
+          color: '#ffffff',
+          stroke: '#000000',
+          strokeThickness: 3,
+        })
+        .setOrigin(0.5, 0);
+      this.seatedNameLabels.push(nameLabel);
     }
   }
 
@@ -592,6 +609,8 @@ export class Game extends Scene {
     this.notes = [];
     for (const c of this.cats) c.destroy();
     this.cats = [];
+    for (const l of this.seatedNameLabels) l.destroy();
+    this.seatedNameLabels = [];
     this.bg?.destroy();
     this.hud?.destroy();
     this.summary?.destroy(true);
