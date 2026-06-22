@@ -36,44 +36,63 @@ export interface CatEffect {
 // ---------------------------------------------------------------------------
 
 /**
- * Fuzzy ground aura — a soft elliptical glow anchored at the cat's feet that
- * wraps up and around the lower body. Built from many thin translucent
- * ellipses for a smooth radial fall-off (Phaser 4's preFX glow is WebGL-only
- * and doesn't render reliably inside the Devvit iframe, so we draw it
- * manually with Graphics).
+ * Cylindrical flame glow that rises from the cat's feet upward. The bottom
+ * of the flame sits AT the foot line (sprite.y); nothing renders below.
+ * Built from a stack of horizontal slice ellipses interpolating from a
+ * wide base to a narrow tip — gives a tapered flame shape with smooth
+ * fall-off both vertically and horizontally.
+ *
+ * Phaser 4's preFX.addGlow is WebGL-only and doesn't render reliably inside
+ * the Devvit iframe, so we draw it manually with Graphics.
  */
 function makeGlow(color: number): CatEffect['apply'] {
   return (scene, sprite) => {
-    const radiusX = 64;
-    const radiusY = 38;
-    const layers = 20;
+    // Flame footprint. Tuned to engulf the cat's lower body without hiding
+    // the cat behind it.
+    const baseWidth = 56;
+    const tipWidth = 10;
+    const flameHeight = 96; // distance from feet upward
+    const slices = 40; // resolution — more slices = smoother gradient
+    const sliceThickness = 10; // each slice's vertical thickness (overlap creates the gradient)
+
     const graphics = scene.add.graphics();
-    // Many thin ellipses — outer layers are nearly transparent, inner layers
-    // build up to a softer max so the glow reads as a fuzzy aura, not a disc.
-    for (let i = layers; i > 0; i--) {
-      const t = i / layers;
-      const rx = radiusX * t;
-      const ry = radiusY * t;
-      // Per-layer alpha contribution. Outer (high t) gets the smallest add,
-      // inner (low t) the largest. Caps below 0.08/layer to keep it fuzzy.
-      const alpha = 0.025 * (1 - t * 0.85);
+
+    // Render the flame in local coords with (0,0) = cat's feet. Each slice is
+    // a thin horizontal ellipse stacked higher than the last; alpha tapers
+    // from a strong base to nearly invisible at the tip.
+    for (let i = 0; i < slices; i++) {
+      const t = i / (slices - 1); // 0 at base, 1 at tip
+      const y = -t * flameHeight; // negative = up (feet are at 0)
+      const w = baseWidth + (tipWidth - baseWidth) * t;
+      // Stronger at the base (~0.10), tapering to almost nothing at the tip.
+      const alpha = 0.10 * (1 - t * 0.85);
       graphics.fillStyle(color, alpha);
-      graphics.fillEllipse(0, 0, rx * 2, ry * 2);
+      graphics.fillEllipse(0, y, w, sliceThickness);
     }
     graphics.setDepth(sprite.depth - 1);
 
     const sync = (): void => {
-      // sprite.y is the foot (origin 0.5, 1). Anchor the aura center a hair
-      // above the feet so it engulfs the lower legs.
-      graphics.setPosition(sprite.x, sprite.y - 6);
+      // Anchor at sprite.y exactly — that's the feet (origin 0.5, 1). Flame
+      // rises upward from here, never below.
+      graphics.setPosition(sprite.x, sprite.y);
     };
     sync();
 
-    // Subtle breathing so the aura feels alive without distracting.
+    // Flicker: gentle horizontal scale tween so the flame feels alive rather
+    // than reading as a frozen decal. Width-only — keeps the bottom anchored.
+    const flicker = scene.tweens.add({
+      targets: graphics,
+      scaleX: 1.08,
+      duration: 380,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+    // Subtle alpha breath as well.
     const pulse = scene.tweens.add({
       targets: graphics,
-      alpha: 0.55,
-      duration: 1100,
+      alpha: 0.85,
+      duration: 900,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut',
@@ -83,6 +102,8 @@ function makeGlow(color: number): CatEffect['apply'] {
     return {
       destroy: () => {
         scene.events.off(Scenes.Events.POST_UPDATE, sync);
+        flicker.stop();
+        flicker.remove();
         pulse.stop();
         pulse.remove();
         graphics.destroy();
