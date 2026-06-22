@@ -109,6 +109,7 @@ export class Preloader extends Scene {
    * Atlas state (June 2026):
    *   idle  — all 6 breeds (cat1–cat6)
    *   hiss  — all 6 breeds
+   *   meow  — all 6 breeds (used by Game scene on rhythm hit)
    *   happy — cat5 and cat6 only; cat1–cat4 lack happy frames in the atlas.
    *            Cat.playHappy() guards with anims.exists(), so missing happy
    *            keys are safe — the cat just holds its current frame and tints.
@@ -120,7 +121,7 @@ export class Preloader extends Scene {
     for (const breed of CAT_BREEDS) {
       const renderBreed = breed === 'rainbow' ? RAINBOW_RENDER_BREED : breed;
 
-      for (const anim of ['idle', 'happy', 'hiss'] as const) {
+      for (const anim of ['idle', 'happy', 'hiss', 'meow'] as const) {
         const key = `${breed}_${anim}`;
         if (this.anims.exists(key)) continue;
 

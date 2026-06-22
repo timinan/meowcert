@@ -156,7 +156,7 @@ export class Game extends Scene {
       // Hit target at the bottom of the lane — the original "fuzzy ball"
       // target from horizontal rhythm. Notes get consumed when they reach it.
       const target = this.add.image(cx, hitLineY, AssetKeys.Image.PspspsTarget);
-      target.setDisplaySize(48, 48);
+      target.setDisplaySize(72, 72);
       target.setTint(color);
       this.hitTargets[i] = target;
       // Snapshot the base scale after setDisplaySize so flash tweens always
@@ -593,14 +593,17 @@ export class Game extends Scene {
     this.summary.setVisible(true);
   }
 
+  // Skip = "play again" for now. Decorate has its own nav via the hamburger.
+  // Both buttons restart the scene with the same playerState so the player
+  // can immediately retry without bouncing through Decorate.
   private onSkipClicked = (): void => {
-    this.scene.start(SceneKeys.Decorate, { playerState: this.playerState });
+    this.scene.restart({ playerState: this.playerState });
   };
 
   private onPostCommentClicked = (): void => {
     console.info('[Game] Post Comment clicked. Score:', this.score.get());
-    // Real Devvit comment post wiring comes later (out of scope for Task 11).
-    this.onSkipClicked();
+    // Real Devvit comment post wiring comes later. Same retry behavior for now.
+    this.scene.restart({ playerState: this.playerState });
   };
 
   // -----------------------------------------------------------------------
@@ -715,7 +718,7 @@ export class Game extends Scene {
       return; // out of window — leave the note for miss detection
     }
     this.score.registerHit(grade);
-    this.cats[laneId]?.playHappy(Balance.catReactionMs);
+    this.cats[laneId]?.playMeow(Balance.catReactionMs);
     note.consumed = true;
     note.recycle();
     this.showHitFeedback(laneId, grade);

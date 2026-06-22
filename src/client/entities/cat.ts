@@ -196,6 +196,18 @@ export class Cat {
     this.revertTimer = this.scene.time.delayedCall(durationMs, () => this.playIdle());
   }
 
+  /** Play the breed's meow animation — used by Game scene when a rhythm
+   *  note is hit. Falls back gracefully if the breed has no meow frames. */
+  playMeow(durationMs = 500): void {
+    this.cancelRevert();
+    const key = `${this.model.breed}_meow`;
+    if (this.scene.anims.exists(key)) {
+      this.sprite.play({ key, repeat: 0 });
+    }
+    this.scene.tweens.add({ targets: this.sprite, scaleX: 1.08, scaleY: 1.08, duration: 120, yoyo: false });
+    this.revertTimer = this.scene.time.delayedCall(durationMs, () => this.playIdle());
+  }
+
   playIdle(): void {
     this.cancelRevert();
     const key = `${this.model.breed}_idle`;
