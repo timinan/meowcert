@@ -1,12 +1,15 @@
 import { Scene, Scenes, GameObjects } from 'phaser';
 import { SceneKeys } from '@/constants/scenes';
+import { AssetKeys } from '@/constants/assets';
 import { BackgroundManager } from '@/entities/background-manager';
 import { Cat } from '@/entities/cat';
+import { RemoveBadge } from '@/entities/remove-badge';
 import { TopHud } from '@/ui/top-hud';
+import { ContextMenu, buildCatMenu } from '@/ui/context-menu';
 import * as L from '@/constants/scene-layout';
 import { CAT_CATALOG, BACKGROUND_CATALOG } from '@/../shared/state';
 import { fetchState, setSeat, setBackground } from '@/services/state-client';
-import type { PlayerState, CatBreed, SeatId, BackgroundId } from '@/../shared/state';
+import type { PlayerState, CatBreed, SeatId, BackgroundId, CatEntry } from '@/../shared/state';
 import type { CatModel } from '@/types/game';
 
 const SEAT_ORDER: SeatId[] = ['seat-left', 'seat-center', 'seat-right'];
@@ -40,6 +43,14 @@ export class Decorate extends Scene {
   // Bottom panel — single Container, recursive-destroyed on shutdown
   private root!: GameObjects.Container;
 
+  // Per-seated-cat remove badges (red ✕ in the top-right of each cat)
+  private removeBadges: RemoveBadge[] = [];
+
+  // Tap-menu + placement state
+  private contextMenu!: ContextMenu;
+  private placingCatId: CatBreed | null = null;
+  private placementZones: GameObjects.Container | null = null;
+
   // Tab state
   private activeTab: ActiveTab = 'CATS';
   private tabCatsText!: GameObjects.Text;
@@ -56,6 +67,9 @@ export class Decorate extends Scene {
     this.playerState = data?.playerState ?? null;
     this.cats = [];
     this.catZones = [];
+    this.removeBadges = [];
+    this.placingCatId = null;
+    this.placementZones = null;
     this.activeTab = 'CATS';
   }
 
@@ -81,11 +95,18 @@ export class Decorate extends Scene {
     const { width, height } = this.scale;
     const scaleY = height / L.DESIGN_H;
     const hintY = 232 * scaleY;
-    this.add.text(width / 2, hintY, 'Tap a seated cat to dress them up', {
+    this.add.text(width / 2, hintY, 'tap a cat for options', {
       fontFamily: '"Courier New", monospace',
       fontSize: '9px',
       color: '#c0a0e6',
     }).setOrigin(0.5);
+
+    // Initialise the tap-action menu once for the whole scene.
+    this.contextMenu = new ContextMenu(this);
+    // Tap-outside-menu closes the menu (and exits placement mode).
+    this.input.on('pointerdown', () => {
+      if (this.contextMenu.isOpen()) this.contextMenu.close();
+    });
 
     // Seated cats in preview (same positions as Game.ts seatCats())
     this.seatCats();
@@ -129,6 +150,7 @@ export class Decorate extends Scene {
 
     for (let i = 0; i < catIds.length; i++) {
       const catId = catIds[i]!;
+      const seatId = SEAT_ORDER.find((sid) => seatedCats[sid] === catId)!;
       const catEntry = CAT_CATALOG.find((c) => c.id === catId);
       if (!catEntry) continue;
 
@@ -152,14 +174,192 @@ export class Decorate extends Scene {
       cat.setPosition(cx, catY);
       this.cats.push(cat);
 
-      // Invisible tap zone over the whole cat column → go to DressingRoom
+      // Invisible tap zone over the whole cat column → opens the cat
+      // context menu (Dress up / Move / Take to bench).
       const zone = this.add.rectangle(cx, stageMidY, colW, stageH, 0x000000, 0);
       zone.setInteractive({ useHandCursor: true });
-      zone.on('pointerdown', () => {
-        this.scene.start(SceneKeys.DressingRoom, { catId, playerState: this.playerState });
-      });
+      zone.on(
+        'pointerdown',
+        (
+          _p: Phaser.Input.Pointer,
+          _x: number,
+          _y: number,
+          event: Phaser.Types.Input.EventData,
+        ) => {
+          event.stopPropagation();
+          this.openCatMenu(catId, catEntry, seatId, cx, catY);
+        },
+      );
       this.catZones.push(zone);
+
+      // Red ✕ badge top-right of the cat for quick-unseat. Offset is in
+      // canvas space — small constant since cats render at design-scale.
+      const badge = new RemoveBadge(this, cx + 22, catY - 56, () => {
+        this.unseatCat(seatId);
+      });
+      this.add.existing(badge);
+      this.removeBadges.push(badge);
     }
+  }
+
+  /**
+   * Show the cat context menu (Dress up / Move / Take to bench, etc).
+   * `seatId` is undefined when invoked from a tray thumb (cat is not yet
+   * placed in the scene).
+   */
+  private openCatMenu(
+    catId: CatBreed,
+    catEntry: CatEntry,
+    seatId: SeatId | undefined,
+    anchorX: number,
+    anchorY: number,
+  ): void {
+    if (this.placingCatId) {
+      // In placement mode — ignore taps on cats (overlapping placement zones
+      // handle taps).
+      return;
+    }
+    const rows = buildCatMenu({
+      isSeated: Boolean(seatId),
+      displayName: catEntry.name,
+    });
+    this.contextMenu.open(anchorX, anchorY, rows, (action) => {
+      this.onCatMenuAction(action, catId, seatId);
+    });
+  }
+
+  /** Handle the action the player picked from the cat menu. */
+  private onCatMenuAction(
+    action: string,
+    catId: CatBreed,
+    seatId: SeatId | undefined,
+  ): void {
+    if (action === 'dressup') {
+      this.scene.start(SceneKeys.DressingRoom, {
+        catId,
+        playerState: this.playerState,
+      });
+      return;
+    }
+    if (action === 'seat' || action === 'place') {
+      this.enterPlacementMode(catId, seatId);
+      return;
+    }
+    if (action === 'unseat' && seatId) {
+      this.unseatCat(seatId);
+      return;
+    }
+    // 'gift' / 'rehome' are out of scope here.
+  }
+
+  /** Mutate state to clear a seat, sync, repaint. */
+  private unseatCat(seatId: SeatId): void {
+    if (!this.playerState) return;
+    delete this.playerState.seatedCats[seatId];
+    setSeat(seatId, null).catch((e) =>
+      console.warn('[Decorate] setSeat (unseat) failed:', e),
+    );
+    this.repaintCatStage();
+    this.renderTray();
+  }
+
+  /**
+   * Enter placement mode for `catId`. Draws 3 green-tinted panels over the
+   * 3 seat columns; tapping a panel seats (or replaces) the cat there.
+   */
+  private enterPlacementMode(catId: CatBreed, fromSeat: SeatId | undefined): void {
+    this.placingCatId = catId;
+    this.drawPlacementZones(fromSeat);
+  }
+
+  private exitPlacementMode(): void {
+    this.placingCatId = null;
+    if (this.placementZones) {
+      this.placementZones.destroy(true);
+      this.placementZones = null;
+    }
+  }
+
+  private drawPlacementZones(fromSeat: SeatId | undefined): void {
+    if (this.placementZones) this.placementZones.destroy(true);
+    const { width, height } = this.scale;
+    const scaleY = height / L.DESIGN_H;
+    const inner = width - L.LANE_GUTTER_PX * 2;
+    const colW = (inner - L.LANE_GAP_PX * (L.LANE_COUNT - 1)) / L.LANE_COUNT;
+    const stageTop = L.TOP_HUD_H * scaleY;
+    const stageH = L.CAT_STAGE_H * scaleY;
+
+    const container = this.add.container(0, 0).setDepth(40);
+    this.placementZones = container;
+
+    for (let i = 0; i < L.LANE_COUNT; i++) {
+      const seatId = SEAT_ORDER[i]!;
+      const cx = L.laneCenterX(i as 0 | 1 | 2, width);
+      const zone = this.add
+        .rectangle(cx, stageTop + stageH / 2, colW - 6, stageH - 12, 0x4dffb4, 0.18)
+        .setStrokeStyle(2, 0x4dffb4, fromSeat === seatId ? 0.4 : 0.9)
+        .setInteractive({ useHandCursor: true });
+      const label = this.add
+        .text(cx, stageTop + stageH / 2, fromSeat === seatId ? 'HERE' : 'TAP TO PLACE', {
+          fontFamily: '"Courier New", monospace',
+          fontSize: '10px',
+          fontStyle: 'bold',
+          color: '#4dffb4',
+        })
+        .setOrigin(0.5);
+      container.add([zone, label]);
+      zone.on(
+        'pointerdown',
+        (
+          _p: Phaser.Input.Pointer,
+          _x: number,
+          _y: number,
+          event: Phaser.Types.Input.EventData,
+        ) => {
+          event.stopPropagation();
+          this.placeCatAt(seatId);
+        },
+      );
+    }
+  }
+
+  /** Move/seat the currently-placing cat into `seatId`, replacing whatever's there. */
+  private placeCatAt(seatId: SeatId): void {
+    if (!this.placingCatId || !this.playerState) {
+      this.exitPlacementMode();
+      return;
+    }
+    const catId = this.placingCatId;
+
+    // If this cat was already in another seat, clear that seat first.
+    const prevSeat = SEAT_ORDER.find((sid) => this.playerState!.seatedCats[sid] === catId);
+    if (prevSeat && prevSeat !== seatId) {
+      delete this.playerState.seatedCats[prevSeat];
+      setSeat(prevSeat, null).catch((e) =>
+        console.warn('[Decorate] setSeat (move-from) failed:', e),
+      );
+    }
+
+    // Seat the new cat (overwrites whatever was here).
+    this.playerState.seatedCats[seatId] = catId;
+    setSeat(seatId, catId).catch((e) =>
+      console.warn('[Decorate] setSeat (place) failed:', e),
+    );
+
+    this.exitPlacementMode();
+    this.repaintCatStage();
+    this.renderTray();
+  }
+
+  /** Tear down + recreate the cat stage (cats + remove badges + tap zones). */
+  private repaintCatStage(): void {
+    for (const c of this.cats) c.destroy();
+    this.cats = [];
+    for (const b of this.removeBadges) b.destroy();
+    this.removeBadges = [];
+    for (const z of this.catZones) z.destroy();
+    this.catZones = [];
+    this.seatCats();
   }
 
   // ---------------------------------------------------------------------------
@@ -346,9 +546,14 @@ export class Decorate extends Scene {
         .setStrokeStyle(2, borderColor, borderAlpha)
         .setInteractive({ useHandCursor: true });
 
-      const emoji = this.add.text(x + thumbW / 2, y + thumbH / 2 - 6, '🐱', {
-        fontSize: `${Math.floor(thumbH * 0.45)}px`,
-      }).setOrigin(0.5);
+      // Real cat sprite from the atlas instead of an emoji. Frame derivation
+      // mirrors the box-open animation's resolveFrame() — for tinted variants
+      // we render the parent's idle frame and apply the tint.
+      const { frame, tint } = catThumbFrame(entry);
+      const sprite = this.add
+        .image(x + thumbW / 2, y + thumbH / 2 - 4, AssetKeys.Atlas.Cats, frame)
+        .setDisplaySize(Math.floor(thumbH * 0.7), Math.floor(thumbH * 0.7));
+      if (tint !== undefined) sprite.setTint(tint);
 
       const label = this.add.text(x + thumbW / 2, y + thumbH - 10, entry.name.toUpperCase(), {
         fontFamily: '"Courier New", monospace',
@@ -357,7 +562,7 @@ export class Decorate extends Scene {
         color: '#ffffff',
       }).setOrigin(0.5, 1);
 
-      this.trayContainer.add([thumb, emoji, label]);
+      this.trayContainer.add([thumb, sprite, label]);
 
       if (isSeated) {
         const badge = this.add.circle(x + thumbW - 6, y + 6, 7, 0xffd34d, 1);
@@ -370,34 +575,20 @@ export class Decorate extends Scene {
         this.trayContainer.add([badge, check]);
       }
 
-      thumb.on('pointerdown', () => this.onCatThumbTap(entry.id, seatedSeat));
-    }
-  }
-
-  private onCatThumbTap(catId: CatBreed, currentSeat: SeatId | undefined): void {
-    if (!this.playerState) return;
-
-    if (currentSeat) {
-      // Unseat: clear this seat
-      delete this.playerState.seatedCats[currentSeat];
-      // Server sync
-      setSeat(currentSeat, null).catch((e) =>
-        console.warn('[Decorate] setSeat (unseat) failed:', e),
-      );
-    } else {
-      // Seat into next open slot
-      const nextSeat = SEAT_ORDER.find((sid) => !this.playerState!.seatedCats[sid]);
-      if (!nextSeat) return; // all 3 seats full — tap is a no-op
-      this.playerState.seatedCats[nextSeat] = catId;
-      // Server sync
-      setSeat(nextSeat, catId).catch((e) =>
-        console.warn('[Decorate] setSeat failed:', e),
+      thumb.on(
+        'pointerdown',
+        (
+          _p: Phaser.Input.Pointer,
+          _x: number,
+          _y: number,
+          event: Phaser.Types.Input.EventData,
+        ) => {
+          event.stopPropagation();
+          // Open the context menu anchored above the thumb.
+          this.openCatMenu(entry.id, entry, seatedSeat, x + thumbW / 2, y + thumbH / 2);
+        },
       );
     }
-
-    // Repaint both the preview and the tray
-    this.seatCats();
-    this.renderTray();
   }
 
   // ---------------------------------------------------------------------------
@@ -518,12 +709,32 @@ export class Decorate extends Scene {
     this.input.removeAllListeners();
     this.input.keyboard?.removeAllListeners();
     this.scale.off('resize');
+    this.contextMenu?.destroy();
+    this.placementZones?.destroy(true);
+    this.placementZones = null;
     this.bg?.destroy();
     for (const c of this.cats) c.destroy();
     this.cats = [];
     for (const z of this.catZones) z.destroy();
     this.catZones = [];
+    for (const b of this.removeBadges) b.destroy();
+    this.removeBadges = [];
     this.root?.destroy(true); // recursive — kills tray + panel children
     this.hud?.destroy();
   }
+}
+
+/**
+ * Pick the atlas frame (and optional tint) for a cat catalog entry. Mirrors
+ * the box-open animation's resolveFrame() so the tray uses the exact same
+ * art as the reveal modal.
+ */
+function catThumbFrame(entry: CatEntry): { frame: string; tint?: number } {
+  if (entry.id === 'rainbow') {
+    return { frame: 'cat6_idle_00' };
+  }
+  const parentId = entry.sourceFrame?.match(/^(cat\d+)_/)?.[1];
+  const frame = parentId ? `${parentId}_idle_00` : `${entry.id}_idle_00`;
+  const tint = entry.tint ? parseInt(entry.tint.replace('#', ''), 16) : undefined;
+  return tint !== undefined ? { frame, tint } : { frame };
 }

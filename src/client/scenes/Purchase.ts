@@ -1,5 +1,6 @@
 import { Scene, GameObjects } from 'phaser';
 import { SceneKeys } from '@/constants/scenes';
+import { AssetKeys } from '@/constants/assets';
 import { playBoxOpenAnimation } from '@/ui/box-open-animation';
 import { TopHud } from '@/ui/top-hud';
 import { openBox, fetchState } from '@/services/state-client';
@@ -335,7 +336,7 @@ export class Purchase extends Scene {
       playBoxOpenAnimation(
         this,
         {
-          textureKey: isCat ? 'cats' : 'cosmetics',
+          textureKey: isCat ? AssetKeys.Atlas.Cats : AssetKeys.Atlas.Cosmetics,
           frame,
           itemName,
           rarity: pull.rarity,
