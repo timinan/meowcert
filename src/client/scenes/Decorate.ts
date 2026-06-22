@@ -108,6 +108,10 @@ export class Decorate extends Scene {
       if (this.contextMenu.isOpen()) this.contextMenu.close();
     });
 
+    // The DressingRoom modal fires this when it closes (✕) — we re-render
+    // the cat stage so any equipped-cosmetic changes show immediately.
+    this.events.on('dressingroom:closed', () => this.repaintCatStage());
+
     // Seated cats in preview (same positions as Game.ts seatCats())
     this.seatCats();
 
@@ -235,7 +239,11 @@ export class Decorate extends Scene {
     seatId: SeatId | undefined,
   ): void {
     if (action === 'dressup') {
-      this.scene.start(SceneKeys.DressingRoom, {
+      // Launch DressingRoom as a PARALLEL scene so Decorate stays rendered
+      // behind it as the modal backdrop. DressingRoom closes itself via ✕
+      // and emits 'dressingroom:closed' on this scene's emitter, which the
+      // listener in create() uses to repaint the cat stage.
+      this.scene.launch(SceneKeys.DressingRoom, {
         catId,
         playerState: this.playerState,
       });
@@ -557,19 +565,20 @@ export class Decorate extends Scene {
       const { frame, tint } = catThumbFrame(entry);
       const sprite = this.add.image(
         x + thumbW / 2,
-        y + thumbH / 2 - 4,
+        y + thumbH / 2 - 8,
         AssetKeys.Atlas.Cats,
         frame,
       );
-      const maxSize = Math.min(thumbW, thumbH) * 0.62;
+      // Fill ~92% of the smaller cell dimension so the cat reads at a glance.
+      const maxSize = Math.min(thumbW, thumbH) * 0.92;
       const scale = Math.min(maxSize / sprite.width, maxSize / sprite.height);
       sprite.setScale(scale);
       if (tint !== undefined) sprite.setTint(tint);
 
-      const label = this.add.text(x + thumbW / 2, y + thumbH - 10, entry.name.toUpperCase(), {
+      const label = this.add.text(x + thumbW / 2, y + thumbH - 8, entry.name.toUpperCase(), {
         fontFamily: '"Courier New", monospace',
         fontStyle: 'bold',
-        fontSize: '7px',
+        fontSize: '13px',
         color: '#ffffff',
       }).setOrigin(0.5, 1);
 
@@ -595,8 +604,12 @@ export class Decorate extends Scene {
           event: Phaser.Types.Input.EventData,
         ) => {
           event.stopPropagation();
-          // Open the context menu anchored above the thumb.
-          this.openCatMenu(entry.id, entry, seatedSeat, x + thumbW / 2, y + thumbH / 2);
+          // Thumb x/y above are LOCAL to trayContainer (which sits inside
+          // root). Convert to world coords so the context menu anchors right
+          // next to the cat that was tapped.
+          const worldX = (this.trayContainer.x ?? 0) + (this.root?.x ?? 0) + x + thumbW / 2;
+          const worldY = (this.trayContainer.y ?? 0) + (this.root?.y ?? 0) + y + thumbH / 2;
+          this.openCatMenu(entry.id, entry, seatedSeat, worldX, worldY);
         },
       );
     }

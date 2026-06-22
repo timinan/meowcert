@@ -45,29 +45,50 @@ export class DressingRoom extends Scene {
     this.events.once(Scenes.Events.SHUTDOWN, () => this.cleanup());
     const { width, height } = this.scale;
 
-    // Background
-    this.add.rectangle(0, 0, width, height, 0x1a0a2e, 1).setOrigin(0, 0);
+    // Modal sizing: leave a margin around the edge so Decorate (running
+    // behind us as a parallel scene) shows through. Tuned to feel like a
+    // popup, not a fullscreen view.
+    const modalW = Math.min(width * 0.86, 420);
+    const modalH = Math.min(height * 0.78, 620);
+    const modalX = (width - modalW) / 2;
+    const modalY = (height - modalH) / 2;
+    const cx = width / 2;
 
-    // Top bar
-    this.add.rectangle(0, 0, width, 44, 0x0b041a, 0.78).setOrigin(0, 0);
-    const back = this.add
-      .rectangle(40, 22, 64, 26, 0x0b041a, 1)
-      .setStrokeStyle(1, 0xc0a0e6, 0.4)
-      .setInteractive({ useHandCursor: true });
-    this.add
-      .text(40, 22, '← Back', {
-        fontFamily: 'Pixeloid Sans, sans-serif',
-        fontStyle: 'bold',
-        fontSize: '11px',
-        color: '#ffd34d',
-      })
-      .setOrigin(0.5);
-    back.on('pointerdown', () => this.exit());
+    // Dim backdrop covers the whole canvas and eats taps so Decorate
+    // underneath doesn't react.
+    const scrim = this.add
+      .rectangle(0, 0, width, height, 0x000000, 0.55)
+      .setOrigin(0, 0)
+      .setInteractive();
+    scrim.on('pointerdown', () => {
+      // Tap outside the modal panel closes too.
+      this.exit();
+    });
 
+    // Modal panel — solid background + accent border. Catches taps so they
+    // don't bubble through to the scrim (which would close).
+    const panelBg = this.add
+      .rectangle(modalX, modalY, modalW, modalH, 0x1a0a2e, 1)
+      .setOrigin(0, 0)
+      .setStrokeStyle(2, 0xffd34d, 0.85)
+      .setInteractive();
+    panelBg.on(
+      'pointerdown',
+      (
+        _p: Phaser.Input.Pointer,
+        _x: number,
+        _y: number,
+        event: Phaser.Types.Input.EventData,
+      ) => {
+        event.stopPropagation();
+      },
+    );
+
+    // Title across the top of the modal
     const catEntry = CAT_CATALOG.find((c) => c.id === this.catId);
     const heroName = catEntry?.name ?? this.catId;
     this.add
-      .text(width / 2, 22, `DRESSING ${heroName.toUpperCase()}`, {
+      .text(cx, modalY + 22, `DRESSING ${heroName.toUpperCase()}`, {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
         fontSize: '12px',
@@ -75,19 +96,45 @@ export class DressingRoom extends Scene {
       })
       .setOrigin(0.5);
 
-    // Hero shot — match Collection.ts frame pattern
+    // ✕ close button — top-right corner of the modal
+    const closeBg = this.add
+      .circle(modalX + modalW - 18, modalY + 18, 12, 0xff5050, 1)
+      .setStrokeStyle(2, 0x0b041a, 1)
+      .setInteractive({ useHandCursor: true });
+    closeBg.on(
+      'pointerdown',
+      (
+        _p: Phaser.Input.Pointer,
+        _x: number,
+        _y: number,
+        event: Phaser.Types.Input.EventData,
+      ) => {
+        event.stopPropagation();
+        this.exit();
+      },
+    );
+    this.add
+      .text(modalX + modalW - 18, modalY + 18, '✕', {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontStyle: 'bold',
+        fontSize: '12px',
+        color: '#ffffff',
+      })
+      .setOrigin(0.5);
+
+    // Hero shot — match Collection.ts frame pattern, sized to fit the modal
     const heroFrame =
       this.catId === 'rainbow' ? 'cat6_idle_00' : `${this.catId}_idle_00`;
-    const heroY = Math.max(120, height * 0.25);
-    const heroScale = Math.min(2.5, width / 200);
+    const heroY = modalY + 100;
+    const heroScale = Math.min(2.2, modalW / 240);
     this.heroSprite = this.add
-      .image(width / 2, heroY, AssetKeys.Atlas.Cats, heroFrame)
+      .image(cx, heroY, AssetKeys.Atlas.Cats, heroFrame)
       .setScale(heroScale);
     this.renderEquippedCosmetic();
 
-    // Wearing label
+    // Wearing label — sits between the hero cat and the slot tabs
     this.wearingLabel = this.add
-      .text(width / 2, this.heroSprite.y + 80, '', {
+      .text(cx, this.heroSprite.y + 68, '', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontSize: '10px',
         color: '#c0a0e6',
@@ -95,25 +142,25 @@ export class DressingRoom extends Scene {
       .setOrigin(0.5);
     this.updateWearingLabel();
 
-    // Slot tabs (HEAD / FACE / NECK) — pick which slot you're shopping for.
-    this.slotTabsContainer = this.add.container(0, this.heroSprite.y + 102);
+    // Slot tabs (HEAD / FACE / NECK)
+    this.slotTabsContainer = this.add.container(0, this.heroSprite.y + 92);
     this.renderSlotTabs();
 
     // Grid container — filtered by activeSlot
-    this.gridContainer = this.add.container(0, this.heroSprite.y + 140);
+    this.gridContainer = this.add.container(0, this.heroSprite.y + 130);
     this.renderGrid();
 
-    // Pagination
-    const paginationY = height - 32;
+    // Pagination — pinned to the BOTTOM of the modal, not the canvas
+    const paginationY = modalY + modalH - 24;
     this.pageLabel = this.add
-      .text(width / 2, paginationY, '', {
+      .text(cx, paginationY, '', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontSize: '10px',
         color: '#c0a0e6',
       })
       .setOrigin(0.5);
-    this.prevBtn = this.makeArrow(40, paginationY, '◀', () => this.changePage(-1));
-    this.nextBtn = this.makeArrow(width - 40, paginationY, '▶', () => this.changePage(1));
+    this.prevBtn = this.makeArrow(modalX + 28, paginationY, '◀', () => this.changePage(-1));
+    this.nextBtn = this.makeArrow(modalX + modalW - 28, paginationY, '▶', () => this.changePage(1));
     this.updatePagination();
   }
 
@@ -370,9 +417,14 @@ export class DressingRoom extends Scene {
   }
 
   private exit(): void {
-    // Phase 5: navigation = scene.start() only — never pause+resume.
-    // Pass playerState back so Decorate re-reads latest equippedCosmetics.
-    this.scene.start(SceneKeys.Decorate, { playerState: this.playerState });
+    // DressingRoom runs as a parallel scene over Decorate (via scene.launch).
+    // On close, emit an event on Decorate's bus so it can repaint the cat
+    // stage with the freshly equipped cosmetics, then stop this scene.
+    // playerState is the same shared reference, so Decorate already sees
+    // the latest equippedCosmetics.
+    const decorate = this.scene.get(SceneKeys.Decorate);
+    if (decorate) decorate.events.emit('dressingroom:closed');
+    this.scene.stop();
   }
 
   private cleanup(): void {
