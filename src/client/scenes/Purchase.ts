@@ -107,6 +107,45 @@ export class Purchase extends Scene {
         console.warn('[purchase] fetchState failed', e);
       }
     }
+
+    this.drawInventoryDebugPanel();
+  }
+
+  /**
+   * Dev-only inventory panel. Shows what the player owns so we can verify box
+   * pulls landed without inspecting Redis. Remove before shipping.
+   */
+  private drawInventoryDebugPanel(): void {
+    const { width } = this.scale;
+    const cats = this.playerState?.ownedCats?.length ?? 0;
+    const cosmetics = this.playerState?.ownedCosmetics?.length ?? 0;
+    const bgs = this.playerState?.ownedBackgrounds?.length ?? 0;
+    const catNames = (this.playerState?.ownedCats ?? []).slice(-3).join(', ') || '—';
+    const cosNames = (this.playerState?.ownedCosmetics ?? []).slice(-3).join(', ') || '—';
+    const bgNames = (this.playerState?.ownedBackgrounds ?? []).join(', ') || '—';
+
+    const x = width - 8;
+    const y = TopHud.HEIGHT + 6;
+    const text = [
+      `INV  🐱 ${cats}  🎩 ${cosmetics}  🖼 ${bgs}`,
+      `cats: ${catNames}`,
+      `cos:  ${cosNames}`,
+      `bgs:  ${bgNames}`,
+    ].join('\n');
+
+    const panel = this.add
+      .text(x, y, text, {
+        fontFamily: 'monospace',
+        fontSize: '9px',
+        color: '#9fffd4',
+        backgroundColor: 'rgba(0,0,0,0.55)',
+        padding: { x: 6, y: 4 },
+        align: 'right',
+      })
+      .setOrigin(1, 0)
+      .setDepth(500);
+
+    this.uiRoot.add(panel);
   }
 
   private drawCards(): void {
