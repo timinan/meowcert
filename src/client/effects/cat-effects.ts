@@ -187,11 +187,11 @@ function makeParticles(opts: ParticleOpts): CatEffect['apply'] {
     const live: GameObjects.Text[] = [];
     const spawnOne = (): void => {
       const offsetX = (Math.random() - 0.5) * opts.spreadX;
-      // Spawn near the cat's body (mid-torso) so particles look like they're
-      // coming FROM the cat, not floating above its head. Use the foot
-      // position helper so the origin (Sprite vs Image) doesn't matter.
+      // Spawn around the cat's feet so particles look like they're rising
+      // up from the ground around the cat, not bursting out of its torso.
+      // Use the foot position helper so origin (Sprite vs Image) doesn't matter.
       const foot = footPosition(sprite);
-      const startY = foot.y - sprite.displayHeight * 0.45;
+      const startY = foot.y - sprite.displayHeight * 0.1;
       const t = scene.add
         .text(foot.x + offsetX, startY, opts.emoji, {
           fontSize: `${opts.size}px`,

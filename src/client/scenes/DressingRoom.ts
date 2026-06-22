@@ -129,7 +129,12 @@ export class DressingRoom extends Scene {
     const heroScale = Math.min(2.2, modalW / 240);
     this.heroSprite = this.add
       .image(cx, heroY, AssetKeys.Atlas.Cats, heroFrame)
-      .setScale(heroScale);
+      .setScale(heroScale)
+      // Bump the hero (and by extension its effect handles which use
+      // depth relative to this) well above the modal panel + scrim, both
+      // of which sit at depth 0. Without this, the flame aura's
+      // `sprite.depth - 1 = -1` gets covered by the modal backdrop.
+      .setDepth(200);
     this.renderEquippedCosmetics();
 
     // Wearing label
