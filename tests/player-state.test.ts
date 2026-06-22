@@ -134,12 +134,12 @@ describe('PlayerState.house', () => {
 });
 
 describe('PlayerState.chart + backgrounds', () => {
-  it('fresh state has a chart with 8 steps at 120 bpm', () => {
+  it('fresh state has a 32-step chart at 120 bpm', () => {
     const fresh = createFreshPlayerState('alice');
     expect(fresh.chart).toBeDefined();
-    expect(fresh.chart.stepCount).toBe(8);
+    expect(fresh.chart.stepCount).toBe(32);
     expect(fresh.chart.bpm).toBe(120);
-    expect(fresh.chart.steps).toHaveLength(8);
+    expect(fresh.chart.steps).toHaveLength(32);
   });
 
   it('fresh state owns default background and has it active', () => {

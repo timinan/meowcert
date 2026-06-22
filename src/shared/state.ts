@@ -205,30 +205,45 @@ export interface ChartStep {
 export interface Chart {
   authorId: string;
   title: string;
-  stepCount: 8;
+  /** Total step count. Must be a positive multiple of CHART_PAGE_SIZE so
+   *  the editor can scroll one page at a time and the chart's loop point
+   *  aligns to a clean musical bar. */
+  stepCount: number;
   bpm: number;
   steps: ChartStep[];
   updatedAt: number;
 }
 
+/** Step count = 4 pages × 8 steps = a 32-step chart. At 120bpm that's
+ *  ~10.7s of music before the loop point — long enough to feel like a
+ *  beat instead of a stutter, short enough that the player can scan
+ *  the whole thing in the editor without scrolling marathons. */
+export const CHART_PAGE_SIZE = 8;
+export const DEFAULT_CHART_STEP_COUNT = 32;
+
 export type BackgroundId = keyof typeof BACKGROUND_CATALOG;
 
-export function emptyChart(authorId: string, title: string): Chart {
+export function emptyChart(
+  authorId: string,
+  title: string,
+  stepCount: number = DEFAULT_CHART_STEP_COUNT,
+): Chart {
   return {
     authorId,
     title,
-    stepCount: 8,
+    stepCount,
     bpm: 120,
-    steps: Array.from({ length: 8 }, () => ({ lanes: [] })),
+    steps: Array.from({ length: stepCount }, () => ({ lanes: [] })),
     updatedAt: Date.now(),
   };
 }
 
 export function validateChart(c: Chart): { ok: true } | { ok: false; reason: string } {
   if (!c.authorId) return { ok: false, reason: 'authorId required' };
-  if (c.stepCount !== 8) return { ok: false, reason: 'stepCount must be 8' };
+  if (c.stepCount <= 0 || c.stepCount % CHART_PAGE_SIZE !== 0)
+    return { ok: false, reason: `stepCount must be a positive multiple of ${CHART_PAGE_SIZE}` };
   if (c.bpm < 60 || c.bpm > 200) return { ok: false, reason: 'bpm out of range' };
-  if (c.steps.length !== 8) return { ok: false, reason: 'steps length must equal stepCount' };
+  if (c.steps.length !== c.stepCount) return { ok: false, reason: 'steps length must equal stepCount' };
   for (const s of c.steps) {
     for (const l of s.lanes) {
       if (l !== 0 && l !== 1 && l !== 2) return { ok: false, reason: `bad lane ${l}` };

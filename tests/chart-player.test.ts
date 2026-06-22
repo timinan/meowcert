@@ -3,7 +3,10 @@ import { ChartPlayer } from '../src/client/systems/chart-player';
 import { emptyChart, type Chart } from '../src/shared/state';
 
 function chartWith(stepLanes: number[][]): Chart {
-  const c = emptyChart('a', 't');
+  // Sized to match the input pattern so isFinished / timing math is
+  // predictable. emptyChart's default of 32 would make these tests run
+  // for 4× the duration the assertions expect.
+  const c = emptyChart('a', 't', stepLanes.length);
   stepLanes.forEach((lanes, i) => (c.steps[i] = { lanes: lanes as any }));
   return c;
 }

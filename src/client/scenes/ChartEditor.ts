@@ -4,14 +4,17 @@ import { LANE_COLORS, LANE_GUTTER_PX, LANE_GAP_PX, LANE_COUNT } from '@/constant
 import { TopHud } from '@/ui/top-hud';
 import { ChartPlayer } from '@/systems/chart-player';
 import { saveChart } from '@/services/state-client';
-import { emptyChart, validateChart } from '@/../shared/state';
+import {
+  emptyChart,
+  validateChart,
+  CHART_PAGE_SIZE,
+} from '@/../shared/state';
 import type { PlayerState, Chart, LaneId } from '@/../shared/state';
 
 // ─── Layout constants ──────────────────────────────────────────────────────
 
 const BPM_CYCLE = [80, 100, 120, 140, 160] as const;
 
-const STEP_COUNT = 8;
 const CELL_GAP = 4;
 // Cell height; width is computed from canvas width at create time.
 const CELL_H = 50;
@@ -34,12 +37,20 @@ export class ChartEditor extends Scene {
   private root!: GameObjects.Container;
   private hud!: TopHud;
 
-  // Grid
-  private cellRects: GameObjects.Rectangle[][] = []; // [step][lane]
+  // Grid — only CHART_PAGE_SIZE rows of cells exist physically; they map
+  // to chart.steps[scrollOffset + localStep] so a 32-step chart pages
+  // through 4 windows of 8 rows each.
+  private cellRects: GameObjects.Rectangle[][] = []; // [localStep][lane]
+  private scrollOffset = 0;
   private gridOriginX = 0;
   private gridOriginY = 0;
   private gridW = 0;
   private gridH = 0;
+
+  // Page navigation
+  private prevPageBtn: GameObjects.Text | null = null;
+  private nextPageBtn: GameObjects.Text | null = null;
+  private pageLabel: GameObjects.Text | null = null;
 
   // Scan line — single pre-created Rectangle, repositioned each frame.
   private scanLine!: GameObjects.Rectangle;
@@ -86,6 +97,7 @@ export class ChartEditor extends Scene {
     this.postBusy = false;
     this.cellRects = [];
     this.flashTimers = [];
+    this.scrollOffset = 0;
   }
 
   create(): void {
@@ -100,6 +112,7 @@ export class ChartEditor extends Scene {
     this.buildHud();
     this.buildSubHeader(width);
     this.buildLanePills(width);
+    this.buildPageNav(width);
     this.buildGrid(width);
     this.buildScanLine();
     this.buildControls(width);
@@ -115,10 +128,26 @@ export class ChartEditor extends Scene {
     this.scanElapsedMs += delta;
     this.scanPlayer.advance(delta);
 
-    // Reposition scan line — no allocation, just number math.
-    const progress = Math.min(this.scanElapsedMs / this.scanTotalMs, 1);
-    const scanY = this.gridOriginY + progress * this.gridH;
+    // Compute the play head's current global step + auto-scroll the page
+    // so the head stays visible. progress wraps to [0,1) per page so the
+    // scan line moves through each window then jumps back to the top.
+    const msPerStep = 60000 / (this.chart.bpm * 2);
+    const globalProgress = Math.min(this.scanElapsedMs / this.scanTotalMs, 1);
+    const globalStepF = globalProgress * this.chart.stepCount;
+    const currentPageStart =
+      Math.floor(globalStepF / CHART_PAGE_SIZE) * CHART_PAGE_SIZE;
+    if (currentPageStart !== this.scrollOffset && currentPageStart < this.chart.stepCount) {
+      this.scrollOffset = currentPageStart;
+      this.refreshCells();
+      this.refreshPageLabel();
+    }
+    const localStepF = globalStepF - currentPageStart;
+    const scanY = this.gridOriginY + (localStepF / CHART_PAGE_SIZE) * this.gridH;
     this.scanLine.setPosition(this.gridOriginX + this.gridW / 2, scanY);
+
+    // Suppress unused-warning for msPerStep — kept because future per-step
+    // visuals (beat dot, bar boundary line) will need it.
+    void msPerStep;
 
     if (this.scanPlayer.isFinished()) {
       this.stopPreview();
@@ -204,8 +233,44 @@ export class ChartEditor extends Scene {
     }
   }
 
+  private buildPageNav(width: number): void {
+    const pageY = TopHud.HEIGHT + 78;
+
+    this.prevPageBtn = this.add
+      .text(LANE_GUTTER_PX + 20, pageY, '◀', {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontStyle: 'bold',
+        fontSize: '16px',
+        color: '#ffd34d',
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    this.prevPageBtn.on('pointerdown', () => this.onPrevPage());
+
+    this.pageLabel = this.add
+      .text(width / 2, pageY, '', {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontSize: '11px',
+        color: '#c0a0e6',
+      })
+      .setOrigin(0.5);
+
+    this.nextPageBtn = this.add
+      .text(width - LANE_GUTTER_PX - 20, pageY, '▶', {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontStyle: 'bold',
+        fontSize: '16px',
+        color: '#ffd34d',
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    this.nextPageBtn.on('pointerdown', () => this.onNextPage());
+
+    this.root.add([this.prevPageBtn, this.pageLabel, this.nextPageBtn]);
+  }
+
   private buildGrid(width: number): void {
-    const gridTop = TopHud.HEIGHT + 80;
+    const gridTop = TopHud.HEIGHT + 96;
     const inner = width - LANE_GUTTER_PX * 2;
     const colW = (inner - LANE_GAP_PX * (LANE_COUNT - 1)) / LANE_COUNT;
     const cellW = colW - 2;
@@ -213,33 +278,75 @@ export class ChartEditor extends Scene {
     this.gridOriginX = LANE_GUTTER_PX;
     this.gridOriginY = gridTop;
     this.gridW = inner;
-    this.gridH = STEP_COUNT * (CELL_H + CELL_GAP) - CELL_GAP;
+    this.gridH = CHART_PAGE_SIZE * (CELL_H + CELL_GAP) - CELL_GAP;
 
-    for (let step = 0; step < STEP_COUNT; step++) {
-      this.cellRects[step] = [];
-      const cy = gridTop + step * (CELL_H + CELL_GAP) + CELL_H / 2;
+    // Cells are keyed by LOCAL step index (0…CHART_PAGE_SIZE-1) at fixed
+    // y positions. Their model-step meaning shifts when scrollOffset
+    // changes — refreshCells() re-reads chart.steps[scrollOffset + i] to
+    // repaint the active state.
+    for (let localStep = 0; localStep < CHART_PAGE_SIZE; localStep++) {
+      this.cellRects[localStep] = [];
+      const cy = gridTop + localStep * (CELL_H + CELL_GAP) + CELL_H / 2;
 
       for (let lane = 0; lane < LANE_COUNT; lane++) {
-        const laneId = lane as LaneId;
         const cx = LANE_GUTTER_PX + colW * lane + colW / 2 + LANE_GAP_PX * lane;
-        const color = LANE_COLORS[lane]!;
-        const isActive = this.chart.steps[step]!.lanes.includes(laneId);
 
         const cell = this.add.rectangle(cx, cy, cellW, CELL_H - 2, 0x1a0a2e, 1);
         cell.setStrokeStyle(1.5, 0x4a2878, 0.9);
-
-        if (isActive) this.activateCell(cell, color);
-
         cell.setInteractive({ useHandCursor: true });
-        // Capture step/lane by value for the closure.
-        const s = step;
+        const ls = localStep;
         const l = lane;
-        cell.on('pointerdown', () => this.toggleCell(s, l as LaneId));
+        cell.on('pointerdown', () => this.toggleCell(ls, l as LaneId));
 
-        this.cellRects[step]![lane] = cell;
+        this.cellRects[localStep]![lane] = cell;
         this.root.add(cell);
       }
     }
+
+    this.refreshCells();
+    this.refreshPageLabel();
+  }
+
+  /** Repaint each visible cell from the chart model at the current scroll
+   *  offset. Cheap — 24 cells, no allocation. */
+  private refreshCells(): void {
+    for (let localStep = 0; localStep < CHART_PAGE_SIZE; localStep++) {
+      const modelStep = this.scrollOffset + localStep;
+      const chartStep = this.chart.steps[modelStep];
+      for (let lane = 0; lane < LANE_COUNT; lane++) {
+        const cell = this.cellRects[localStep]![lane]!;
+        const isActive = chartStep?.lanes.includes(lane as LaneId) ?? false;
+        if (isActive) this.activateCell(cell, LANE_COLORS[lane]!);
+        else this.deactivateCell(cell);
+      }
+    }
+  }
+
+  private refreshPageLabel(): void {
+    if (!this.pageLabel) return;
+    const page = Math.floor(this.scrollOffset / CHART_PAGE_SIZE) + 1;
+    const totalPages = Math.max(1, Math.ceil(this.chart.stepCount / CHART_PAGE_SIZE));
+    const from = this.scrollOffset + 1;
+    const to = Math.min(this.scrollOffset + CHART_PAGE_SIZE, this.chart.stepCount);
+    this.pageLabel.setText(`Page ${page}/${totalPages}  ·  steps ${from}–${to}`);
+    // Dim disabled arrows so the player can see when they're at the ends.
+    if (this.prevPageBtn) this.prevPageBtn.setAlpha(page === 1 ? 0.3 : 1);
+    if (this.nextPageBtn) this.nextPageBtn.setAlpha(page === totalPages ? 0.3 : 1);
+  }
+
+  private onPrevPage(): void {
+    if (this.scrollOffset === 0) return;
+    this.scrollOffset = Math.max(0, this.scrollOffset - CHART_PAGE_SIZE);
+    this.refreshCells();
+    this.refreshPageLabel();
+  }
+
+  private onNextPage(): void {
+    const maxOffset = this.chart.stepCount - CHART_PAGE_SIZE;
+    if (this.scrollOffset >= maxOffset) return;
+    this.scrollOffset = Math.min(maxOffset, this.scrollOffset + CHART_PAGE_SIZE);
+    this.refreshCells();
+    this.refreshPageLabel();
   }
 
   private activateCell(cell: GameObjects.Rectangle, color: number): void {
@@ -255,16 +362,15 @@ export class ChartEditor extends Scene {
   private flashCell(cell: GameObjects.Rectangle, color: number): void {
     cell.setFillStyle(0xffffff, 0.95);
     const t = this.time.delayedCall(80, () => {
-      // Re-check active state after flash.
-      const step = this.cellRects.findIndex((row) => row && row.includes(cell));
-      const lane = step >= 0 ? this.cellRects[step]!.indexOf(cell) : -1;
-      if (step >= 0 && lane >= 0) {
-        const active = this.chart.steps[step]!.lanes.includes(lane as LaneId);
-        if (active) {
-          this.activateCell(cell, color);
-        } else {
-          this.deactivateCell(cell);
-        }
+      // Re-check active state after flash. The cell's row/column tells us
+      // its LOCAL position; the model step is scrollOffset + localStep.
+      const localStep = this.cellRects.findIndex((row) => row && row.includes(cell));
+      const lane = localStep >= 0 ? this.cellRects[localStep]!.indexOf(cell) : -1;
+      if (localStep >= 0 && lane >= 0) {
+        const modelStep = this.scrollOffset + localStep;
+        const active = this.chart.steps[modelStep]?.lanes.includes(lane as LaneId) ?? false;
+        if (active) this.activateCell(cell, color);
+        else this.deactivateCell(cell);
       }
     });
     this.flashTimers.push(t);
@@ -385,10 +491,12 @@ export class ChartEditor extends Scene {
 
   // ─── Interactions ───────────────────────────────────────────────────────
 
-  private toggleCell(step: number, lane: LaneId): void {
-    const chartStep = this.chart.steps[step]!;
+  private toggleCell(localStep: number, lane: LaneId): void {
+    const modelStep = this.scrollOffset + localStep;
+    const chartStep = this.chart.steps[modelStep];
+    if (!chartStep) return;
     const idx = chartStep.lanes.indexOf(lane);
-    const cell = this.cellRects[step]![lane]!;
+    const cell = this.cellRects[localStep]![lane]!;
     const color = LANE_COLORS[lane]!;
 
     if (idx >= 0) {
@@ -420,15 +528,19 @@ export class ChartEditor extends Scene {
   private startPreview(): void {
     // msPerStep is the same formula ChartPlayer uses.
     const msPerStep = 60000 / (this.chart.bpm * 2);
-    this.scanTotalMs = msPerStep * STEP_COUNT;
+    this.scanTotalMs = msPerStep * this.chart.stepCount;
     this.scanElapsedMs = 0;
 
     this.scanPlayer = new ChartPlayer(this.chart, { loopCount: 1, noteFallMs: 0 });
     this.scanPlayer.onSpawn((lane) => {
-      // Flash cells that fire at the current play-head step.
+      // Flash cells that fire at the current play-head step. Only the
+      // visible window's local cell exists; if the step is on a different
+      // page, the auto-scroll in update() will catch up next frame.
       const approxStep = Math.round(this.scanElapsedMs / msPerStep);
-      const clampedStep = Math.max(0, Math.min(STEP_COUNT - 1, approxStep));
-      const cell = this.cellRects[clampedStep]?.[lane];
+      const modelStep = Math.max(0, Math.min(this.chart.stepCount - 1, approxStep));
+      const localStep = modelStep - this.scrollOffset;
+      if (localStep < 0 || localStep >= CHART_PAGE_SIZE) return;
+      const cell = this.cellRects[localStep]?.[lane];
       if (cell) this.flashCell(cell, LANE_COLORS[lane]!);
     });
 
@@ -450,13 +562,10 @@ export class ChartEditor extends Scene {
 
   private onClearTap(): void {
     this.stopPreview();
-    for (let step = 0; step < STEP_COUNT; step++) {
+    for (let step = 0; step < this.chart.stepCount; step++) {
       this.chart.steps[step]!.lanes = [];
-      for (let lane = 0; lane < LANE_COUNT; lane++) {
-        const cell = this.cellRects[step]![lane]!;
-        this.deactivateCell(cell);
-      }
     }
+    this.refreshCells();
   }
 
   private onBpmTap(): void {
