@@ -260,7 +260,12 @@ export class Decorate extends Scene {
       this.catZones.push(zone);
 
       // Red ✕ badge top-right of the cat for quick-unseat.
-      const badge = new RemoveBadge(this, cx + 22, catY - 56, () => {
+      // Badge offset tuned for 1.4× scaled cats. At native scale (1×) the cat
+      // is 91×64 (origin 0.5, 1) so it reaches catY - 64. At 1.4× it reaches
+      // catY - 90, and (cx + 22, catY - 56) would put the ✕ over the cat's
+      // upper body. Push it to the head/right shoulder so the cat stays
+      // visible underneath.
+      const badge = new RemoveBadge(this, cx + 36, catY - 100, () => {
         this.unseatCat(seatId);
       });
       this.add.existing(badge);

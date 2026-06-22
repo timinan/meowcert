@@ -27,6 +27,11 @@ export class Note extends GameObjects.Container {
     this.letters = scene.add.image(0, 0, AssetKeys.Image.PspspsElementLetters);
     this.letters.setDisplaySize(54, 54);
     this.add([this.ball, this.letters]);
+    // Render above cat-effect particles (cat sprite depth 0 → particles
+    // depth +2). Without this, a cat with sparkles / fire / hearts equipped
+    // visually obscures every falling note in its lane and the player
+    // misses everything in that column.
+    this.setDepth(40);
     this.setActive(false).setVisible(false);
   }
 

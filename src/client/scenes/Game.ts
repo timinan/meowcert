@@ -789,19 +789,24 @@ export class Game extends Scene {
     if (this.cleanedUp) return;
     this.cleanedUp = true;
 
-    // hud FIRST so its drawer panel/scrim get force-destroyed before
+    // hud FIRST so its drawer panel/scrim get force-destroyed before any
     // tweens.killAll wipes the close animation that would otherwise
-    // destroy them. The orphaned interactive scrim is what was eating
-    // every click in the next scene and making the game appear frozen.
+    // destroy them. The orphaned interactive scrim eats every click in
+    // the next scene and the game appears frozen.
     this.hud?.destroy();
     this.summary?.destroy(true);
     this.summary = null;
 
-    this.tweens.killAll();
-    this.time.removeAllEvents();
-    this.input.removeAllListeners();
-    this.input.keyboard?.removeAllListeners();
-    this.scale.off('resize');
+    // Destroy entities BEFORE tweens.killAll so each owner can cleanly
+    // stop+remove its own tweens. Cat → effect.destroy() calls
+    // `tween.stop()` / `tween.remove()` — if we'd killed the tween
+    // already, those calls on a freed tween instance can throw and halt
+    // the rest of cleanup, leaving input listeners alive into the next
+    // scene (which is what was making Decorate appear frozen after Play).
+    for (const c of this.cats) c.destroy();
+    this.cats = [];
+    for (const n of this.notes) n.recycle();
+    this.notes = [];
     for (const r of this.laneRects) r.destroy();
     this.laneRects = [];
     for (const t of this.hitTargets) t.destroy();
@@ -811,13 +816,16 @@ export class Game extends Scene {
     this.comboText?.destroy();
     for (const z of this.tapZones) z.destroy();
     this.tapZones = [];
-    for (const n of this.notes) n.recycle();
-    this.notes = [];
-    for (const c of this.cats) c.destroy();
-    this.cats = [];
     for (const l of this.seatedNameLabels) l.destroy();
     this.seatedNameLabels = [];
     this.bg?.destroy();
+
+    // Now safe to wipe any remaining tweens / timers / input.
+    this.tweens.killAll();
+    this.time.removeAllEvents();
+    this.input.removeAllListeners();
+    this.input.keyboard?.removeAllListeners();
+    this.scale.off('resize');
   }
 }
 
