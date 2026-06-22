@@ -13,8 +13,13 @@ export const LANE_BOTTOM_Y = DESIGN_H;                    // = 580
 // a chance to land a great/perfect tap on the "other side" of the
 // target instead of missing the moment it touches the target.
 export const HIT_LINE_Y = LANE_BOTTOM_Y - 40;             // = 540
-export const LANE_GUTTER_PX = 12;
-export const LANE_GAP_PX = 4;
+// Bars run edge-to-edge with no padding between them — the rhythm bar
+// texture is the floor of the playfield and Tim wants no background gaps
+// peeking through. laneCenterX and the lane-width math both honor these
+// values, so flipping them to 0 collapses the visual seams without
+// requiring per-scene layout work.
+export const LANE_GUTTER_PX = 0;
+export const LANE_GAP_PX = 0;
 export const LANE_COUNT = 3;
 
 export const LANE_COLORS = [0x6fbcff, 0xc678ff, 0xffd34d] as const;

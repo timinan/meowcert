@@ -138,10 +138,15 @@ export class Preloader extends Scene {
           continue;
         }
 
+        // Idle stays slow + breathy at the global cadence. Hiss + meow are
+        // reaction animations the player triggers on a tap — they need to
+        // read as a quick punch, not a leisurely stretch. Bumped to 16fps
+        // so the full clip lands close to Balance.catReactionMs.
+        const isReaction = anim === 'hiss' || anim === 'meow';
         this.anims.create({
           key,
           frames,
-          frameRate: Balance.catAnimationFrameRate,
+          frameRate: isReaction ? 16 : Balance.catAnimationFrameRate,
           repeat: anim === 'idle' ? -1 : 0,
         });
       }
