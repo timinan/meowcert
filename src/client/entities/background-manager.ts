@@ -36,39 +36,33 @@ export class BackgroundManager {
   }
 
   /** Redraws the container contents for the active background id.
-   *  Safe to call on background changes — not a per-frame hot path. */
+   *  Renders the catalog's backdrop texture stretched to fill the
+   *  canvas. Falls back to a solid color rect if the texture isn't
+   *  loaded so the scene never goes blank. Safe to call on background
+   *  changes — not a per-frame hot path. */
   private draw(): void {
     if (!this.container) return;
     this.container.removeAll(true);
 
     const w = this.scene.scale.width;
     const h = this.scene.scale.height;
+    const entry = BACKGROUND_CATALOG[this.active];
 
-    // Cheap gradient via a single rect. Replace with atlas key once art lands.
-    const top = this.scene.add
-      .rectangle(0, 0, w, h, this.topColor())
-      .setOrigin(0, 0);
-    this.container.add(top);
-
-    // Scenery decor per theme.
-    if (this.active === 'cozy') {
-      // Window rectangle + potted plant.
-      this.container.add(this.scene.add.rectangle(20, 60, 60, 80, 0xffd187));
-      this.container.add(
-        this.scene.add.text(w - 36, h * 0.25, '🪴', { fontSize: '28px' }),
-      );
-    } else if (this.active === 'spooky') {
-      // Ghost at reduced alpha.
-      this.container.add(
-        this.scene.add.text(24, 60, '👻', { fontSize: '24px' }).setAlpha(0.6),
-      );
+    if (entry && this.scene.textures.exists(entry.backdropKey)) {
+      const img = this.scene.add
+        .image(0, 0, entry.backdropKey)
+        .setOrigin(0, 0);
+      img.displayWidth = w;
+      img.displayHeight = h;
+      this.container.add(img);
+      return;
     }
-  }
 
-  private topColor(): number {
-    if (this.active === 'cozy') return 0xc98a48;
-    if (this.active === 'spooky') return 0x2a2440;
-    return 0x3b2a5c;
+    // Texture missing — solid color fallback so the lane stays readable.
+    const fallback = this.scene.add
+      .rectangle(0, 0, w, h, 0x3b2a5c)
+      .setOrigin(0, 0);
+    this.container.add(fallback);
   }
 
   destroy(): void {

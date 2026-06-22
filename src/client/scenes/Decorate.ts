@@ -853,21 +853,33 @@ export class Decorate extends Scene {
       const isActive = activeBg === entry.id;
       const borderColor = isActive ? 0x4dffb4 : 0xc0a0e6;
       const borderAlpha = isActive ? 1 : 0.25;
-      const fillColor = this.bgThumbColor(entry.id as BackgroundId);
 
-      const thumb = this.add
-        .rectangle(x + thumbW / 2, y + thumbH / 2, thumbW, thumbH, fillColor, 1)
-        .setStrokeStyle(2, borderColor, borderAlpha)
-        .setInteractive({ useHandCursor: true });
+      // Background backdrop as the actual thumbnail. The interactive
+      // hit area is on the image itself, and the border rect layers
+      // over it so the active-state outline reads on any artwork.
+      const thumb = this.textures.exists(entry.backdropKey)
+        ? this.add
+            .image(x + thumbW / 2, y + thumbH / 2, entry.backdropKey)
+            .setDisplaySize(thumbW, thumbH)
+            .setInteractive({ useHandCursor: true })
+        : this.add
+            .rectangle(x + thumbW / 2, y + thumbH / 2, thumbW, thumbH, 0x3b2a5c, 1)
+            .setInteractive({ useHandCursor: true });
+
+      const border = this.add
+        .rectangle(x + thumbW / 2, y + thumbH / 2, thumbW, thumbH, 0x000000, 0)
+        .setStrokeStyle(2, borderColor, borderAlpha);
 
       const label = this.add.text(x + thumbW / 2, y + thumbH - 10, entry.displayName.toUpperCase(), {
         fontFamily: '"Courier New", monospace',
         fontStyle: 'bold',
         fontSize: '7px',
         color: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 3,
       }).setOrigin(0.5, 1);
 
-      this.trayContainer.add([thumb, label]);
+      this.trayContainer.add([thumb, border, label]);
 
       if (isActive) {
         const badge = this.add.circle(x + thumbW - 6, y + 6, 7, 0x4dffb4, 1);
@@ -887,12 +899,6 @@ export class Decorate extends Scene {
       this.bgsPage = Math.max(0, Math.min(totalBgPages - 1, this.bgsPage + delta));
       this.renderTray();
     });
-  }
-
-  private bgThumbColor(id: BackgroundId): number {
-    if (id === 'cozy') return 0xa16f3b;
-    if (id === 'spooky') return 0x1e1b2c;
-    return 0x3b2a5c; // default
   }
 
   private onBgThumbTap(bgId: BackgroundId): void {

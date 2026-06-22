@@ -10,12 +10,22 @@ function makeFakeScene() {
     setDepth: vi.fn().mockReturnThis(),
     destroy: vi.fn(),
   };
+  const makeImage = () => ({
+    setOrigin: vi.fn().mockReturnThis(),
+    displayWidth: 0,
+    displayHeight: 0,
+  });
   return {
     add: {
       container: vi.fn().mockReturnValue(container),
       rectangle: vi.fn().mockReturnValue({ setOrigin: vi.fn().mockReturnThis() }),
+      image: vi.fn().mockImplementation(() => makeImage()),
       text: vi.fn().mockImplementation(() => makeText()),
     },
+    // BackgroundManager probes the texture cache before rendering the
+    // image; the fake reports false so the test exercises the fallback
+    // path without needing a real Phaser textures plugin.
+    textures: { exists: vi.fn().mockReturnValue(false) },
     scale: { width: 400, height: 700 },
   } as unknown as Phaser.Scene;
 }
