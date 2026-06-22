@@ -143,14 +143,16 @@ export class Game extends Scene {
       const cx = L.laneCenterX(i as 0 | 1 | 2, width);
       const color = L.LANE_COLORS[i]!;
 
-      // Lane backdrop: the original Phase 1 rhythm bar track rotated 90° so
-      // its long axis runs vertical. Pre-rotation displayWidth/Height are
-      // swapped from the visual we want — after rotation the texture's
-      // horizontal axis becomes the lane's vertical axis.
+      // Lane backdrop: the original Phase 1 rhythm bar track rotated -90°
+      // (was +90°, which rendered the track upside down — the texture's
+      // "open" end pointed up instead of down). Pre-rotation
+      // displayWidth/Height are swapped from the visual we want — after
+      // rotation the texture's horizontal axis becomes the lane's vertical
+      // axis.
       const bar = this.add.image(cx, laneTopY + laneH / 2, AssetKeys.Image.RhythmBarBackground);
       bar.displayWidth = laneH;
       bar.displayHeight = colW;
-      bar.setRotation(Math.PI / 2);
+      bar.setRotation(-Math.PI / 2);
       bar.setTint(color);
       this.laneRects.push(bar as unknown as Phaser.GameObjects.Rectangle);
 
@@ -684,14 +686,15 @@ export class Game extends Scene {
     const note = this.acquireNote();
     const x = L.laneCenterX(laneId, this.scale.width);
     const scaleY = this.scale.height / L.DESIGN_H;
-    note.configure(
-      laneId,
-      x,
-      L.LANE_TOP_Y * scaleY,
-      L.HIT_LINE_Y * scaleY,
-      Balance.noteFallMs,
-      hitAtMs,
-    );
+    const startY = L.LANE_TOP_Y * scaleY;
+    const hitY = L.HIT_LINE_Y * scaleY;
+    const endY = L.LANE_BOTTOM_Y * scaleY;
+    // Note keeps falling past the target so the player can see (and tap)
+    // the ball as it leaves the hit line. Tween duration is scaled to
+    // preserve the original noteFallMs at the moment the ball crosses
+    // the target — same hit timing, longer trail.
+    const totalFallMs = ((endY - startY) / (hitY - startY)) * Balance.noteFallMs;
+    note.configure(laneId, x, startY, endY, totalFallMs, hitAtMs);
   }
 
   /** Hot path: scan pre-allocated pool for an inactive note. Allocates only
@@ -788,44 +791,85 @@ export class Game extends Scene {
     // can re-enter. Better to short-circuit than to destroy twice.
     if (this.cleanedUp) return;
     this.cleanedUp = true;
+    console.info('[Game] cleanup start');
+    try {
+      this.doCleanup();
+      console.info('[Game] cleanup done');
+    } catch (err) {
+      // If any cleanup step throws, the rest gets skipped — that's how
+      // input listeners leak into the next scene and freeze it. Log
+      // loudly so we can see which step failed in the playtest console.
+      console.error('[Game] cleanup threw — next scene may be broken:', err);
+    }
+  }
+
+  private doCleanup(): void {
 
     // hud FIRST so its drawer panel/scrim get force-destroyed before any
     // tweens.killAll wipes the close animation that would otherwise
     // destroy them. The orphaned interactive scrim eats every click in
     // the next scene and the game appears frozen.
-    this.hud?.destroy();
-    this.summary?.destroy(true);
-    this.summary = null;
+    // Each step is wrapped so one throw can't halt the rest — that's
+    // exactly what was leaking Game's input listeners into Decorate and
+    // freezing it. tearDown() logs the failing step name so the playtest
+    // console points at the culprit on the next freeze report.
+    const tearDown = (name: string, fn: () => void): void => {
+      try {
+        fn();
+      } catch (err) {
+        console.error(`[Game] cleanup step "${name}" threw:`, err);
+      }
+    };
+
+    tearDown('hud', () => this.hud?.destroy());
+    tearDown('summary', () => {
+      this.summary?.destroy(true);
+      this.summary = null;
+    });
 
     // Destroy entities BEFORE tweens.killAll so each owner can cleanly
     // stop+remove its own tweens. Cat → effect.destroy() calls
     // `tween.stop()` / `tween.remove()` — if we'd killed the tween
-    // already, those calls on a freed tween instance can throw and halt
-    // the rest of cleanup, leaving input listeners alive into the next
-    // scene (which is what was making Decorate appear frozen after Play).
-    for (const c of this.cats) c.destroy();
-    this.cats = [];
-    for (const n of this.notes) n.recycle();
-    this.notes = [];
-    for (const r of this.laneRects) r.destroy();
-    this.laneRects = [];
-    for (const t of this.hitTargets) t.destroy();
-    this.hitTargets = [];
-    for (const t of this.hitFeedbackTexts) t.destroy();
-    this.hitFeedbackTexts = [];
-    this.comboText?.destroy();
-    for (const z of this.tapZones) z.destroy();
-    this.tapZones = [];
-    for (const l of this.seatedNameLabels) l.destroy();
-    this.seatedNameLabels = [];
-    this.bg?.destroy();
+    // already, those calls on a freed tween instance can throw.
+    tearDown('cats', () => {
+      for (const c of this.cats) c.destroy();
+      this.cats = [];
+    });
+    tearDown('notes', () => {
+      for (const n of this.notes) n.recycle();
+      this.notes = [];
+    });
+    tearDown('lane-rects', () => {
+      for (const r of this.laneRects) r.destroy();
+      this.laneRects = [];
+    });
+    tearDown('hit-targets', () => {
+      for (const t of this.hitTargets) t.destroy();
+      this.hitTargets = [];
+    });
+    tearDown('hit-feedback', () => {
+      for (const t of this.hitFeedbackTexts) t.destroy();
+      this.hitFeedbackTexts = [];
+    });
+    tearDown('combo-text', () => this.comboText?.destroy());
+    tearDown('tap-zones', () => {
+      for (const z of this.tapZones) z.destroy();
+      this.tapZones = [];
+    });
+    tearDown('name-labels', () => {
+      for (const l of this.seatedNameLabels) l.destroy();
+      this.seatedNameLabels = [];
+    });
+    tearDown('background', () => this.bg?.destroy());
 
     // Now safe to wipe any remaining tweens / timers / input.
-    this.tweens.killAll();
-    this.time.removeAllEvents();
-    this.input.removeAllListeners();
-    this.input.keyboard?.removeAllListeners();
-    this.scale.off('resize');
+    tearDown('tweens', () => this.tweens.killAll());
+    tearDown('timers', () => this.time.removeAllEvents());
+    tearDown('input', () => {
+      this.input.removeAllListeners();
+      this.input.keyboard?.removeAllListeners();
+    });
+    tearDown('scale-resize', () => this.scale.off('resize'));
   }
 }
 
