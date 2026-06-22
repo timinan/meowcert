@@ -18,6 +18,11 @@ export interface EffectHandle {
   destroy(): void;
 }
 
+/** Anything Phaser-y that the effects can be applied to. Sprite and Image
+ * both supply the position / depth / alpha / scale properties the effects
+ * read — animations aren't required. */
+export type EffectTarget = GameObjects.Sprite | GameObjects.Image;
+
 export interface CatEffect {
   /** Stable catalog id, e.g. 'effect-red-glow'. Used as the CosmeticId. */
   id: string;
@@ -27,8 +32,8 @@ export interface CatEffect {
   iconEmoji: string;
   /** Drives the rarity badge color. */
   rarity: 'common' | 'uncommon' | 'rare' | 'legendary';
-  /** Spin up the effect on the given sprite. Return a handle that tears it down. */
-  apply(scene: Scene, sprite: GameObjects.Sprite): EffectHandle;
+  /** Spin up the effect on the given sprite/image. Return a handle that tears it down. */
+  apply(scene: Scene, target: EffectTarget): EffectHandle;
 }
 
 // ---------------------------------------------------------------------------

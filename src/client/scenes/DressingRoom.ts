@@ -4,7 +4,7 @@ import { CAT_CATALOG, COSMETIC_CATALOG } from '@/../shared/state';
 import { AssetKeys } from '@/constants/assets';
 import { equipCosmetic } from '@/services/state-client';
 import { parentIdFor } from '@/entities/cat';
-import { CAT_EFFECT_BY_ID } from '@/effects/cat-effects';
+import { CAT_EFFECT_BY_ID, type EffectHandle } from '@/effects/cat-effects';
 import type { PlayerState, OwnedCosmetic } from '@/../shared/state';
 
 const COSMETICS_PER_PAGE = 19;
@@ -26,6 +26,8 @@ export class DressingRoom extends Scene {
   private heroSprite!: GameObjects.Image;
   /** One layered sprite per equipped slot — keyed by slot name. */
   private heroCosmetics: Record<string, GameObjects.Sprite> = {};
+  /** Active EFFECT handles on the hero preview, keyed by slot ('effect'). */
+  private heroEffects: Record<string, EffectHandle> = {};
   private wearingLabel!: GameObjects.Text;
   private pageLabel!: GameObjects.Text;
   private prevBtn!: GameObjects.Container;
@@ -42,6 +44,7 @@ export class DressingRoom extends Scene {
     this.page = 0;
     this.activeSlot = 'head';
     this.heroCosmetics = {};
+    this.heroEffects = {};
   }
 
   create(): void {
@@ -191,6 +194,10 @@ export class DressingRoom extends Scene {
       this.heroCosmetics[slot]?.destroy();
     }
     this.heroCosmetics = {};
+    for (const slot of Object.keys(this.heroEffects)) {
+      this.heroEffects[slot]?.destroy();
+    }
+    this.heroEffects = {};
 
     const slots = this.playerState.equippedCosmetics[this.catInstanceId];
     if (!slots) return;
@@ -201,10 +208,14 @@ export class DressingRoom extends Scene {
       if (!cosInstanceId) continue;
       // Resolve the catalog type via the sidecar.
       const cosTypeId = equippedTypes[cosInstanceId] ?? cosInstanceId;
-      // Effect cosmetics have no atlas frame to render in the hero preview;
-      // the player will see them when the modal closes (Cat entity applies
-      // them in the Decorate stage). Skip silently here.
-      if (CAT_EFFECT_BY_ID[cosTypeId]) continue;
+      // EFFECT cosmetics are code-driven — apply them to the hero preview
+      // so the player can see what they're equipping without leaving the
+      // modal. Tracked separately so they tear down on slot swap / close.
+      const effect = CAT_EFFECT_BY_ID[cosTypeId];
+      if (effect) {
+        this.heroEffects[slotKey] = effect.apply(this, this.heroSprite);
+        continue;
+      }
       const cos = COSMETIC_CATALOG.find((c) => c.id === cosTypeId);
       if (!cos) continue;
       const renderId = parentIdFor(cos) ?? cos.id;
@@ -498,6 +509,10 @@ export class DressingRoom extends Scene {
       this.heroCosmetics[slot]?.destroy();
     }
     this.heroCosmetics = {};
+    for (const slot of Object.keys(this.heroEffects)) {
+      this.heroEffects[slot]?.destroy();
+    }
+    this.heroEffects = {};
     this.gridContainer?.destroy(true);
     this.slotTabsContainer?.destroy(true);
   }

@@ -655,6 +655,25 @@ export class Decorate extends Scene {
         this.trayContainer.add(cosSprite);
       }
 
+      // Static effect-indicator badge in the top-left of the thumb. Live
+      // effects are too noisy at thumbnail scale, so the badge just says
+      // "this cat has [emoji] equipped" — full effect plays on the seated
+      // preview above.
+      const equippedEffectInstanceId = equippedSlots['effect'];
+      if (equippedEffectInstanceId) {
+        const effectTypeId = equippedTypes[equippedEffectInstanceId];
+        const effectMeta = effectTypeId ? CAT_EFFECT_BY_ID[effectTypeId] : undefined;
+        if (effectMeta) {
+          const badgeBg = this.add
+            .circle(x + 10, y + 10, 9, 0x0b041a, 0.85)
+            .setStrokeStyle(1, 0xffd34d, 0.6);
+          const badgeIcon = this.add
+            .text(x + 10, y + 10, effectMeta.iconEmoji, { fontSize: '11px' })
+            .setOrigin(0.5);
+          this.trayContainer.add([badgeBg, badgeIcon]);
+        }
+      }
+
       // Label uses the instance's custom name, truncated to fit.
       const label = this.add.text(
         x + thumbW / 2,
