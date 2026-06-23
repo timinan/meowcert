@@ -103,19 +103,25 @@ export class MusicSystem {
     this.lastMeowKey = null;
   }
 
-  /** Pick the backing this chart should play. Stable per saved version
-   *  of the chart — the hash includes `updatedAt`, so saving the chart
-   *  again may roll a different backing. That gives creators a "save to
-   *  shuffle" affordance during authoring while still keeping the same
-   *  saved chart sounding identical to every visitor on every play. */
+  /** Pick the backing this chart should play. Filters by tempo AND
+   *  player-picked vibe; falls back to "any vibe at this tempo" if the
+   *  chart has no vibe yet (old saves) or the chosen vibe has no
+   *  catalog entries. Stable per saved version of the chart — the hash
+   *  includes `updatedAt`, so saving again may roll a different
+   *  backing within the same tempo+vibe bucket. */
   private pickBacking(): BackingTrack | null {
-    const candidates = Object.values(BACKING_CATALOG).filter(
+    const sameTempo = Object.values(BACKING_CATALOG).filter(
       (b) => b.bpm === this.chart.bpm,
     );
-    if (candidates.length === 0) return null;
+    if (sameTempo.length === 0) return null;
+    let candidates = sameTempo;
+    if (this.chart.vibe) {
+      const sameVibe = sameTempo.filter((b) => b.vibe === this.chart.vibe);
+      if (sameVibe.length > 0) candidates = sameVibe;
+    }
     if (candidates.length === 1) return candidates[0]!;
     const hash = hashString(
-      `${this.chart.authorId}:${this.chart.bpm}:${this.chart.updatedAt}`,
+      `${this.chart.authorId}:${this.chart.bpm}:${this.chart.vibe ?? ''}:${this.chart.updatedAt}`,
     );
     return candidates[hash % candidates.length]!;
   }

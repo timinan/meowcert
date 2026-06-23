@@ -11,7 +11,7 @@ import {
   CHART_PAGE_SIZE,
   BACKING_CATALOG,
 } from '@/../shared/state';
-import type { PlayerState, Chart, LaneId } from '@/../shared/state';
+import type { PlayerState, Chart, LaneId, BackingVibe } from '@/../shared/state';
 
 interface TempoEntry {
   speedLabel: string;
@@ -34,6 +34,19 @@ function buildTempoCycle(): TempoEntry[] {
     }
   }
   return [...byLabel.values()].sort((a, b) => a.bpm - b.bpm);
+}
+
+const VIBE_DISPLAY_ORDER: BackingVibe[] = ['upbeat', 'melodic', 'smooth'];
+
+/** Vibes available at a given BPM. Player's vibe picker only shows
+ *  options that actually have at least one backing at the current
+ *  tempo so an empty pick is impossible. */
+function buildVibeCycle(bpm: number): BackingVibe[] {
+  const set = new Set<BackingVibe>();
+  for (const backing of Object.values(BACKING_CATALOG)) {
+    if (backing.bpm === bpm) set.add(backing.vibe);
+  }
+  return VIBE_DISPLAY_ORDER.filter((v) => set.has(v));
 }
 
 /**
@@ -79,6 +92,9 @@ export class ChartEditor extends Scene {
   private bpmBtnText!: GameObjects.Text;
   private tempoCycle: TempoEntry[] = [];
   private tempoIndex = 0;
+  private vibeBtnText!: GameObjects.Text;
+  private vibeCycle: BackingVibe[] = [];
+  private vibeIndex = 0;
   private saveBusy = false;
   private saveBtnBg!: GameObjects.Rectangle;
   private saveBtnText!: GameObjects.Text;
@@ -112,6 +128,18 @@ export class ChartEditor extends Scene {
       }
       this.tempoIndex = nearestIdx;
       this.chart.bpm = this.tempoCycle[nearestIdx]!.bpm;
+    }
+
+    // Vibe cycle depends on the current tempo — only vibes with at
+    // least one backing at this tempo are pickable. If the chart's
+    // saved vibe is no longer available (catalog churn), snap to the
+    // first option.
+    this.vibeCycle = buildVibeCycle(this.chart.bpm);
+    if (this.vibeCycle.length > 0) {
+      const saved = this.chart.vibe;
+      const matchIdx = saved ? this.vibeCycle.indexOf(saved) : -1;
+      this.vibeIndex = matchIdx >= 0 ? matchIdx : 0;
+      this.chart.vibe = this.vibeCycle[this.vibeIndex]!;
     }
 
     this.cellPanels = [];
@@ -318,12 +346,12 @@ export class ChartEditor extends Scene {
     const barCenterY = stripY + BOTTOM_STRIP_H / 2;
     const btnH = 40;
 
-    // Three buttons across the bottom: CLEAR / BPM / SAVE. SAVE is the
-    // primary action — persists the chart in place. Play happens from
-    // the hamburger drawer.
-    const sideMargin = 12;
-    const gap = 8;
-    const btnW = (width - sideMargin * 2 - gap * 2) / 3;
+    // Four buttons across the bottom: CLEAR / TEMPO / VIBE / SAVE.
+    // SAVE is the primary action — persists the chart in place. Play
+    // happens from the hamburger drawer.
+    const sideMargin = 10;
+    const gap = 6;
+    const btnW = (width - sideMargin * 2 - gap * 3) / 4;
     const startX = sideMargin + btnW / 2;
 
     // CLEAR
@@ -335,14 +363,14 @@ export class ChartEditor extends Scene {
       .text(startX, barCenterY, 'CLEAR', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
-        fontSize: '13px',
+        fontSize: '12px',
         color: '#c678ff',
       })
       .setOrigin(0.5);
     clearBg.on('pointerdown', () => this.onClearTap());
     this.root.add([clearBg, clearText]);
 
-    // BPM cycle
+    // TEMPO cycle
     const bpmX = startX + btnW + gap;
     const bpmBg = this.add
       .rectangle(bpmX, barCenterY, btnW, btnH, 0x2c1856, 1)
@@ -352,16 +380,33 @@ export class ChartEditor extends Scene {
       .text(bpmX, barCenterY, this.tempoButtonLabel(), {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
-        fontSize: '12px',
+        fontSize: '11px',
         color: '#c0a0e6',
       })
       .setOrigin(0.5);
     bpmBg.on('pointerdown', () => this.onBpmTap());
     this.root.add([bpmBg, this.bpmBtnText]);
 
+    // VIBE cycle
+    const vibeX = bpmX + btnW + gap;
+    const vibeBg = this.add
+      .rectangle(vibeX, barCenterY, btnW, btnH, 0x2c1856, 1)
+      .setStrokeStyle(1, 0xc678ff, 0.7)
+      .setInteractive({ useHandCursor: true });
+    this.vibeBtnText = this.add
+      .text(vibeX, barCenterY, this.vibeButtonLabel(), {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontStyle: 'bold',
+        fontSize: '11px',
+        color: '#c0a0e6',
+      })
+      .setOrigin(0.5);
+    vibeBg.on('pointerdown', () => this.onVibeTap());
+    this.root.add([vibeBg, this.vibeBtnText]);
+
     // SAVE — primary action. Big yellow button. Flashes green on success
     // so the player gets unambiguous confirmation without a modal.
-    const saveX = bpmX + btnW + gap;
+    const saveX = vibeX + btnW + gap;
     this.saveBtnBg = this.add
       .rectangle(saveX, barCenterY, btnW, btnH, 0xffd34d, 1)
       .setInteractive({ useHandCursor: true });
@@ -460,6 +505,29 @@ export class ChartEditor extends Scene {
     this.tempoIndex = (this.tempoIndex + 1) % this.tempoCycle.length;
     this.chart.bpm = this.tempoCycle[this.tempoIndex]!.bpm;
     this.bpmBtnText.setText(this.tempoButtonLabel());
+
+    // Vibes available depend on the new tempo — rebuild the cycle and
+    // snap the chart's vibe to whatever's available so the picker
+    // never lies about what's selectable.
+    this.vibeCycle = buildVibeCycle(this.chart.bpm);
+    if (this.vibeCycle.length === 0) {
+      this.chart.vibe = undefined;
+      this.vibeBtnText.setText(this.vibeButtonLabel());
+      return;
+    }
+    const existingIdx = this.chart.vibe
+      ? this.vibeCycle.indexOf(this.chart.vibe)
+      : -1;
+    this.vibeIndex = existingIdx >= 0 ? existingIdx : 0;
+    this.chart.vibe = this.vibeCycle[this.vibeIndex]!;
+    this.vibeBtnText.setText(this.vibeButtonLabel());
+  }
+
+  private onVibeTap(): void {
+    if (this.vibeCycle.length === 0) return;
+    this.vibeIndex = (this.vibeIndex + 1) % this.vibeCycle.length;
+    this.chart.vibe = this.vibeCycle[this.vibeIndex]!;
+    this.vibeBtnText.setText(this.vibeButtonLabel());
   }
 
   /** Render the speedLabel uppercased, e.g. "FAST". Falls back to a
@@ -469,6 +537,14 @@ export class ChartEditor extends Scene {
     if (this.tempoCycle.length === 0) return `BPM ${this.chart.bpm}`;
     const entry = this.tempoCycle[this.tempoIndex]!;
     return entry.speedLabel.toUpperCase();
+  }
+
+  /** Render the current vibe uppercased, e.g. "UPBEAT". Shows "—"
+   *  if no vibes are available at the current tempo so the picker
+   *  visibly inert rather than mysteriously blank. */
+  private vibeButtonLabel(): string {
+    if (this.vibeCycle.length === 0) return '—';
+    return this.vibeCycle[this.vibeIndex]!.toUpperCase();
   }
 
   private async onSaveTap(): Promise<void> {

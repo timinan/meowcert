@@ -172,12 +172,24 @@ export const COSMETIC_CATALOG: CosmeticEntry[] = [
 // See `outputs/prds/2026-06-22-pspsps-music-system-spec.md` for the
 // full design rationale.
 
+/** Vibe categories for the editor's vibe picker. Each backing track
+ *  carries one; the chart stores the player's pick so the same chart
+ *  always sounds like the same vibe.
+ *
+ *  - `upbeat`   — bouncy, energetic, dance, chiptune, synthwave
+ *  - `melodic`  — pretty, dreamy, lo-fi, ambient, melodic
+ *  - `smooth`   — jazzy, bossa, lounge, soulful
+ */
+export type BackingVibe = 'upbeat' | 'melodic' | 'smooth';
+
 /** One backing instrumental loop. Lives in `public/assets/audio/backings/`. */
 export interface BackingTrack {
   /** Stable id, e.g. 'fast-130'. */
   id: string;
   /** User-facing tempo label shown in the editor's tempo cycle button. */
   speedLabel: 'slow' | 'medium' | 'fast' | 'faster';
+  /** User-facing vibe category shown in the editor's vibe picker. */
+  vibe: BackingVibe;
   /** Beats per minute. Charts authored at this BPM align exactly to the
    *  backing's beat grid (no drift across a 30s round). */
   bpm: number;
@@ -198,6 +210,7 @@ export const BACKING_CATALOG: Record<string, BackingTrack> = {
   'bounce-bloom-1': {
     id: 'bounce-bloom-1',
     speedLabel: 'fast',
+    vibe: 'upbeat',
     bpm: 130,
     audioKey: 'backing-bounce-bloom-1',
     loopDurationMs: 30_000, // approximate — only used by future tooling
@@ -205,6 +218,7 @@ export const BACKING_CATALOG: Record<string, BackingTrack> = {
   'bounce-bloom-2': {
     id: 'bounce-bloom-2',
     speedLabel: 'fast',
+    vibe: 'upbeat',
     bpm: 130,
     audioKey: 'backing-bounce-bloom-2',
     loopDurationMs: 30_000,
@@ -212,6 +226,7 @@ export const BACKING_CATALOG: Record<string, BackingTrack> = {
   'bouncy-bounce': {
     id: 'bouncy-bounce',
     speedLabel: 'fast',
+    vibe: 'upbeat',
     bpm: 130,
     audioKey: 'backing-bouncy-bounce',
     loopDurationMs: 30_000,
@@ -219,6 +234,7 @@ export const BACKING_CATALOG: Record<string, BackingTrack> = {
   'cinematic-bossa-nova-1': {
     id: 'cinematic-bossa-nova-1',
     speedLabel: 'fast',
+    vibe: 'smooth',
     bpm: 130,
     audioKey: 'backing-cinematic-bossa-nova-1',
     loopDurationMs: 30_000,
@@ -226,6 +242,7 @@ export const BACKING_CATALOG: Record<string, BackingTrack> = {
   'cinematic-bossa-nova-2': {
     id: 'cinematic-bossa-nova-2',
     speedLabel: 'fast',
+    vibe: 'smooth',
     bpm: 130,
     audioKey: 'backing-cinematic-bossa-nova-2',
     loopDurationMs: 30_000,
@@ -233,6 +250,7 @@ export const BACKING_CATALOG: Record<string, BackingTrack> = {
   'midnight-coffee': {
     id: 'midnight-coffee',
     speedLabel: 'fast',
+    vibe: 'melodic',
     bpm: 130,
     audioKey: 'backing-midnight-coffee',
     loopDurationMs: 30_000,
@@ -240,6 +258,7 @@ export const BACKING_CATALOG: Record<string, BackingTrack> = {
   'neon-dash': {
     id: 'neon-dash',
     speedLabel: 'fast',
+    vibe: 'upbeat',
     bpm: 130,
     audioKey: 'backing-neon-dash',
     loopDurationMs: 30_000,
@@ -332,6 +351,10 @@ export interface Chart {
    *  aligns to a clean musical bar. */
   stepCount: number;
   bpm: number;
+  /** Player-picked vibe for the backing track. Optional — old charts
+   *  without it default to the first available vibe at the chart's
+   *  tempo on next editor open. */
+  vibe?: BackingVibe;
   steps: ChartStep[];
   updatedAt: number;
 }
