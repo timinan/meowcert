@@ -154,6 +154,59 @@ export const COSMETIC_CATALOG: CosmeticEntry[] = [
   ...EFFECT_COSMETIC_CATALOG,
 ];
 
+// -- Music catalogs -----------------------------------------------------
+//
+// Music plays during a round in two layers: a long looping backing
+// instrumental (BGM) underneath, and short meow stem one-shots (SFX)
+// fired on every successful lane tap. Both layers are curated content
+// shipped with the app — no per-user generation, no API cost at scale.
+// See `outputs/prds/2026-06-22-pspsps-music-system-spec.md` for the
+// full design rationale.
+
+/** One backing instrumental loop. Lives in `public/assets/audio/backings/`. */
+export interface BackingTrack {
+  /** Stable id, e.g. 'fast-130'. */
+  id: string;
+  /** User-facing tempo label shown in the editor's tempo cycle button. */
+  speedLabel: 'slow' | 'medium' | 'fast' | 'faster';
+  /** Beats per minute. Charts authored at this BPM align exactly to the
+   *  backing's beat grid (no drift across a 30s round). */
+  bpm: number;
+  /** Phaser asset key registered in Preloader. */
+  audioKey: string;
+  /** One full loop length in ms — informational, used by future tooling
+   *  that wants to schedule visual cues against bar boundaries. */
+  loopDurationMs: number;
+}
+
+/**
+ * Curated backing tracks. Empty at commit 1 — entries get added as
+ * Tim authors them on Suno. Each tempo label SHOULD have at least one
+ * entry once we ship; the editor's tempo picker derives its options
+ * from this catalog at scene init.
+ */
+export const BACKING_CATALOG: Record<string, BackingTrack> = {};
+
+/** One pre-recorded meow audio one-shot. Lives in `public/assets/audio/meows/`. */
+export interface MeowStem {
+  /** Stable id, e.g. 'cute-01'. */
+  id: string;
+  /** Phaser asset key registered in Preloader. */
+  audioKey: string;
+  /** Meow character — narrative description of the inflection. */
+  character: 'cute' | 'sass' | 'yowl' | 'chirp' | 'purr' | 'dramatic';
+  /** Lane affinity. Lane 0 = low/sass, lane 1 = mid/cute, lane 2 = high/chirp.
+   *  `MusicSystem` filters by lane on each successful tap before random pick. */
+  lane: LaneId;
+}
+
+/**
+ * Curated meow stem pool. Empty at commit 1 — entries get added as
+ * meow WAVs are sourced (phone recordings, free SFX libraries, or
+ * Suno vocal generations).
+ */
+export const MEOW_STEM_CATALOG: MeowStem[] = [];
+
 // -- Box catalog --------------------------------------------------------
 
 export const BOX_CATALOG: Record<BoxId, BoxConfig> = {

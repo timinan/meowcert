@@ -3,7 +3,7 @@ import { SceneKeys } from '@/constants/scenes';
 import { AssetKeys } from '@/constants/assets';
 import { Balance } from '@/constants/balance';
 import { fetchState } from '@/services/state-client';
-import { BACKGROUND_CATALOG } from '@/../shared/state';
+import { BACKGROUND_CATALOG, BACKING_CATALOG, MEOW_STEM_CATALOG } from '@/../shared/state';
 import type { PlayerState } from '@/../shared/state';
 
 // All logical cat breeds. 'rainbow' has no atlas frames of its own — it borrows
@@ -57,11 +57,34 @@ export class Preloader extends Scene {
       this.load.image(bg.backdropKey, `themes/${bg.id}-bg.png`);
     }
 
+    // Per-frame translation offsets for each cat animation. Cat.ts reads
+    // this from cache to ride static cosmetics along with their cat. Falls
+    // back to a no-op (no offset applied) if the file is missing.
+    this.load.json(AssetKeys.Json.CatFrameOffsets, 'atlas/cat-frame-offsets.json');
+
     this.load.audio(AssetKeys.Audio.Background, ['sounds/background.mp3']);
     this.load.audio(AssetKeys.Audio.Pspsps, ['sounds/pspsps.mp3']);
     this.load.audio(AssetKeys.Audio.ThemeDefaultMusic, ['themes/default-music.mp3']);
     this.load.audio(AssetKeys.Audio.ThemeCozyMusic, ['themes/cozy-music.mp3']);
     this.load.audio(AssetKeys.Audio.ThemeSpookyMusic, ['themes/spooky-music.mp3']);
+
+    // Music system catalogs — empty at commit 1. Backings + meow stems
+    // get added as Tim authors them via the workflow in
+    // `outputs/prds/2026-06-22-pspsps-music-system-spec.md`. Both ogg +
+    // mp3 paths are registered (Phaser falls back to whichever the
+    // browser supports) so Safari/iOS land on a working codec.
+    for (const backing of Object.values(BACKING_CATALOG)) {
+      this.load.audio(backing.audioKey, [
+        `audio/backings/${backing.id}.ogg`,
+        `audio/backings/${backing.id}.mp3`,
+      ]);
+    }
+    for (const stem of MEOW_STEM_CATALOG) {
+      this.load.audio(stem.audioKey, [
+        `audio/meows/${stem.id}.ogg`,
+        `audio/meows/${stem.id}.wav`,
+      ]);
+    }
   }
 
   async create() {
