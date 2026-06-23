@@ -108,13 +108,15 @@
   <section class="section">
     <div class="section-head">
       <h2>🖼  Backgrounds</h2>
-      <span class="hint">chunky pixel art · 1024×1536 · horizon at y ≈ 415</span>
+      <span class="hint">chunky pixel art · 1024×1536 · decoration in top 1/5 · horizon at y ≈ 307</span>
     </div>
     <p class="blurb">
-      Each prompt locks the same composition rule as the v6 spec:
-      densely-decorated top 27% above the horizon line, completely empty
-      floor below for the engine to seat cats on. FAILURE MODE warnings
-      and explicit negative constraints included so the model can't drift.
+      Each prompt locks the v7 composition rule: densely-decorated <b>top 1/5</b>
+      of the image above the horizon line, completely empty floor in the
+      <b>bottom 4/5</b> for the engine to seat cats on. v6 horizon at y ≈ 415
+      let the decoration creep too far down; v7 pushes it up to y ≈ 307 so
+      the floor has more room. FAILURE MODE warnings and explicit negative
+      constraints stop the model from drifting.
     </p>
     <button class="regen" id="regen-bg"><span class="icon">🎲</span>Regenerate</button>
     <div id="bg-list"></div>
@@ -143,13 +145,17 @@ const MUSIC_PROMPTS_PER_BATCH = 6;
 
 // ─── Background themes ───────────────────────────────────────────────────
 //
-// Each theme is a structured object that fills the v6 template:
+// Each theme is a structured object that fills the v7 template:
 //
 //   HEADER (constant pixel-art preamble)
-//   COMPOSITION RULE: horizon at y ≈ 415, what's above/below
-//   ABOVE HORIZON: dense scene-specific props + atmosphere
-//   BELOW HORIZON: floor material with subtle texture
-//   FAILURE MODE: theme-specific forbidden props below the line
+//   COMPOSITION RULE: horizon at y ≈ 307 (top 1/5 of the 1536-tall
+//                     image), what's above/below
+//   ABOVE HORIZON: dense scene-specific props + atmosphere packed
+//                  into the upper 1/5 strip
+//   BELOW HORIZON: floor material with subtle texture filling the
+//                  bottom 4/5 of the image
+//   FAILURE MODE: theme-specific forbidden props below the line +
+//                 "don't let decoration creep past the top 1/5"
 //   NEGATIVE: explicit no-cats, plus theme-specific exclusions
 //
 // Quality > quantity — these mirror the depth of the 10 hand-written v6
@@ -450,13 +456,13 @@ function bgPromptFromTheme(theme) {
   return [
     BG_HEADER,
     '',
-    `**Composition rule (read this first):** The horizon line ${theme.horizonContext} sits at image y ≈ 415. Below that line (image y 415 to 1536) is a completely empty ${theme.floorMaterial}. Above the line (image y 0 to 415) is the densely decorated ${theme.title.toLowerCase()}.`,
+    `**Composition rule (read this first):** The decorated scene occupies ONLY the top 1/5 of the image. The horizon line ${theme.horizonContext} sits at image y ≈ 307 (one-fifth of the way down the 1536-tall portrait). Below that line (image y 307 to 1536) is a completely empty ${theme.floorMaterial} — that's the bottom 4/5 of the image, a vast clear floor for the game engine to seat characters on. Above the line (image y 0 to 307) is the densely decorated ${theme.title.toLowerCase()} packed into the upper strip.`,
     '',
-    `**Above the horizon (image y 0 to 415):** ${theme.aboveHorizon}. Pack this region densely with no large empty zones.`,
+    `**Above the horizon (image y 0 to 307, the top 1/5):** ${theme.aboveHorizon}. Pack this narrow upper strip densely with no large empty zones — every prop should contribute since the decorated region is intentionally compact.`,
     '',
-    `**Below the horizon (image y 415 to 1536):** clean flat ${theme.floorMaterial}. No props, no objects. Empty.`,
+    `**Below the horizon (image y 307 to 1536, the bottom 4/5):** clean flat ${theme.floorMaterial}. No props, no objects, no decoration of any kind. Completely empty — this is the entire bottom four-fifths of the image.`,
     '',
-    `**FAILURE MODE — do NOT do this:** do not put any ${theme.failureProps}, or any other objects below image y 415 (the game draws the cats on top of the floor — the bg must NOT include cat seating). Do not leave the upper region sparse. Do not put the horizon line significantly lower than y 415.`,
+    `**FAILURE MODE — do NOT do this:** do not put any ${theme.failureProps}, or any other objects below image y 307 (the game draws the cats on top of the floor — the bg must NOT include cat seating). Do not let the decoration leak past the top 1/5 of the image. Do not leave the upper strip sparse. Do not put the horizon line significantly lower than y 307 — the floor needs the full bottom four-fifths of the image.`,
     '',
     `No cats, no characters, no people${theme.negativeExtras ? ', ' + theme.negativeExtras : ''}, no animals anywhere in the scene. Chunky pixel art, not smooth illustration.`,
   ].join('\n');
