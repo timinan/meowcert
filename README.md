@@ -1,30 +1,40 @@
-## Devvit Phaser Starter
+# Meowcert
 
-A starter to build web applications on Reddit's developer platform
+A Reddit-native rhythm game where every post is a stage and your cats are the headliners.
 
-- [Devvit](https://developers.reddit.com/): A way to build and deploy immersive games on Reddit
-- [Vite](https://vite.dev/): For compiling the webView
-- [Phaser](https://phaser.io/): 2D game engine
-- [Hono](https://hono.dev/): For backend logic
-- [TypeScript](https://www.typescriptlang.org/): For type safety
+Meowcert is a cozy async-social rhythm game built on Devvit. Each Reddit post is a player's stage — visitors tap to the host's authored beat and the host's cats meow the melody. Decorate your cats, write your beat, drop the post.
 
-## Getting Started
+## How it plays
 
-> Make sure you have Node 22 downloaded on your machine before running!
+- **Decorate.** Pull cats and cosmetics, dress them up, pick a backdrop. Your stage is your house.
+- **Write a beat.** A 3-lane step sequencer with tempo and vibe pickers. Save your chart and the game picks a matching Suno backing track from the catalog — same chart always plays the same song.
+- **Drop a post.** Your stage goes live on Reddit. Visitors land on it, tap through the round, and your cats meow the melody on the beat.
 
-1. Run `npm create devvit@latest --template=phaser`
-2. Go through the installation wizard. You will need to create a Reddit account and connect it to Reddit developers
-3. Copy the command on the success page into your terminal
+## Built with
 
-## Commands
+- [Devvit Web](https://developers.reddit.com/) — Reddit's developer platform
+- [Phaser 4](https://phaser.io/) — 2D game engine
+- [Hono](https://hono.dev/) — server runtime
+- [Vite](https://vite.dev/) + [TypeScript](https://www.typescriptlang.org/) — client build + type safety
 
-- `npm run dev`: Starts a development server where you can develop your application live on Reddit.
-- `npm run build`: Builds your client and server projects
-- `npm run deploy`: Uploads a new version of your app
-- `npm run launch`: Publishes your app for review
-- `npm run login`: Logs your CLI into Reddit
-- `npm run type-check`: Type checks, lints, and prettifies your app
+In-repo content pipeline: drag-drop calibrators for cats, cosmetics, themes, and music with server-side `sharp` recoloring and `ffmpeg` audio processing. The shared catalogs are auto-generated from the calibrator JSON so the game tracks edits in real time.
+
+## Built for
+
+[Reddit Games with a Hook](https://redditgameswithahook.devpost.com/) — Devpost hackathon.
+
+## Development
+
+```bash
+npm run dev           # devvit playtest + vite watcher
+node tools/server.mjs # content calibrators at http://localhost:3000
+npm run build         # build client + server
+npm run deploy        # publish a new version
+npm run type-check    # type check + lint
+```
+
+Node 22+ required.
 
 ## Credits
 
-Thanks to the Phaser team for [providing a great template](https://github.com/phaserjs/template-vite-ts)!
+Built on the [Devvit Phaser starter template](https://github.com/phaserjs/template-vite-ts). Cat art and animations adapted from the original `pspsadopt` Telegram prototype.
