@@ -68,22 +68,16 @@ export class Preloader extends Scene {
     this.load.audio(AssetKeys.Audio.ThemeCozyMusic, ['themes/cozy-music.mp3']);
     this.load.audio(AssetKeys.Audio.ThemeSpookyMusic, ['themes/spooky-music.mp3']);
 
-    // Music system catalogs — empty at commit 1. Backings + meow stems
-    // get added as Tim authors them via the workflow in
-    // `outputs/prds/2026-06-22-pspsps-music-system-spec.md`. Both ogg +
-    // mp3 paths are registered (Phaser falls back to whichever the
-    // browser supports) so Safari/iOS land on a working codec.
+    // Music system catalogs. Backings + meow stems get added as Tim
+    // authors them via the workflow in
+    // `outputs/prds/2026-06-22-pspsps-music-system-spec.md`. mp3-only
+    // for now — ogg companions deferred until ffmpeg is on the build
+    // box; Devvit's Chromium iframe plays mp3 natively.
     for (const backing of Object.values(BACKING_CATALOG)) {
-      this.load.audio(backing.audioKey, [
-        `audio/backings/${backing.id}.ogg`,
-        `audio/backings/${backing.id}.mp3`,
-      ]);
+      this.load.audio(backing.audioKey, `audio/backings/${backing.id}.mp3`);
     }
     for (const stem of MEOW_STEM_CATALOG) {
-      this.load.audio(stem.audioKey, [
-        `audio/meows/${stem.id}.ogg`,
-        `audio/meows/${stem.id}.wav`,
-      ]);
+      this.load.audio(stem.audioKey, `audio/meows/${stem.id}.wav`);
     }
   }
 

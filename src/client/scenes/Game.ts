@@ -5,7 +5,7 @@ import { Note } from '@/entities/note';
 import { BackgroundManager } from '@/entities/background-manager';
 import { ChartPlayer } from '@/systems/chart-player';
 import { ScoreSystem } from '@/systems/score-system';
-import { SongPlayer } from '@/systems/song-player';
+import { MusicSystem } from '@/systems/music-system';
 import { TopHud } from '@/ui/top-hud';
 import * as L from '@/constants/scene-layout';
 import { AssetKeys } from '@/constants/assets';
@@ -48,8 +48,7 @@ export class Game extends Scene {
   /** Step-1 audio system. Reads the same chart ChartPlayer plays back and
    *  fires a pitched meow on every active step. Starts on the player's
    *  first lane tap (mobile / iframe audio context unlock). */
-  private songPlayer: SongPlayer | null = null;
-  private songStarted = false;
+  private music: MusicSystem | null = null;
   private startTimeMs = 0;
   private roundOver = false;
   /** True between scene boot and the player tapping PLAY on the Ready
@@ -90,8 +89,7 @@ export class Game extends Scene {
     this.roundOver = false;
     this.startTimeMs = 0;
     this.cleanedUp = false;
-    this.songPlayer = null;
-    this.songStarted = false;
+    this.music = null;
     this.pendingStart = true;
     this.readyModal = null;
   }
@@ -126,12 +124,6 @@ export class Game extends Scene {
     }
 
     await this.initChartPlayer();
-
-    // Start the meow + lofi downloads RIGHT NOW so they're in the browser
-    // cache by the time the player taps PLAY. Without this, the user
-    // gesture → start() → Tone.loaded() chain blocks ~3 seconds while
-    // the 2.9 MB lofi mp3 streams.
-    this.songPlayer?.preload();
 
     this.bindInput();
     // Tap zones live but disabled until PLAY is pressed. The modal
@@ -289,10 +281,9 @@ export class Game extends Scene {
 
   /**
    * Pre-round modal — gates chart advance + tap input until the player
-   * taps PLAY. The PLAY click is also the user gesture Tone.js needs to
-   * unlock the WebAudio context, AND the preload window before the
-   * click is when the lofi mp3 actually downloads, so music kicks in
-   * immediately instead of after a 3 s blocking fetch.
+   * taps PLAY. The PLAY click is also the user gesture WebAudio needs
+   * to unlock the audio context; Phaser's sound manager handles that
+   * unlock transparently on the first user interaction.
    *
    * Plays the player's authored chart as-is — no difficulty preset
    * picker, no random-chart fallback (those were calibration scaffolding
@@ -366,7 +357,7 @@ export class Game extends Scene {
       playBg.on('pointerover', () => playBg.setFillStyle(0xffe680, 1));
       playBg.on('pointerout', () => playBg.setFillStyle(0xffd34d, 1));
       playBg.on('pointerup', () => {
-        void this.ensureSongStarted();
+        this.music?.start();
         this.readyModal?.destroy(true);
         this.readyModal = null;
         for (const z of this.tapZones) z.setInteractive();
@@ -730,25 +721,10 @@ export class Game extends Scene {
       const n = this.notes[i]!;
       if (n.active) n.recycle();
     }
-    // Stop the meow melody — Transport.cancel inside SongPlayer.stop
-    // wipes pending scheduled events so a long round doesn't keep
-    // firing meows after the summary appears.
-    this.songPlayer?.stop();
+    // Stop the backing track immediately; any in-flight meow one-shots
+    // are cheap and brief, no need to interrupt.
+    this.music?.stop();
     this.showSummary();
-  }
-
-  /** Unlock + start the SongPlayer on the first player tap. Subsequent
-   *  taps no-op cheaply because both unlock() and start() early-return
-   *  once they've run. */
-  private async ensureSongStarted(): Promise<void> {
-    if (this.songStarted || !this.songPlayer) return;
-    this.songStarted = true;
-    try {
-      await this.songPlayer.unlock();
-      await this.songPlayer.start();
-    } catch (err) {
-      console.warn('[Game] SongPlayer start failed:', err);
-    }
   }
 
   private showSummary(): void {
@@ -842,33 +818,12 @@ export class Game extends Scene {
 
     this.player.onSpawn((lane, hitAt) => this.spawnNote(lane, hitAt));
 
-    // Spin up the SongPlayer on the same chart. It stays silent until
-    // the player taps a lane — Tone.js refuses to start audio without a
-    // user gesture in the iframe.
-    if (Balance.audioEnabled) {
-      try {
-        this.songPlayer = new SongPlayer({
-          chart: playChart,
-          // Sample declared at E4 — matches the highest lane note. Tone
-          // plays the source clip at natural pitch on lane 2 (zero
-          // shift, full cuteness preserved) and pitches the other lanes
-          // mildly DOWN (C4 = -4 semitones, A3 = -7). C4 declaration was
-          // chipmunky on E4; A4 was too deep across the board.
-          meowSamples: { E4: 'assets/audio/meows/meow.wav' },
-          // Drive meows from the tap handler instead of the chart beat
-          // so the audio tracks the player's input. The chart still
-          // dictates note spawn timing visually + for scoring; the
-          // SongPlayer just owns the meow voice + backing track.
-          autoSchedule: false,
-          // The prototype's lofi loop, threaded under the meows via Tone
-          // Player.sync so it pauses/resumes with Transport.
-          backingTrackUrl: 'assets/sounds/background.mp3',
-        });
-      } catch (err) {
-        console.warn('[Game] SongPlayer init failed:', err);
-        this.songPlayer = null;
-      }
-    }
+    // Music for the round: real backing track from BACKING_CATALOG
+    // (selected by chart.bpm + author hash) and meow stems from
+    // MEOW_STEM_CATALOG fired on each successful lane tap. Phaser's
+    // sound manager handles the WebAudio gesture unlock for free on
+    // first user interaction — no manual unlock dance needed.
+    this.music = new MusicSystem(this, playChart);
   }
 
   // -----------------------------------------------------------------------
@@ -909,11 +864,6 @@ export class Game extends Scene {
 
   private registerTap(laneId: LaneId): void {
     if (this.roundOver) return;
-    // First tap unlocks the WebAudio context + starts the SongPlayer.
-    // Tone.js requires a user gesture before any audio can play, and
-    // every lane tap counts. After the first call this is cheap (early
-    // returns inside SongPlayer.start).
-    void this.ensureSongStarted();
     const now = this.time.now - this.startTimeMs;
     const note = this.activeNoteInLane(laneId, now);
 
@@ -940,7 +890,7 @@ export class Game extends Scene {
     // with a cat sound. Fire the meow before grading-side effects so
     // the audio lands as close to the tap moment as possible.
     if (grade !== 'miss') {
-      this.songPlayer?.playMeow(laneId);
+      this.music?.playMeowForLane(laneId);
     }
 
     this.score.registerHit(grade);
@@ -1091,8 +1041,8 @@ export class Game extends Scene {
     });
     tearDown('background', () => this.bg?.destroy());
     tearDown('song-player', () => {
-      this.songPlayer?.destroy();
-      this.songPlayer = null;
+      this.music?.destroy();
+      this.music = null;
     });
 
     // Now safe to wipe any remaining tweens / timers / input.

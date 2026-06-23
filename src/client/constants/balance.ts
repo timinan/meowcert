@@ -61,12 +61,6 @@ export const Balance = {
   // is twice this).
   interactionMarkerTraversalMs: 1_400,
 
-  // Step-1 audio. When true, Game scene spins up a SongPlayer that fires
-  // a pitched meow on every active chart step (lane 0=C4, 1=E4, 2=G4).
-  // Plays a procedural synth meow until Tim drops real WAV samples into
-  // public/assets/audio/meows/. Turn off if audio breaks the playtest.
-  audioEnabled: true,
-
   // Phase 5: vertical rhythm gameplay
   // Hit windows widened from 50/100ms so first-time players actually land
   // greats; tight windows + fast fall made every tap feel like a miss.

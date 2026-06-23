@@ -9,10 +9,32 @@ import {
   emptyChart,
   validateChart,
   CHART_PAGE_SIZE,
+  BACKING_CATALOG,
 } from '@/../shared/state';
 import type { PlayerState, Chart, LaneId } from '@/../shared/state';
 
-const BPM_CYCLE = [80, 100, 120, 140, 160] as const;
+interface TempoEntry {
+  speedLabel: string;
+  bpm: number;
+}
+
+/** Derive the tempo cycle from BACKING_CATALOG so the editor only
+ *  offers BPMs we actually have music for. One entry per unique
+ *  speedLabel, sorted by BPM. Picks the lowest-BPM backing per label
+ *  if multiple share a label. */
+function buildTempoCycle(): TempoEntry[] {
+  const byLabel = new Map<string, TempoEntry>();
+  for (const backing of Object.values(BACKING_CATALOG)) {
+    const existing = byLabel.get(backing.speedLabel);
+    if (!existing || backing.bpm < existing.bpm) {
+      byLabel.set(backing.speedLabel, {
+        speedLabel: backing.speedLabel,
+        bpm: backing.bpm,
+      });
+    }
+  }
+  return [...byLabel.values()].sort((a, b) => a.bpm - b.bpm);
+}
 
 /**
  * Chart editor — 3-lane × 32-step beat sequencer paged in 8-row windows.
@@ -55,7 +77,8 @@ export class ChartEditor extends Scene {
 
   // Bottom controls
   private bpmBtnText!: GameObjects.Text;
-  private bpmIndex = 2; // default 120bpm
+  private tempoCycle: TempoEntry[] = [];
+  private tempoIndex = 0;
   private saveBusy = false;
   private saveBtnBg!: GameObjects.Rectangle;
   private saveBtnText!: GameObjects.Text;
@@ -73,8 +96,23 @@ export class ChartEditor extends Scene {
       ? (JSON.parse(JSON.stringify(existing)) as Chart)
       : emptyChart(username, 'My Beat');
 
-    const bpmIdx = BPM_CYCLE.indexOf(this.chart.bpm as (typeof BPM_CYCLE)[number]);
-    this.bpmIndex = bpmIdx >= 0 ? bpmIdx : 2;
+    // Build the tempo cycle from whatever backings are in the catalog.
+    // Snap chart.bpm to the closest available tempo so a chart authored
+    // before a backing was added still has a valid playable tempo.
+    this.tempoCycle = buildTempoCycle();
+    if (this.tempoCycle.length > 0) {
+      let nearestIdx = 0;
+      let nearestDist = Math.abs(this.chart.bpm - this.tempoCycle[0]!.bpm);
+      for (let i = 1; i < this.tempoCycle.length; i++) {
+        const d = Math.abs(this.chart.bpm - this.tempoCycle[i]!.bpm);
+        if (d < nearestDist) {
+          nearestDist = d;
+          nearestIdx = i;
+        }
+      }
+      this.tempoIndex = nearestIdx;
+      this.chart.bpm = this.tempoCycle[nearestIdx]!.bpm;
+    }
 
     this.cellPanels = [];
     this.cellNotes = [];
@@ -311,7 +349,7 @@ export class ChartEditor extends Scene {
       .setStrokeStyle(1, 0xc678ff, 0.7)
       .setInteractive({ useHandCursor: true });
     this.bpmBtnText = this.add
-      .text(bpmX, barCenterY, `BPM ${BPM_CYCLE[this.bpmIndex]}`, {
+      .text(bpmX, barCenterY, this.tempoButtonLabel(), {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
         fontSize: '12px',
@@ -418,10 +456,19 @@ export class ChartEditor extends Scene {
   }
 
   private onBpmTap(): void {
-    this.bpmIndex = (this.bpmIndex + 1) % BPM_CYCLE.length;
-    const bpm = BPM_CYCLE[this.bpmIndex]!;
-    this.chart.bpm = bpm;
-    this.bpmBtnText.setText(`BPM ${bpm}`);
+    if (this.tempoCycle.length === 0) return;
+    this.tempoIndex = (this.tempoIndex + 1) % this.tempoCycle.length;
+    this.chart.bpm = this.tempoCycle[this.tempoIndex]!.bpm;
+    this.bpmBtnText.setText(this.tempoButtonLabel());
+  }
+
+  /** Render the speedLabel uppercased, e.g. "FAST". Falls back to a
+   *  numeric "BPM N" only if the catalog is empty — that's a content
+   *  bug worth surfacing. */
+  private tempoButtonLabel(): string {
+    if (this.tempoCycle.length === 0) return `BPM ${this.chart.bpm}`;
+    const entry = this.tempoCycle[this.tempoIndex]!;
+    return entry.speedLabel.toUpperCase();
   }
 
   private async onSaveTap(): Promise<void> {

@@ -78,6 +78,15 @@ export interface CosmeticEntry {
   tint?: string;
   /** Blend mode used at render time. */
   tintMode?: 'color' | 'hue' | 'multiply' | 'soft-light';
+  /** When true, this cosmetic has no per-frame animation art and the Cat
+   *  entity rides it through `cat-frame-offsets.json` so it bobs with
+   *  its cat. Set by the Cosmetic Quick Add upload flow on single-PNG
+   *  cosmetics. Existing hand-animated cosmetics leave this unset and
+   *  keep using their per-frame art for motion. */
+  isStatic?: boolean;
+  /** Optional per-cosmetic override of the slot-default motion strength.
+   *  Only used when `isStatic` is true. 1.0 = tracks cat 1:1. */
+  motionStrength?: number;
 }
 
 // -- Themes (Backgrounds) -----------------------------------------------
@@ -180,12 +189,27 @@ export interface BackingTrack {
 }
 
 /**
- * Curated backing tracks. Empty at commit 1 — entries get added as
- * Tim authors them on Suno. Each tempo label SHOULD have at least one
- * entry once we ship; the editor's tempo picker derives its options
- * from this catalog at scene init.
+ * Curated backing tracks. Entries get added as Tim authors them on Suno.
+ * Each tempo label SHOULD have at least one entry once we ship; the
+ * editor's tempo picker derives its options from this catalog at scene
+ * init.
  */
-export const BACKING_CATALOG: Record<string, BackingTrack> = {};
+export const BACKING_CATALOG: Record<string, BackingTrack> = {
+  'bounce-bloom-1': {
+    id: 'bounce-bloom-1',
+    speedLabel: 'fast',
+    bpm: 130,
+    audioKey: 'backing-bounce-bloom-1',
+    loopDurationMs: 30_000, // ~30s — fills one full round if chart bpm matches
+  },
+  'bounce-bloom-2': {
+    id: 'bounce-bloom-2',
+    speedLabel: 'fast',
+    bpm: 130,
+    audioKey: 'backing-bounce-bloom-2',
+    loopDurationMs: 30_000,
+  },
+};
 
 /** One pre-recorded meow audio one-shot. Lives in `public/assets/audio/meows/`. */
 export interface MeowStem {
@@ -201,11 +225,15 @@ export interface MeowStem {
 }
 
 /**
- * Curated meow stem pool. Empty at commit 1 — entries get added as
- * meow WAVs are sourced (phone recordings, free SFX libraries, or
- * Suno vocal generations).
+ * Curated meow stem pool. Starts with the legacy `meow.wav` only —
+ * `MusicSystem.playMeowForLane` falls back to "any stem" when no
+ * per-lane match exists, so a single shared entry still fires meows
+ * on every lane tap. As Tim adds diverse stems (cute / sass / yowl
+ * recordings), per-lane affinity kicks in automatically.
  */
-export const MEOW_STEM_CATALOG: MeowStem[] = [];
+export const MEOW_STEM_CATALOG: MeowStem[] = [
+  { id: 'meow', audioKey: 'meow-legacy', character: 'cute', lane: 1 },
+];
 
 // -- Box catalog --------------------------------------------------------
 
