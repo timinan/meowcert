@@ -894,11 +894,11 @@ export class Game extends Scene {
       else if (dy <= maxHitDistance) grade = 'great';
     }
 
-    // Only meow on a real hit — missed taps shouldn't reward the player
-    // with a cat sound. Fire the meow before grading-side effects so
-    // the audio lands as close to the tap moment as possible.
+    // Only fire a tap tone on a real hit — missed taps shouldn't reward
+    // the player with audio. Fire before grading-side effects so the
+    // tone lands as close to the tap moment as possible.
     if (grade !== 'miss') {
-      this.music?.playMeowForLane(laneId);
+      this.music?.playTapForLane(laneId);
     }
 
     this.score.registerHit(grade);
