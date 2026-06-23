@@ -19,9 +19,7 @@
     margin: 0; padding: 28px 36px; font-family: system-ui, sans-serif;
     background: var(--bg); color: #fff; min-height: 100vh;
   }
-  h1 {
-    margin: 0 0 4px; color: var(--accent); font-size: 22px;
-  }
+  h1 { margin: 0 0 4px; color: var(--accent); font-size: 22px; }
   .subhead { color: var(--muted); font-size: 13px; margin: 0 0 28px; max-width: 760px; }
   .subhead a { color: var(--accent-2); }
 
@@ -29,17 +27,13 @@
     background: var(--panel); border-radius: 12px; padding: 18px 22px;
     margin-bottom: 24px;
   }
-  .section-head {
-    display: flex; align-items: baseline; gap: 14px; margin: 0 0 4px;
-  }
+  .section-head { display: flex; align-items: baseline; gap: 14px; margin: 0 0 4px; }
   .section-head h2 {
     margin: 0; color: var(--accent); font-size: 16px;
     text-transform: uppercase; letter-spacing: 0.6px;
   }
-  .section-head .hint {
-    color: var(--muted); font-size: 12px; margin-left: auto;
-  }
-  .section .blurb { color: var(--muted); font-size: 12px; margin: 0 0 14px; }
+  .section-head .hint { color: var(--muted); font-size: 12px; margin-left: auto; }
+  .section .blurb { color: var(--muted); font-size: 12px; margin: 0 0 14px; max-width: 760px; }
   .regen {
     background: var(--accent-2); color: #1a0a2e; padding: 9px 18px; border-radius: 6px;
     font-weight: 700; cursor: pointer; font-size: 13px; border: none;
@@ -48,28 +42,51 @@
   .regen:hover { background: var(--accent); }
   .regen .icon { margin-right: 6px; }
 
-  .prompt {
+  .bg-card {
+    background: var(--bg); border-radius: 8px; padding: 14px 16px;
+    margin-bottom: 12px; border: 1px solid var(--panel-2);
+    transition: background 80ms, border-color 80ms;
+    cursor: pointer; position: relative;
+  }
+  .bg-card:hover { border-color: var(--accent-2); }
+  .bg-card.copied { border-color: var(--ok); background: rgba(127, 220, 138, 0.06); }
+  .bg-card .title {
+    color: var(--accent); font-size: 14px; font-weight: 700; margin: 0 0 8px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .bg-card .body {
+    color: #e8dcf5; font-size: 12.5px; line-height: 1.55;
+    white-space: pre-wrap; word-break: break-word;
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+  .bg-card .body b { color: var(--accent-2); font-weight: 700; }
+  .bg-card .copy-hint {
+    position: absolute; top: 14px; right: 16px;
+    font-size: 10px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .bg-card.copied .copy-hint { color: var(--ok); }
+
+  .music-prompt {
     background: var(--bg); border-radius: 8px; padding: 12px 14px;
     margin-bottom: 8px; display: flex; gap: 12px;
     border: 1px solid var(--panel-2);
     transition: background 80ms, border-color 80ms;
     cursor: pointer;
   }
-  .prompt:hover { background: var(--panel-2); border-color: var(--accent-2); }
-  .prompt.copied { border-color: var(--ok); background: rgba(127, 220, 138, 0.08); }
-  .prompt .text { flex: 1; font-size: 14px; line-height: 1.45; }
-  .prompt .meta {
-    flex-shrink: 0; font-size: 10px; color: var(--muted);
+  .music-prompt:hover { background: var(--panel-2); border-color: var(--accent-2); }
+  .music-prompt.copied { border-color: var(--ok); background: rgba(127, 220, 138, 0.08); }
+  .music-prompt .text { flex: 1; font-size: 14px; line-height: 1.45; }
+  .music-prompt .meta {
+    flex-shrink: 0; font-size: 10px;
     text-transform: uppercase; letter-spacing: 0.5px;
-    align-self: center; padding: 3px 9px; border: 1px solid var(--accent-2);
+    align-self: center; padding: 3px 9px; border: 1px solid currentColor;
     border-radius: 999px;
   }
-  .prompt .meta.upbeat  { color: #ffb46b; border-color: #ffb46b; }
-  .prompt .meta.melodic { color: #9ed5ff; border-color: #9ed5ff; }
-  .prompt .meta.smooth  { color: #c5a3ff; border-color: #c5a3ff; }
-  .prompt .copy-hint {
-    font-size: 10px; color: var(--muted); align-self: center;
-  }
+  .music-prompt .meta.upbeat  { color: #ffb46b; }
+  .music-prompt .meta.melodic { color: #9ed5ff; }
+  .music-prompt .meta.smooth  { color: #c5a3ff; }
+  .music-prompt .copy-hint { font-size: 10px; color: var(--muted); align-self: center; }
 
   .toast {
     position: fixed; bottom: 22px; right: 22px;
@@ -85,20 +102,19 @@
 <body>
   <h1>Prompt Generator</h1>
   <p class="subhead">
-    Procedural prompts shaped around the pspsps game vibe: cozy / playful cat-room
-    backgrounds, and 130 BPM looping backing music with no vocals.
-    Tap a prompt to copy. <a href="/">all tools</a>
+    Prompts formatted to match <code>outputs/portfolio/pspsps-background-prompt.md</code> (v6 horizon-line style for gpt-image-1) and the working Suno format for backings. Tap any card to copy the full prompt. <a href="/">all tools</a>
   </p>
 
   <section class="section">
     <div class="section-head">
       <h2>🖼  Backgrounds</h2>
-      <span class="hint">portrait 1024×1536 · bottom 2/3 empty floor · no characters</span>
+      <span class="hint">chunky pixel art · 1024×1536 · horizon at y ≈ 415</span>
     </div>
     <p class="blurb">
-      For gpt-image-1 / Midjourney / Stable Diffusion. Every prompt enforces the
-      empty-floor layout so the game engine can seat cats on top — the bg art
-      provides the room, never the characters.
+      Each prompt locks the same composition rule as the v6 spec:
+      densely-decorated top 27% above the horizon line, completely empty
+      floor below for the engine to seat cats on. FAILURE MODE warnings
+      and explicit negative constraints included so the model can't drift.
     </p>
     <button class="regen" id="regen-bg"><span class="icon">🎲</span>Regenerate</button>
     <div id="bg-list"></div>
@@ -110,9 +126,9 @@
       <span class="hint">Suno · 130 BPM · no vocals · loop-friendly</span>
     </div>
     <p class="blurb">
-      Tagged by vibe (UPBEAT / MELODIC / SMOOTH) so you can target gaps in the
-      Music Calibrator. All locked at 130 BPM so charts authored at FAST stay
-      in sync.
+      Tagged by vibe (UPBEAT / MELODIC / SMOOTH) so each prompt fills a
+      specific gap in the Music Calibrator. Locked at 130 BPM so charts
+      authored at FAST stay in sync.
     </p>
     <button class="regen" id="regen-music"><span class="icon">🎲</span>Regenerate</button>
     <div id="music-list"></div>
@@ -122,182 +138,302 @@
 
 <script src="/tools-nav.js"></script>
 <script>
-const BG_PROMPTS_PER_BATCH = 6;
+const BG_PROMPTS_PER_BATCH = 4;
 const MUSIC_PROMPTS_PER_BATCH = 6;
 
-// ─── Background ingredients ───────────────────────────────────────────────
+// ─── Background themes ───────────────────────────────────────────────────
 //
-// Each prompt = setting + mood + lighting + style + layout enforcement.
-// Pool sizes chosen so 6 picks rarely repeat exact combos across consecutive
-// regenerates; combinatorial space is ~30k+.
+// Each theme is a structured object that fills the v6 template:
+//
+//   HEADER (constant pixel-art preamble)
+//   COMPOSITION RULE: horizon at y ≈ 415, what's above/below
+//   ABOVE HORIZON: dense scene-specific props + atmosphere
+//   BELOW HORIZON: floor material with subtle texture
+//   FAILURE MODE: theme-specific forbidden props below the line
+//   NEGATIVE: explicit no-cats, plus theme-specific exclusions
+//
+// Quality > quantity — these mirror the depth of the 10 hand-written v6
+// prompts in `outputs/portfolio/pspsps-background-prompt.md`. Each one
+// can ship as-is to gpt-image-1.
 
-const BG_SETTINGS = [
-  'cozy reading nook with tall floor-to-ceiling bookshelves',
-  'sun-drenched tropical beach hut interior with bamboo walls',
-  'abandoned 80s arcade with dusty cabinets and faded carpet',
-  "wizard's cluttered potion lab with bubbling glassware",
-  'mossy mushroom forest grove with giant glowing toadstools',
-  'Japanese tea house at twilight with shoji screens and tatami floor',
-  'polar ice cave with bioluminescent crystals on the walls',
-  'retro diner booth interior with chrome trim and neon signage',
-  "pirate ship captain's cabin with maps, lanterns, and a wheel",
-  'pumpkin patch under a harvest moon with hay bales and lanterns',
-  'neon Tokyo alley with vending machines and cherry blossoms',
-  'casino lounge with red velvet booths and brass chandeliers',
-  'ancient cat temple with stone murals and burning incense',
-  'volcanic palace throne room with obsidian columns and lava channels',
-  'lo-fi study room with a rain-streaked window and houseplants',
-  'cherry blossom garden with stone lanterns and a koi pond',
-  'snowy mountain cabin interior with a stone fireplace',
-  'underwater coral palace with bioluminescent fish',
-  'witch cottage interior with herb bundles and a cauldron',
-  'candy land bakery with frosting drips and gumdrop tiles',
-  'art studio with paint splatters, easels, and northern light',
-  'observatory dome with a brass telescope and star charts',
-  'train station platform at night with steam and lanterns',
-  'art deco ballroom with gold trim and a chandelier',
-  'ramen shop interior with paper lanterns and a steaming pot',
-  'snowy alpine ski lodge lounge with antler decor',
-  'old library with stained glass windows and reading lamps',
-  'autumn forest clearing with red maples and a creek',
-  'dragon hoard cavern with gold piles and gemstones',
-  'retro space station observation deck with a planet view',
-  'beachside boardwalk arcade with palm trees and string lights',
-  'treehouse hideout with rope bridges and lantern strings',
-  'Moroccan riad courtyard with tiled fountain and arches',
-  'underground jazz club with brick walls and dim sconces',
-  'secret garden with fairy lights, ivy walls, and stone benches',
-  'theater backstage with hanging ropes and rolled-up backdrops',
-  'alpine valley meadow with wildflowers and snowy peaks',
-  'frost-frozen ice palace ballroom with crystal chandeliers',
-  'swampy witch hut on stilts with cypress trees',
-  'candlelit gothic cathedral interior with vaulted arches',
-  'mad scientist laboratory with tesla coils and bubbling beakers',
-  'cyberpunk noodle bar with holographic signs',
-  'haunted mansion library with cobwebs and a hidden door',
-  'bamboo dojo with rice paper walls and morning mist',
-  'fairy mushroom village interior with twig furniture',
-  'desert oasis tent interior with rugs and brass lamps',
-  'medieval tavern with a hearth and oak tables',
-  'space pirate cargo bay with crates and viewports',
+const BG_HEADER =
+  'Chunky retro pixel art, 16-bit / SNES era style. Blocky pixels, ' +
+  'visible large pixel chunks, limited palette, no anti-aliasing, no ' +
+  'smooth gradients. Portrait, exactly 1024 × 1536 pixels.';
+
+const BG_THEMES = [
+  {
+    title: 'Old Library Reading Room',
+    horizonContext: "where the library's tall bookshelves and back wall meet the wooden floor",
+    floorMaterial: 'warm wooden plank floor with subtle pixel grain',
+    aboveHorizon:
+      'floor-to-ceiling dark oak bookshelves stuffed with leather-bound books in deep greens / reds / browns flanking both side walls, a rolling brass ladder leaning against one shelf, hanging pendant lamps with warm amber glow, a large arched stained-glass window in the back wall throwing colored light, framed oil paintings between shelves, a marble bust on a high pedestal in the distant background, scattered open books and rolled scrolls on background tables, dust motes drifting through the light beams',
+    failureProps: 'reading desks, chairs, books, lecterns',
+    negativeExtras: 'no librarians',
+  },
+  {
+    title: 'Witch Cottage Kitchen',
+    horizonContext: "where the witch's hanging herbs and stone fireplace meet the worn wooden floor",
+    floorMaterial: 'worn wooden plank floor with subtle knot patterns and faint cobwebs',
+    aboveHorizon:
+      'a large stone fireplace center-back with a black iron cauldron bubbling green smoke, dried herb bundles in sage / lavender / thyme hanging from the wooden ceiling beams, shelves of glass jars filled with eyeballs / mushrooms / glowing liquids, a hanging broom in the corner, a black cat skull on a high shelf (decorative, NOT a live cat), a leather spellbook open on a back counter with a quill, a string of garlic, a brass scale, candles in iron sconces flickering on the walls, distant cobwebbed windows showing a full moon',
+    failureProps: 'cauldrons, books, jars, broomsticks',
+    negativeExtras: 'no witches, no live black cats (the skull is decorative only)',
+  },
+  {
+    title: 'Treetop Hideout',
+    horizonContext: 'where the treehouse interior walls and rope ladder meet the wooden plank floor',
+    floorMaterial: 'wide wooden plank floor with visible nails and faint moss between boards',
+    aboveHorizon:
+      'rough-hewn timber walls with hanging rope vines, a porthole window showing a forest canopy with shafts of green-tinted sunlight, hanging lanterns made from glass jars with fireflies inside, a rope ladder snaking up out of frame, a wooden treasure map pinned to the back wall, woven-twig shelves with pinecones and acorns, a "NO ADULTS" sign painted in chalk, paper airplanes stuck in the rafters, a hanging string of pennant flags in red / yellow / blue, distant glimpses of bird nests in the branches outside',
+    failureProps: 'crates, chests, ropes coiled on the floor, planks',
+    negativeExtras: 'no kids, no people',
+  },
+  {
+    title: "Wizard's Potion Lab",
+    horizonContext: "where the wizard's cluttered workbench and bookcase wall meet the stone-tile floor",
+    floorMaterial: 'cool grey stone-tile floor with faint chalk runes traced into the cracks',
+    aboveHorizon:
+      'a back wall packed with glowing potion bottles in vivid teal / magenta / amber on dark wood shelves, a tall arched window with star-filled night sky, a hanging crystal orb radiating soft purple light, a giant open spellbook on a high lectern with floating runes hovering above it, dried starfish and bat wings hanging from the ceiling, a coiled brass alembic with bubbling green liquid in the distant background, a hanging astrolabe, scrolls tied with ribbon, candle flames in tall iron candelabra, drifting motes of golden light',
+    failureProps: 'cauldrons, books on the floor, scrolls, glass vials',
+    negativeExtras: 'no wizards, no apprentices',
+  },
+  {
+    title: 'Cherry Blossom Garden',
+    horizonContext: 'where the garden background and stone wall meet the moss-covered ground',
+    floorMaterial: 'soft moss-covered ground with scattered pink cherry petals',
+    aboveHorizon:
+      'pink and white cherry blossom trees in full bloom arching across the top of the frame with petals drifting downward, a traditional stone lantern (toro) center-back glowing softly, a small wooden footbridge in the distant background crossing a koi pond, distant pagoda silhouettes against pale teal sky, hanging paper lanterns in warm peach tones, a torii gate framing the back, soft golden morning light, mountain peaks in the far distance, a ribbon of pale mist near the horizon',
+    failureProps: 'benches, rocks, lanterns, koi statues, rakes',
+    negativeExtras: 'no monks, no people, no live koi in the foreground',
+  },
+  {
+    title: 'Western Saloon',
+    horizonContext: "where the saloon's wooden bar and swinging doors meet the dust-streaked plank floor",
+    floorMaterial: 'rough wooden plank floor with dust streaks and faint boot scuffs',
+    aboveHorizon:
+      'a long wooden bar center-back with a row of glass bottles and a brass spittoon, a stuffed deer head mounted above the bar, hanging oil lamps with warm yellow glow, batwing saloon doors with sunlight pouring through, wanted posters tacked to the side walls, a piano in the back-right corner with sheet music propped up, hanging horseshoes for luck, a hand-painted "WHISKEY 5¢" sign, a row of bar stools (in the distant background only), a chalkboard menu, fake plant tumbleweeds, distant view of dusty plains through a side window',
+    failureProps: 'spittoons, stools, barrels, cards on tables',
+    negativeExtras: 'no cowboys, no bartenders, no people',
+  },
+  {
+    title: 'Steampunk Airship Bridge',
+    horizonContext: "where the airship's brass control panels and porthole window meet the riveted metal deck",
+    floorMaterial: 'dark riveted metal deck with brass bolt heads in a regular pattern',
+    aboveHorizon:
+      'a massive central brass wheel with a captain\'s telescope mounted beside it, banks of dials and pressure gauges with needles wiggling, hanging chains and copper tubing across the ceiling, a large round porthole window center-back showing clouds and the curve of distant mountains far below, flickering Edison-bulb cage lamps, a hanging speaking tube, leather-bound logbooks on a back shelf, a rotating radar screen with green sweep line, brass valves with steam puffing from the joints, a small barometer, a hanging weather pennant flag',
+    failureProps: 'crates, barrels, control consoles on the floor',
+    negativeExtras: 'no captains, no crew, no people',
+  },
+  {
+    title: 'Carnival Funhouse',
+    horizonContext: "where the funhouse's striped walls and curtained doorways meet the checkered tile floor",
+    floorMaterial: 'glossy red-and-yellow checkered tile floor with subtle reflective sheen',
+    aboveHorizon:
+      'red-and-white striped circus tent walls leaning at warped angles, hanging carnival pennant flags in primary colors strung across the ceiling, two distorted funhouse mirrors mounted on either side wall reflecting wonky colors, a grinning clown face painted above the back doorway, hanging strings of carnival lights, a balloon animal vendor display in the distant background, a popcorn cart silhouette deep in the back, gold tassel curtains framing the edges, faint big-top music notes drawn in the corners as decoration',
+    failureProps: 'balloons on the floor, popcorn buckets, ride seats, signs',
+    negativeExtras: 'no clowns, no carnies, no people',
+  },
+  {
+    title: 'Underground Jazz Club',
+    horizonContext: "where the jazz club's brick back wall and stage meet the polished wooden floor",
+    floorMaterial: 'dark polished wooden floor with subtle reflective grain',
+    aboveHorizon:
+      'a low brick stage center-back lit by a single warm spotlight, an unattended upright bass leaning against a back wall (decorative), an unmanned drum kit silhouetted in the back-left, a vintage microphone on a stand, a hanging "JAZZ" sign in cursive neon pink, dim wall sconces casting amber pools on exposed brick, framed black-and-white photos of jazz legends on the walls, hanging cigar smoke wisps in the air, a chalkboard menu listing cocktails, hanging Edison bulbs at varying heights, dark velvet curtains framing the stage',
+    failureProps: 'instruments on the floor, chairs, tables, cocktail glasses',
+    negativeExtras: 'no musicians, no patrons, no people',
+  },
+  {
+    title: 'Bamboo Dojo',
+    horizonContext: 'where the dojo paper screens and weapon rack meet the polished tatami floor',
+    floorMaterial: 'tightly woven tan tatami mats with subtle pixel weave pattern and dark border bands',
+    aboveHorizon:
+      'sliding shoji paper screens forming the back wall with sunrise glow behind them, a wooden weapon rack holding bokken / staffs / katanas mounted on one side wall, a calligraphy scroll with bold Japanese kanji hanging center-back, hanging paper lanterns with warm amber light, a small altar shelf with a single bonsai tree, a row of hanging bells on a rope, a gong with a striker hanging beside it, exposed dark wood beams across the ceiling, a small spray of cherry blossoms drifting in through a slightly-ajar screen',
+    failureProps: 'training dummies, mats, cushions, swords on the floor',
+    negativeExtras: 'no martial artists, no people, no sensei',
+  },
+  {
+    title: 'Moroccan Riad Courtyard',
+    horizonContext: 'where the riad arches and tiled wall meet the patterned mosaic floor',
+    floorMaterial: 'intricate blue-and-white geometric mosaic tile floor with star and diamond patterns',
+    aboveHorizon:
+      'tall horseshoe arches center-back framing a deep teal evening sky with a crescent moon, a tinkling tiled fountain backed against the central wall, hanging brass lanterns in a cascade of warm jewel tones, climbing vines of jasmine and pink bougainvillea curling around the arches, a copper teapot and ornate glasses on a back niche shelf, hanging tasseled rugs on the side walls in deep red and turquoise patterns, palm fronds peeking over the courtyard wall, a small carved cedar door in the distant back, hanging birdcages (empty) as decoration',
+    failureProps: 'cushions, low tables, rugs across the floor, urns',
+    negativeExtras: 'no people, no live birds',
+  },
+  {
+    title: 'Polar Aurora Observatory',
+    horizonContext: 'where the observatory dome opening and instrument racks meet the wood-plank floor',
+    floorMaterial: 'pale wood-plank floor with frosted edges and subtle ice crystal patterns',
+    aboveHorizon:
+      'a massive brass telescope center-back pointing up through a slit in the dome ceiling, a sky full of green-and-pink aurora swirling above the open dome, star charts pinned to wooden walls, brass astrolabes and sextants mounted on shelves, hanging crystal prisms catching aurora light, frost-edged windows on either side showing snow-laden pine trees outside, a hot kettle on a pot-belly stove in the back corner with steam rising, a chalkboard covered in constellation diagrams, hanging fur-lined coats by a back hook, a small wind-up planetarium model on a shelf',
+    failureProps: 'rugs, books on the floor, snow drifts inside, fur pelts',
+    negativeExtras: 'no astronomers, no scientists, no people',
+  },
+  {
+    title: 'Candy Land Bakery',
+    horizonContext: "where the bakery's pastel display case and gumdrop walls meet the candy-cane tile floor",
+    floorMaterial: 'glossy red-and-white candy-cane diagonal-stripe tile floor with sugar sparkle pixels',
+    aboveHorizon:
+      'a back wall made of stacked gumdrop spheres in cotton-candy pink / mint green / lemon yellow, frosting dripping from the ceiling in pastel swirls, hanging chocolate bar curtains framing the edges, a back counter display of giant cupcakes / macarons / lollipops in towering pastel stacks, hanging strings of jellybean garland, a "BAKERY" sign in pink-and-mint icing letters, a hanging cookie clock with frosting hands, sprinkles drifting downward like confetti, a pink-and-cream-striped awning across the top, towering whipped-cream cloud shapes on either side',
+    failureProps: 'cakes, donuts, candies, sprinkles piled on the floor',
+    negativeExtras: 'no bakers, no children, no people',
+  },
+  {
+    title: 'Fairy Mushroom Village',
+    horizonContext: 'where the village backdrop of giant glowing toadstools and ferns meets the mossy ground',
+    floorMaterial: 'soft moss-covered ground with tiny white flower pixels and faint mushroom spores',
+    aboveHorizon:
+      'giant glowing toadstool mushrooms in deep red / orange / purple with white spots crowding the back, tiny pixel-art mushroom houses with round windows nestled between the stalks, fireflies drifting upward in clusters of warm yellow, glowing fairy dust trails curling through the air, twisted ivy vines hanging from above, tall ferns framing both edges, distant pixel rays of moonlight piercing through a dense forest canopy, hanging gourd-lanterns with soft cyan glow, tiny pixel-art butterflies in the distance, a small wooden signpost half-hidden in the back',
+    failureProps: 'mushroom seats, toadstool platforms, baskets, lanterns on the floor',
+    negativeExtras: 'no fairies, no gnomes, no people, no live animals in the foreground',
+  },
+  {
+    title: 'Subway Station Platform',
+    horizonContext: "where the subway's tiled wall and tunnel mouth meet the cement platform floor",
+    floorMaterial: 'plain dark grey cement platform floor with subtle scuff marks and faint yellow safety stripe far in the back',
+    aboveHorizon:
+      'a tiled back wall in cream and forest green subway tile reading "PSPSPS STATION" in vintage typography, a dark tunnel mouth center-back fading into pixel-black with a single tiny train light far in the distance, hanging fluorescent ceiling tubes giving cold blue-white light, peeling movie posters in faded reds and blues on the side walls, a hanging clock showing 11:47 PM, a wall-mounted route map with colored lines, hanging duct cables and pipes across the ceiling, graffiti tags in pink and chartreuse on the lower wall, a vintage destination-board with flipping letters',
+    failureProps: 'benches, trash cans, vending machines, luggage on the floor',
+    negativeExtras: 'no commuters, no passengers, no people',
+  },
+  {
+    title: 'Ramen Shop Interior',
+    horizonContext: "where the ramen shop's curtains and back kitchen meet the polished concrete floor",
+    floorMaterial: 'cool dark polished concrete floor with subtle radial light reflections from overhead lanterns',
+    aboveHorizon:
+      'red and white noren curtains hanging from the ceiling reading "RAMEN" in white kanji (ラーメン), a back open kitchen with a giant simmering pot wreathed in steam, neon "OPEN" signs in pink and blue glowing on the side walls, hanging strings of paper lanterns in red and gold, framed black-and-white photos of bowls of noodles, a hanging chalkboard menu with handwritten specials, hanging ladles and chopstick holders on a brass rack, vintage Japanese movie posters faded on the walls, a small Lucky Cat statue on a high shelf (decorative, NOT a live cat), a hanging vintage Coca-Cola sign in Japanese script',
+    failureProps: 'stools, bowls, chopsticks, soup, counter slabs',
+    negativeExtras: 'no chefs, no diners, no people, no live cats (the maneki-neko statue is decorative only)',
+  },
+  {
+    title: 'Cyberpunk Noodle Alley',
+    horizonContext: 'where the noodle stalls and neon signs meet the rain-slick alley pavement',
+    floorMaterial: 'rain-slick dark asphalt with reflective neon highlights pooling on the surface',
+    aboveHorizon:
+      'a narrow alley crammed with overlapping neon signs in magenta / cyan / lime, hanging Japanese / Chinese / Korean characters glowing in script, a steaming noodle stall booth center-back with paper lanterns, holographic billboards advertising synthetic ramen above the rooftops, dripping pipes overhead with falling rain pixels, exposed wiring and conduit, a vending machine glowing electric blue against one wall, hanging string lights tangled across the alley, distant hovercar tail-lights blurring in the deep background, "OPEN 24H" neon sign in red, faded graffiti tags layered on a brick wall',
+    failureProps: 'stools, crates, noodle bowls on the ground, garbage',
+    negativeExtras: 'no people, no androids, no cyberpunk citizens',
+  },
+  {
+    title: 'Spooky Haunted Mansion Hall',
+    horizonContext: 'where the mansion grand staircase and ancestral portraits meet the dusty marble floor',
+    floorMaterial: 'cracked black-and-white marble checkered floor with thick layers of pixel dust',
+    aboveHorizon:
+      'a grand sweeping staircase center-back with broken banisters and a torn red carpet runner, hanging cobweb-draped chandelier swinging slightly, ancestral oil-painting portraits on the walls (eyes slightly off-center to feel watched), a tall grandfather clock stopped at midnight, tattered velvet drapes framing arched windows revealing a thunderstorm sky with lightning flash, ghostly white candle sconces with green flickering flame, a hovering pale phantom orb in the upper-back corner, mounted suits of armor leaning oddly in the corners, peeling wallpaper showing brick beneath, a large dusty mirror reflecting nothing',
+    failureProps: 'rugs, furniture, candelabras, books, urns',
+    negativeExtras: 'no ghosts in the foreground, no people, no skeletons walking',
+  },
+  {
+    title: 'Beach Tiki Hut',
+    horizonContext: 'where the tiki hut walls and ocean view meet the sandy floor',
+    floorMaterial: 'soft golden beach sand with subtle wave-ripple pixel texture and a few scattered tiny seashells',
+    aboveHorizon:
+      'a tiki bar back wall made of bamboo poles with a wide opening framing a sunset ocean view (orange-to-pink gradient sky with a small sailboat silhouette), hanging string of fairy lights in warm white across the bamboo roof, two large carved wooden tiki masks on either side of the back wall in red / black / yellow, hanging coconut shells and dried pineapple, a hanging surfboard mounted decoratively, palm leaves drooping in from the top edges, a "TIKI BAR" sign in carved letters, hanging colored glass floats in nets, a few drifting pixel seagulls in the distance, gentle wisps of beach grass framing the lower edges of the back wall',
+    failureProps: 'lounge chairs, towels, drinks, sandcastles, beach balls',
+    negativeExtras: 'no tourists, no beachgoers, no people',
+  },
+  {
+    title: 'Pirate Cove Cave',
+    horizonContext: 'where the pirate cove cave walls and treasure stash meet the wet stone floor',
+    floorMaterial: 'damp dark stone floor with subtle puddle reflections and faint sand-streaked grain',
+    aboveHorizon:
+      'a rocky cave mouth back-center opening to a moonlit pirate cove with a docked ship silhouette and palm-tree island shapes far in the distance, a treasure chest overflowing with gold coins and gems on a stone shelf high in the back, hanging skull-and-crossbones flag, dripping ceiling stalactites, a wall map pinned with daggers, a stuck cutlass in a wooden barrel up on a back ledge (decorative), hanging tankards on a rope, swinging lanterns with warm flame light, a parrot perch in the distance (no parrot present — decorative perch only), barrels of rum stacked against the back wall, scattered gold doubloons on the high shelves',
+    failureProps: 'open chests, gold piles, barrels, ropes, anchors',
+    negativeExtras: 'no pirates, no crewmen, no people, no live parrots',
+  },
+  {
+    title: 'Robot Assembly Line',
+    horizonContext: 'where the factory conveyor belts and assembly arms meet the polished concrete floor',
+    floorMaterial: 'polished light grey concrete floor with painted yellow safety hashing far in the distant back',
+    aboveHorizon:
+      'two long industrial conveyor belts running across the upper third carrying partially-assembled cartoon robots, mechanical arms with sparks descending from the ceiling, hanging hazard signs and rotating warning lights in amber, a big back wall control panel covered in blinking buttons and CRT monitors showing wave forms, exposed pipes and wiring in vibrant red / blue / yellow, a "SAFETY FIRST" sign in pixel orange, hanging chains with hooks, a large round factory window high up showing a smoggy industrial cityscape, neon hazard tape draped across the upper frame, smoke wisps drifting from the conveyors',
+    failureProps: 'crates, robot parts on the floor, conveyor belt extensions, tools',
+    negativeExtras: 'no workers, no engineers, no operating robots on the floor',
+  },
+  {
+    title: 'Snowy Ski Lodge Lounge',
+    horizonContext: 'where the lodge stone fireplace and antler decor meet the warm wood-plank floor',
+    floorMaterial: 'rich honey-toned wooden plank floor with faint melted snow puddles and a subtle grain pattern',
+    aboveHorizon:
+      'a huge stone fireplace center-back with a roaring orange flame, a mounted moose head with antlers above the mantel, hanging woven snowshoes and wooden skis crossed on the side walls, a glowing pine garland strung across the top edge, a tall window in the back-right showing falling snow against a starry sky and distant snow-capped peaks, a hot kettle dangling on an iron arm over the fire, hanging plaid blankets on a wall hook, a stuffed owl on a high shelf (decorative), hanging amber-lit lanterns, a chalkboard sign reading "WARM UP" in cursive, framed vintage ski-resort posters on the side wall',
+    failureProps: 'armchairs, rugs in the foreground, ski boots, logs',
+    negativeExtras: 'no skiers, no guests, no people, no live animals',
+  },
+  {
+    title: 'Cathedral Stained Glass Apse',
+    horizonContext: 'where the cathedral pillars and stained-glass apse meet the polished marble floor',
+    floorMaterial: 'cool polished black-and-cream marble floor with subtle reflective sheen and faint inlaid cross pattern far in the back',
+    aboveHorizon:
+      'a massive rose stained-glass window center-back glowing with rich jewel tones casting colored light beams, two tall stone pillars framing the back, hanging brass thurible censers with curling incense smoke, candle racks on the side walls with rows of votive flames, a gothic vaulted stone ceiling far above with ribbed arches, ornate carved stone reliefs of vines, hanging banner-flags in deep crimson and gold, a small organ pipe array high in the back, distant choir stalls in the deep background (no figures present)',
+    failureProps: 'pews, kneelers, altar tables, baskets, candelabra on the floor',
+    negativeExtras: 'no priests, no choir members, no congregants, no people',
+  },
+  {
+    title: 'Sushi Conveyor Bar',
+    horizonContext: "where the sushi bar's conveyor track and chef station meet the polished bamboo floor",
+    floorMaterial: 'polished pale bamboo floor with subtle horizontal grain and gentle reflective sheen',
+    aboveHorizon:
+      'a continuous sushi conveyor belt running across the upper third carrying tiny pixel-art plates of nigiri / maki / inari in pinks and yellows, the chef station back wall has a giant brass kettle steaming over a flame, hanging noren curtains with white kanji on indigo, paper lantern strings of red-and-white globes, a wall of small wooden order chits clipped to a string, hanging sake casks (kazaridaru) stacked on the back wall, neon "SUSHI" sign in pink against a brick column, hanging cone-shaped pendant lamps with warm light, framed black-ink fish art on the walls',
+    failureProps: 'stools, plates on the floor, chopsticks, soy sauce bottles',
+    negativeExtras: 'no chefs, no diners, no people',
+  },
 ];
 
-const BG_MOOD = [
-  'cozy and warm', 'mysterious and dim', 'playful and bright',
-  'dreamy and pastel', 'peaceful and quiet', 'vibrant and energetic',
-  'melancholic and soft', 'whimsical and storybook', 'magical and sparkly',
-  'intimate and welcoming', 'festive and lively', 'eerie and atmospheric',
-  'sun-drenched and cheerful',
-];
-
-const BG_LIGHTING = [
-  'warm sunset glow through the windows',
-  'soft morning light with floating dust motes',
-  'golden hour streaming sideways',
-  'moonlit with pale blue highlights',
-  'candlelit with flickering shadows',
-  'neon-lit with magenta and cyan',
-  'dappled afternoon light through leaves',
-  'twilight purple and pink sky',
-  'cool fluorescent overhead light',
-  'pale dawn pastels',
-  'paper lantern warmth',
-  'firelight flicker from a hearth',
-  'overcast diffuse daylight',
-];
-
-const BG_STYLE = [
-  'stylized painted illustration, soft brush strokes',
-  "hand-painted children's storybook style, gouache",
-  'cozy anime backdrop, cel-shaded',
-  'retro 16-bit pixel art backdrop, sharp pixels',
-  'watercolor illustration with visible paper grain',
-  'Studio Ghibli inspired painterly background',
-  'storybook gouache with rich saturated color',
-  'soft 3D render with painterly post-processing',
-];
-
-const BG_LAYOUT_CONSTRAINT =
-  'portrait 1024x1536, top third holds the visual focus (ceiling / sky / horizon),' +
-  ' bottom two thirds is an empty clear floor at image y ≈ 415 ready for the game' +
-  ' engine to seat characters, no people, no animals, no creatures, no characters' +
-  ' in the scene';
-
-// ─── Music ingredients ────────────────────────────────────────────────────
+// ─── Music vibes (Suno format — single-line, 130 BPM, no vocals) ─────────
 
 const MUSIC_VIBES = {
   upbeat: [
-    '8-bit chiptune adventure music',
-    'synthwave with arpeggio leads and gated drums',
-    'bouncy electro-funk with slap bass',
-    'K-pop dance instrumental with pluck synths',
-    'tropical house with steel drums and clap layers',
-    'EDM festival build with arpeggios and white-noise sweeps',
-    'disco-funk with brass stabs',
-    'electro swing with chopped horns',
-    'video game boss music',
-    'vaporwave shopping mall ambient',
-    'drum and bass breakbeat',
-    'carnival circus march with calliope',
-    'Nintendo platformer chip-rock',
-    'Chicago house with piano stabs',
-    'energetic ska punk instrumental',
-    'happy hardcore with rave stabs',
+    '8-bit chiptune adventure music, playful and bouncy, 130 BPM, no vocals, looping, instrumental',
+    'synthwave with arpeggio leads and gated drums, retro and driving, 130 BPM, no vocals, looping, instrumental',
+    'bouncy electro-funk with slap bass, groovy and tight, 130 BPM, no vocals, looping, instrumental',
+    'K-pop dance instrumental with pluck synths, energetic and cute, 130 BPM, no vocals, looping, instrumental',
+    'tropical house with steel drums and clap layers, summery and bright, 130 BPM, no vocals, looping, instrumental',
+    'EDM festival build with arpeggios and white-noise sweeps, big and confident, 130 BPM, no vocals, looping, instrumental',
+    'disco-funk with brass stabs and four-on-the-floor kick, joyful and groovy, 130 BPM, no vocals, looping, instrumental',
+    'electro swing with chopped horns and shuffle beat, playful and brassy, 130 BPM, no vocals, looping, instrumental',
+    'classic video game boss music, intense and chunky, 130 BPM, no vocals, looping, instrumental',
+    'vaporwave shopping mall ambient, dreamy and nostalgic, 130 BPM, no vocals, looping, instrumental',
+    'drum and bass breakbeat with rolling toms, punchy and forward, 130 BPM, no vocals, looping, instrumental',
+    'Nintendo platformer chip-rock with square waves, bright and adventurous, 130 BPM, no vocals, looping, instrumental',
+    'energetic ska punk instrumental with horn section, upbeat and snappy, 130 BPM, no vocals, looping, instrumental',
+    'Chicago house with piano stabs and four-on-the-floor, hands-up and warm, 130 BPM, no vocals, looping, instrumental',
   ],
   melodic: [
-    'dreamy lo-fi hip hop beats',
-    'ambient marimba with bell synths',
-    'Japanese city pop instrumental, breezy',
-    'indie folk with glockenspiel and acoustic guitar',
-    'chillwave sunset cruise instrumental',
-    'anime study session beat with rain ambience',
-    'minimalist piano with strings',
-    'shoegaze instrumental with reverb-soaked guitar',
-    'celestial harp ambient',
-    'post-rock guitar swells building slowly',
-    'Mediterranean acoustic instrumental with mandolin',
-    'cinematic music box lullaby tempo-doubled',
-    'soft electronica with woodwinds',
-    'wistful folktronica with field recordings',
+    'dreamy lo-fi hip hop beats with mellow piano, cozy and reflective, 130 BPM, no vocals, looping, instrumental',
+    'ambient marimba with bell synths, warm and floating, 130 BPM, no vocals, looping, instrumental',
+    'Japanese city pop instrumental, breezy and effortless, 130 BPM, no vocals, looping, instrumental',
+    'indie folk with glockenspiel and acoustic guitar, gentle and intimate, 130 BPM, no vocals, looping, instrumental',
+    'chillwave sunset cruise instrumental, warm and laid-back, 130 BPM, no vocals, looping, instrumental',
+    'anime study session beat with rain ambience and soft keys, cozy and focused, 130 BPM, no vocals, looping, instrumental',
+    'minimalist piano with strings, contemplative and pretty, 130 BPM, no vocals, looping, instrumental',
+    'shoegaze instrumental with reverb-soaked guitar, hazy and lush, 130 BPM, no vocals, looping, instrumental',
+    'celestial harp ambient with pad textures, ethereal and weightless, 130 BPM, no vocals, looping, instrumental',
+    'post-rock guitar swells building gradually, cinematic and hopeful, 130 BPM, no vocals, looping, instrumental',
+    'Mediterranean acoustic instrumental with mandolin and hand percussion, sunny and gentle, 130 BPM, no vocals, looping, instrumental',
+    'soft electronica with woodwinds and pad textures, dreamy and warm, 130 BPM, no vocals, looping, instrumental',
+    'wistful folktronica with field recordings and gentle synths, nostalgic and tender, 130 BPM, no vocals, looping, instrumental',
   ],
   smooth: [
-    'bossa nova lounge with vibraphone',
-    'neo-soul groove with Rhodes piano',
-    'trip-hop with vinyl crackle and dusty drums',
-    'cool jazz piano trio',
-    'smooth jazz with soprano sax lead',
-    'soul-jazz with Hammond organ',
-    '70s lounge muzak instrumental',
-    'French café jazz with accordion accents',
-    'elevator muzak refined edition',
-    'noir jazz piano with brushed drums',
-    'samba groove with shaker and surdo',
-    'rare groove instrumental with wah guitar',
-    'Cuban son montuno with piano tumbao',
-    'reggae one-drop with skanking guitar',
+    'bossa nova lounge with vibraphone and gentle guitar, breezy and sophisticated, 130 BPM, no vocals, looping, instrumental',
+    'neo-soul groove with Rhodes piano and warm bass, soulful and mellow, 130 BPM, no vocals, looping, instrumental',
+    'trip-hop with vinyl crackle and dusty drums, moody and cool, 130 BPM, no vocals, looping, instrumental',
+    'cool jazz piano trio with brushed drums, late-night and intimate, 130 BPM, no vocals, looping, instrumental',
+    'smooth jazz with soprano sax lead, plush and confident, 130 BPM, no vocals, looping, instrumental',
+    'soul-jazz with Hammond organ and tight rhythm section, warm and groovy, 130 BPM, no vocals, looping, instrumental',
+    '70s lounge muzak instrumental, easy-listening and bright, 130 BPM, no vocals, looping, instrumental',
+    'French café jazz with accordion accents and gypsy guitar, sunny and charming, 130 BPM, no vocals, looping, instrumental',
+    'noir jazz piano with brushed drums and walking bass, smoky and mysterious, 130 BPM, no vocals, looping, instrumental',
+    'samba groove with shaker and surdo drums, bright and celebratory, 130 BPM, no vocals, looping, instrumental',
+    'rare groove instrumental with wah guitar and tight rhythm, funky and slick, 130 BPM, no vocals, looping, instrumental',
+    'Cuban son montuno with piano tumbao and congas, danceable and warm, 130 BPM, no vocals, looping, instrumental',
+    'reggae one-drop with skanking guitar and tight bass, sunny and rolling, 130 BPM, no vocals, looping, instrumental',
   ],
 };
 
-const MUSIC_DESCRIPTORS = [
-  'playful and bouncy',
-  'warm and intimate',
-  'breezy and effortless',
-  'punchy and tight',
-  'dreamy and floating',
-  'energetic and confident',
-  'mellow but groovy',
-  'lush and cinematic',
-  'crisp and clean',
-];
-
-const MUSIC_TAIL =
-  'no vocals, 130 BPM, loops cleanly at 30 seconds, instrumental only';
-
 // ─── Generation ────────────────────────────────────────────────────────────
 
-function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-
-function pickNUnique(arr, n) {
+function pickN(arr, n) {
   const pool = [...arr];
   const out = [];
   for (let i = 0; i < n && pool.length > 0; i++) {
@@ -308,81 +444,102 @@ function pickNUnique(arr, n) {
   return out;
 }
 
-function bgPrompt() {
-  return [
-    pick(BG_SETTINGS),
-    pick(BG_MOOD),
-    pick(BG_LIGHTING),
-    pick(BG_STYLE),
-    BG_LAYOUT_CONSTRAINT,
-  ].join(', ');
-}
+function pickOne(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
-function musicPrompt(vibe) {
-  const style = pick(MUSIC_VIBES[vibe]);
-  const descriptor = pick(MUSIC_DESCRIPTORS);
-  return `${style}, ${descriptor}, ${MUSIC_TAIL}`;
+function bgPromptFromTheme(theme) {
+  return [
+    BG_HEADER,
+    '',
+    `**Composition rule (read this first):** The horizon line ${theme.horizonContext} sits at image y ≈ 415. Below that line (image y 415 to 1536) is a completely empty ${theme.floorMaterial}. Above the line (image y 0 to 415) is the densely decorated ${theme.title.toLowerCase()}.`,
+    '',
+    `**Above the horizon (image y 0 to 415):** ${theme.aboveHorizon}. Pack this region densely with no large empty zones.`,
+    '',
+    `**Below the horizon (image y 415 to 1536):** clean flat ${theme.floorMaterial}. No props, no objects. Empty.`,
+    '',
+    `**FAILURE MODE — do NOT do this:** do not put any ${theme.failureProps}, or any other objects below image y 415 (the game draws the cats on top of the floor — the bg must NOT include cat seating). Do not leave the upper region sparse. Do not put the horizon line significantly lower than y 415.`,
+    '',
+    `No cats, no characters, no people${theme.negativeExtras ? ', ' + theme.negativeExtras : ''}, no animals anywhere in the scene. Chunky pixel art, not smooth illustration.`,
+  ].join('\n');
 }
 
 function renderBackgrounds() {
   const list = document.getElementById('bg-list');
   list.innerHTML = '';
-  const settings = pickNUnique(BG_SETTINGS, BG_PROMPTS_PER_BATCH);
-  for (const setting of settings) {
-    const prompt = [
-      setting,
-      pick(BG_MOOD),
-      pick(BG_LIGHTING),
-      pick(BG_STYLE),
-      BG_LAYOUT_CONSTRAINT,
-    ].join(', ');
-    list.appendChild(buildPromptRow(prompt, null));
+  const themes = pickN(BG_THEMES, BG_PROMPTS_PER_BATCH);
+  for (const theme of themes) {
+    list.appendChild(buildBgCard(theme));
   }
+}
+
+function buildBgCard(theme) {
+  const card = document.createElement('div');
+  card.className = 'bg-card';
+
+  const title = document.createElement('h3');
+  title.className = 'title';
+  title.textContent = theme.title;
+  card.appendChild(title);
+
+  const fullPrompt = bgPromptFromTheme(theme);
+
+  const body = document.createElement('div');
+  body.className = 'body';
+  // Render **bold** segments as <b> while preserving newlines via white-space.
+  body.innerHTML = fullPrompt
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+  card.appendChild(body);
+
+  const hint = document.createElement('span');
+  hint.className = 'copy-hint';
+  hint.textContent = 'tap to copy';
+  card.appendChild(hint);
+
+  card.addEventListener('click', () => copy(fullPrompt, card, 'background prompt copied'));
+  return card;
 }
 
 function renderMusic() {
   const list = document.getElementById('music-list');
   list.innerHTML = '';
-  // Distribute 6 picks across the 3 vibes evenly: 2 upbeat / 2 melodic / 2 smooth.
-  // Tim said the picker should help fill gaps — even split avoids upbeat-heavy bias.
+  // Even 2/2/2 split across vibes so the generator helps fill all three
+  // calibrator buckets equally — never skews upbeat-heavy.
   const split = ['upbeat', 'upbeat', 'melodic', 'melodic', 'smooth', 'smooth'];
-  // Shuffle so they don't always render in the same order.
   for (let i = split.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [split[i], split[j]] = [split[j], split[i]];
   }
   for (const vibe of split.slice(0, MUSIC_PROMPTS_PER_BATCH)) {
-    list.appendChild(buildPromptRow(musicPrompt(vibe), vibe));
+    const text = pickOne(MUSIC_VIBES[vibe]);
+    list.appendChild(buildMusicRow(text, vibe));
   }
 }
 
-function buildPromptRow(text, badge) {
+function buildMusicRow(text, vibe) {
   const row = document.createElement('div');
-  row.className = 'prompt';
+  row.className = 'music-prompt';
   const t = document.createElement('div');
   t.className = 'text';
   t.textContent = text;
   row.appendChild(t);
-  if (badge) {
-    const b = document.createElement('span');
-    b.className = 'meta ' + badge;
-    b.textContent = badge;
-    row.appendChild(b);
-  }
+  const b = document.createElement('span');
+  b.className = 'meta ' + vibe;
+  b.textContent = vibe;
+  row.appendChild(b);
   const hint = document.createElement('span');
   hint.className = 'copy-hint';
   hint.textContent = 'tap to copy';
   row.appendChild(hint);
-  row.addEventListener('click', () => copy(text, row));
+  row.addEventListener('click', () => copy(text, row, 'music prompt copied'));
   return row;
 }
 
-async function copy(text, row) {
+async function copy(text, el, label) {
   try {
     await navigator.clipboard.writeText(text);
-    row.classList.add('copied');
-    toast('copied');
-    setTimeout(() => row.classList.remove('copied'), 1200);
+    el.classList.add('copied');
+    toast(label || 'copied');
+    setTimeout(() => el.classList.remove('copied'), 1500);
   } catch (e) {
     toast('copy failed: ' + e.message);
   }
@@ -393,7 +550,7 @@ function toast(msg) {
   el.textContent = msg;
   el.classList.add('show');
   clearTimeout(toast._t);
-  toast._t = setTimeout(() => el.classList.remove('show'), 1400);
+  toast._t = setTimeout(() => el.classList.remove('show'), 1500);
 }
 
 document.getElementById('regen-bg').addEventListener('click', renderBackgrounds);
