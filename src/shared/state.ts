@@ -328,10 +328,11 @@ export function createFreshPlayerState(username: string = ''): PlayerState {
     username,
     coins: STARTER_COINS,
     ownedCats: starterCats,
-    // Auto-grant one instance of each EFFECT cosmetic so the player can test
-    // them in the DressingRoom EFFECT tab without going through the
-    // cosmetic-box RNG. Atlas-backed cosmetics still come from box pulls.
-    ownedCosmetics: EFFECT_COSMETIC_CATALOG.map((e) => ({
+    // DEV: grant one instance of every cosmetic in the catalog (atlas-backed
+    // + effects) so the DressingRoom shows the full set without box-pull
+    // RNG. Revert to box-pull-only (`[]`) before shipping alongside
+    // DEV_RESET_ON_LOAD = false.
+    ownedCosmetics: COSMETIC_CATALOG.map((e) => ({
       id: makeInstanceId(),
       type: e.id,
     })),

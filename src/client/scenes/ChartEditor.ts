@@ -45,16 +45,20 @@ export class ChartEditor extends Scene {
   private cellPanels: GameObjects.Rectangle[][] = []; // [localStep][lane]
   private cellNotes: GameObjects.Container[][] = [];  // [localStep][lane]
 
-  // Page nav
+  // Page nav (sits right above the bottom controls strip)
   private scrollOffset = 0;
   private upPageBtn!: GameObjects.Text;
   private downPageBtn!: GameObjects.Text;
   private pageLabel!: GameObjects.Text;
+  private addPageBtn!: GameObjects.Rectangle;
+  private addPageBtnText!: GameObjects.Text;
 
   // Bottom controls
   private bpmBtnText!: GameObjects.Text;
   private bpmIndex = 2; // default 120bpm
-  private playBusy = false;
+  private saveBusy = false;
+  private saveBtnBg!: GameObjects.Rectangle;
+  private saveBtnText!: GameObjects.Text;
 
   constructor() {
     super(SceneKeys.ChartEditor);
@@ -75,9 +79,12 @@ export class ChartEditor extends Scene {
     this.cellPanels = [];
     this.cellNotes = [];
     this.scrollOffset = 0;
-    this.playBusy = false;
+    this.saveBusy = false;
     this.colCenterXs = [];
   }
+
+  /** Max chart length, in pages. Lift if 32+ pages becomes a real need. */
+  private static readonly MAX_PAGES = 16;
 
   create(): void {
     this.root = this.add.container(0, 0).setDepth(0);
@@ -101,11 +108,10 @@ export class ChartEditor extends Scene {
 
   private computeGrid(): void {
     const { width, height } = this.scale;
-    // Reserve HUD strip up top, a compact page-nav row, and the bottom
-    // controls strip. Everything else is the grid — no cats row eating
-    // space.
-    const topReserved = TopHud.HEIGHT + 36; // HUD + page nav
-    const bottomReserved = 88;              // controls strip + breathing room
+    // HUD up top; bottom carved into page-nav row + controls strip + a
+    // bit of breathing room. Grid takes everything else.
+    const topReserved = TopHud.HEIGHT + 8;
+    const bottomReserved = PAGE_NAV_ROW_H + BOTTOM_STRIP_H + 8;
     this.gridTop = topReserved;
     this.gridBottom = height - bottomReserved;
     this.cellH = (this.gridBottom - this.gridTop) / CHART_PAGE_SIZE;
@@ -159,12 +165,16 @@ export class ChartEditor extends Scene {
   }
 
   private buildPageNav(): void {
-    const navY = TopHud.HEIGHT + 18;
-    const w = this.scale.width;
-    const cx = w / 2;
+    const { width, height } = this.scale;
+    // Page-nav row sits directly above the bottom controls strip.
+    const navY = height - BOTTOM_STRIP_H - PAGE_NAV_ROW_H / 2;
 
+    // ▲ on the left, PAGE label + ▼ clustered to the right of it. Leaves
+    // the right edge for the + ADD PAGE button so navigate-vs-modify
+    // stay visually separated.
+    const leftCluster = 12;
     this.upPageBtn = this.add
-      .text(cx - 64, navY, '▲', {
+      .text(leftCluster + 14, navY, '▲', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
         fontSize: '20px',
@@ -175,7 +185,7 @@ export class ChartEditor extends Scene {
     this.upPageBtn.on('pointerdown', () => this.onPrevPage());
 
     this.pageLabel = this.add
-      .text(cx, navY, '', {
+      .text(leftCluster + 80, navY, '', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
         fontSize: '12px',
@@ -184,7 +194,7 @@ export class ChartEditor extends Scene {
       .setOrigin(0.5);
 
     this.downPageBtn = this.add
-      .text(cx + 64, navY, '▼', {
+      .text(leftCluster + 144, navY, '▼', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
         fontSize: '20px',
@@ -194,7 +204,32 @@ export class ChartEditor extends Scene {
       .setInteractive({ useHandCursor: true });
     this.downPageBtn.on('pointerdown', () => this.onNextPage());
 
-    this.root.add([this.upPageBtn, this.pageLabel, this.downPageBtn]);
+    // + ADD PAGE — grows the chart by another 8-step page (capped at
+    // MAX_PAGES so the timeline doesn't blow up to thousands of steps).
+    const addW = 96;
+    const addH = 28;
+    const addX = width - 12 - addW / 2;
+    this.addPageBtn = this.add
+      .rectangle(addX, navY, addW, addH, 0x2c1856, 1)
+      .setStrokeStyle(1, 0x4dffb4, 0.7)
+      .setInteractive({ useHandCursor: true });
+    this.addPageBtnText = this.add
+      .text(addX, navY, '+ ADD PAGE', {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontStyle: 'bold',
+        fontSize: '11px',
+        color: '#4dffb4',
+      })
+      .setOrigin(0.5);
+    this.addPageBtn.on('pointerdown', () => this.onAddPage());
+
+    this.root.add([
+      this.upPageBtn,
+      this.pageLabel,
+      this.downPageBtn,
+      this.addPageBtn,
+      this.addPageBtnText,
+    ]);
     this.refreshPageLabel();
   }
 
@@ -236,18 +271,18 @@ export class ChartEditor extends Scene {
 
   private buildBottomBar(): void {
     const { width, height } = this.scale;
-    const stripH = 72;
-    const stripY = height - stripH;
+    const stripY = height - BOTTOM_STRIP_H;
     const strip = this.add
-      .rectangle(0, stripY, width, stripH, 0x0b041a, 0.78)
+      .rectangle(0, stripY, width, BOTTOM_STRIP_H, 0x0b041a, 0.78)
       .setOrigin(0, 0);
     this.root.add(strip);
 
-    const barCenterY = stripY + stripH / 2;
+    const barCenterY = stripY + BOTTOM_STRIP_H / 2;
     const btnH = 40;
 
-    // Three buttons across the bottom: CLEAR / BPM / PLAY. PLAY is the
-    // primary action — saves the chart and routes to Game in test mode.
+    // Three buttons across the bottom: CLEAR / BPM / SAVE. SAVE is the
+    // primary action — persists the chart in place. Play happens from
+    // the hamburger drawer.
     const sideMargin = 12;
     const gap = 8;
     const btnW = (width - sideMargin * 2 - gap * 2) / 3;
@@ -286,21 +321,22 @@ export class ChartEditor extends Scene {
     bpmBg.on('pointerdown', () => this.onBpmTap());
     this.root.add([bpmBg, this.bpmBtnText]);
 
-    // PLAY — the primary action. Big, yellow, leads into Game test mode.
-    const playX = bpmX + btnW + gap;
-    const playBg = this.add
-      .rectangle(playX, barCenterY, btnW, btnH, 0xffd34d, 1)
+    // SAVE — primary action. Big yellow button. Flashes green on success
+    // so the player gets unambiguous confirmation without a modal.
+    const saveX = bpmX + btnW + gap;
+    this.saveBtnBg = this.add
+      .rectangle(saveX, barCenterY, btnW, btnH, 0xffd34d, 1)
       .setInteractive({ useHandCursor: true });
-    const playText = this.add
-      .text(playX, barCenterY, '▶ PLAY', {
+    this.saveBtnText = this.add
+      .text(saveX, barCenterY, 'SAVE', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
         fontSize: '14px',
         color: '#1a0a2e',
       })
       .setOrigin(0.5);
-    playBg.on('pointerdown', () => void this.onPlayTap());
-    this.root.add([playBg, playText]);
+    this.saveBtnBg.on('pointerdown', () => void this.onSaveTap());
+    this.root.add([this.saveBtnBg, this.saveBtnText]);
   }
 
   // ─── Interactions ───────────────────────────────────────────────────────
@@ -346,6 +382,21 @@ export class ChartEditor extends Scene {
     this.pageLabel.setText(`PAGE ${page} / ${totalPages}`);
     this.upPageBtn.setAlpha(page === 1 ? 0.3 : 1);
     this.downPageBtn.setAlpha(page === totalPages ? 0.3 : 1);
+    const atMax = totalPages >= ChartEditor.MAX_PAGES;
+    this.addPageBtn.setAlpha(atMax ? 0.3 : 1);
+    this.addPageBtnText.setAlpha(atMax ? 0.4 : 1);
+  }
+
+  private onAddPage(): void {
+    const totalPages = Math.ceil(this.chart.stepCount / CHART_PAGE_SIZE);
+    if (totalPages >= ChartEditor.MAX_PAGES) return;
+    for (let i = 0; i < CHART_PAGE_SIZE; i++) {
+      this.chart.steps.push({ lanes: [] });
+    }
+    this.chart.stepCount += CHART_PAGE_SIZE;
+    // Jump the player to the new page so they can start authoring it.
+    this.scrollOffset = this.chart.stepCount - CHART_PAGE_SIZE;
+    this.refreshPage();
   }
 
   private onPrevPage(): void {
@@ -373,29 +424,42 @@ export class ChartEditor extends Scene {
     this.bpmBtnText.setText(`BPM ${bpm}`);
   }
 
-  private async onPlayTap(): Promise<void> {
-    if (this.playBusy) return;
+  private async onSaveTap(): Promise<void> {
+    if (this.saveBusy) return;
     const result = validateChart(this.chart);
     if (!result.ok) {
       console.warn('[ChartEditor] validateChart failed:', result.reason);
+      this.flashSaveButton(0xff6b6b, 'INVALID');
       return;
     }
-    this.playBusy = true;
+    this.saveBusy = true;
     this.chart.updatedAt = Date.now();
     try {
       await saveChart(this.chart);
+      // Mutate the live playerState so the next time the player hits PLAY
+      // from the hamburger drawer, Game.initChartPlayer sees the chart they
+      // just authored (initChartPlayer reads playerState.chart first).
+      if (this.playerState) {
+        this.playerState.chart = this.chart;
+      }
+      this.flashSaveButton(0x4dffb4, 'SAVED');
     } catch (err) {
-      console.warn('[ChartEditor] saveChart failed, routing anyway:', err);
+      console.warn('[ChartEditor] saveChart failed:', err);
+      this.flashSaveButton(0xff6b6b, 'FAILED');
+    } finally {
+      this.saveBusy = false;
     }
-    // Game.initChartPlayer reads playerState.chart first — mutate so the
-    // round actually picks up the freshly-edited beat instead of whatever
-    // chart was on the state object when this scene started.
-    if (this.playerState) {
-      this.playerState.chart = this.chart;
-    }
-    this.scene.start(SceneKeys.Game, {
-      playerState: this.playerState,
-      testMode: true,
+  }
+
+  /** Briefly recolor + relabel the SAVE button so the player sees the
+   *  write took effect, then snap it back to yellow / SAVE. */
+  private flashSaveButton(color: number, label: string): void {
+    this.saveBtnBg.setFillStyle(color, 1);
+    this.saveBtnText.setText(label);
+    this.time.delayedCall(900, () => {
+      if (!this.scene.isActive()) return;
+      this.saveBtnBg.setFillStyle(0xffd34d, 1);
+      this.saveBtnText.setText('SAVE');
     });
   }
 
@@ -412,3 +476,9 @@ export class ChartEditor extends Scene {
     this.root.destroy(true);
   }
 }
+
+// Layout constants — referenced from computeGrid + buildPageNav +
+// buildBottomBar so the page-nav row and bottom strip stack cleanly.
+const PAGE_NAV_ROW_H = 36;
+const BOTTOM_STRIP_H = 72;
+

@@ -4,12 +4,6 @@ import { Cat } from '@/entities/cat';
 import { Note } from '@/entities/note';
 import { BackgroundManager } from '@/entities/background-manager';
 import { ChartPlayer } from '@/systems/chart-player';
-import {
-  DIFFICULTY_LEVELS,
-  DIFFICULTY_PRESETS,
-  makeChartForDifficulty,
-  type DifficultyLevel,
-} from '@/systems/difficulty-charts';
 import { ScoreSystem } from '@/systems/score-system';
 import { SongPlayer } from '@/systems/song-player';
 import { TopHud } from '@/ui/top-hud';
@@ -17,7 +11,7 @@ import * as L from '@/constants/scene-layout';
 import { AssetKeys } from '@/constants/assets';
 import { Balance } from '@/constants/balance';
 import { fetchState, loadChart } from '@/services/state-client';
-import { CAT_CATALOG } from '@/../shared/state';
+import { CAT_CATALOG, emptyChart } from '@/../shared/state';
 import type { PlayerState, LaneId, Chart, SeatId } from '@/../shared/state';
 import type { CatModel } from '@/types/game';
 
@@ -64,11 +58,6 @@ export class Game extends Scene {
    *  isn't fighting the modal for user attention. */
   private pendingStart = true;
   private readyModal: Phaser.GameObjects.Container | null = null;
-  /** Difficulty selected on the Ready modal. The modal's PLAY button
-   *  swaps the chart out for `makeChartForDifficulty(selectedDifficulty)`
-   *  so playtesting the curve is one click away. Defaults to level 2 —
-   *  Tim's calibration point for "the current generated chart feel". */
-  private selectedDifficulty: DifficultyLevel = 2;
 
   // -----------------------------------------------------------------------
   // Live hit / miss feedback (one floating "PERFECT" / "GREAT" / "MISS"
@@ -105,7 +94,6 @@ export class Game extends Scene {
     this.songStarted = false;
     this.pendingStart = true;
     this.readyModal = null;
-    this.selectedDifficulty = 2;
   }
 
   async create(): Promise<void> {
@@ -159,7 +147,13 @@ export class Game extends Scene {
     if (this.pendingStart || this.roundOver) return;
     this.player.advance(delta);
     this.checkMisses();
-    if (this.player.isFinished()) this.endRound();
+    // Wall-clock is the sole end signal. `initChartPlayer` already loops
+    // the chart enough times to comfortably fill the cap — `isFinished()`
+    // is intentionally NOT checked so a short chart that runs out of
+    // loops early would never end the round before the 30s cap.
+    if (this.time.now - this.startTimeMs >= Balance.maxRoundMs) {
+      this.endRound();
+    }
   }
 
   // -----------------------------------------------------------------------
@@ -295,13 +289,15 @@ export class Game extends Scene {
 
   /**
    * Pre-round modal — gates chart advance + tap input until the player
-   * picks a difficulty and taps PLAY. The PLAY click serves three
-   * purposes: (1) it's the user gesture Tone.js needs to unlock the
-   * WebAudio context, (2) the preload window before this click is when
-   * the lofi mp3 actually downloads (so music kicks in immediately
-   * instead of after a 3 s blocking fetch), and (3) it tells us which
-   * difficulty chart to actually play, so we can swap out whatever
-   * chart initChartPlayer loaded with a curated preset.
+   * taps PLAY. The PLAY click is also the user gesture Tone.js needs to
+   * unlock the WebAudio context, AND the preload window before the
+   * click is when the lofi mp3 actually downloads, so music kicks in
+   * immediately instead of after a 3 s blocking fetch.
+   *
+   * Plays the player's authored chart as-is — no difficulty preset
+   * picker, no random-chart fallback (those were calibration scaffolding
+   * before the editor existed). BACK TO EDITOR routes to the chart
+   * editor for quick iteration.
    */
   private showReadyModal(): void {
     if (!this.scene.isActive()) return;
@@ -309,26 +305,22 @@ export class Game extends Scene {
     const cx = width / 2;
     const cy = height / 2;
 
-    // Depth 1000 keeps the modal above HUD (100) / drawer (201) /
-    // summary (300) and anything else that might land on this scene.
     const container = this.add.container(0, 0).setDepth(1000);
 
-    // Full-screen click eater so taps outside the PLAY button don't
-    // fall through to (disabled) tap zones underneath.
     const backdrop = this.add
       .rectangle(cx, cy, width, height, 0x000000, 0.75)
       .setInteractive();
     container.add(backdrop);
 
     const panelW = Math.min(280, width - 32);
-    const panelH = 280;
+    const panelH = 220;
     const panel = this.add.rectangle(cx, cy, panelW, panelH, 0x1a0a2e, 1);
     panel.setStrokeStyle(2, 0xc678ff, 0.8);
     container.add(panel);
 
     const fontBase = { fontFamily: 'Pixeloid Sans, sans-serif' };
 
-    const title = this.add.text(cx, cy - 116, 'READY?', {
+    const title = this.add.text(cx, cy - 78, 'READY?', {
       ...fontBase,
       fontStyle: 'bold',
       fontSize: '22px',
@@ -336,7 +328,7 @@ export class Game extends Scene {
     }).setOrigin(0.5);
     container.add(title);
 
-    const subtitle = this.add.text(cx, cy - 78, 'Tap the falling balls\non the beat', {
+    const subtitle = this.add.text(cx, cy - 42, 'Play your beat', {
       ...fontBase,
       fontSize: '11px',
       color: '#c0a0e6',
@@ -344,65 +336,11 @@ export class Game extends Scene {
     }).setOrigin(0.5);
     container.add(subtitle);
 
-    const diffLabel = this.add.text(cx, cy - 34, 'DIFFICULTY', {
-      ...fontBase,
-      fontSize: '10px',
-      color: '#c0a0e6',
-    }).setOrigin(0.5);
-    container.add(diffLabel);
-
-    // Row of 5 number buttons. Selected = filled yellow, unselected =
-    // outlined. updateSelection() repaints whenever the choice changes.
-    const btnSize = 30;
-    const gap = 8;
-    const rowW = btnSize * 5 + gap * 4;
-    const rowStartX = cx - rowW / 2 + btnSize / 2;
-    const diffY = cy - 8;
-    const diffButtons: Phaser.GameObjects.Rectangle[] = [];
-    const diffTexts: Phaser.GameObjects.Text[] = [];
-
-    const presetNameText = this.add.text(cx, cy + 28, '', {
-      ...fontBase,
-      fontStyle: 'bold',
-      fontSize: '14px',
-      color: '#ffd34d',
-    }).setOrigin(0.5);
-    container.add(presetNameText);
-
-    const updateSelection = (level: DifficultyLevel): void => {
-      this.selectedDifficulty = level;
-      for (let i = 0; i < DIFFICULTY_LEVELS.length; i++) {
-        const lvl = DIFFICULTY_LEVELS[i]!;
-        const isSel = lvl === level;
-        diffButtons[i]!.setFillStyle(isSel ? 0xffd34d : 0x2c1856, 1);
-        diffButtons[i]!.setStrokeStyle(1, 0xffd34d, isSel ? 1 : 0.6);
-        diffTexts[i]!.setColor(isSel ? '#1a0a2e' : '#ffd34d');
-      }
-      presetNameText.setText(DIFFICULTY_PRESETS[level].label);
-    };
-
-    for (let i = 0; i < DIFFICULTY_LEVELS.length; i++) {
-      const lvl = DIFFICULTY_LEVELS[i]!;
-      const x = rowStartX + i * (btnSize + gap);
-      const btn = this.add.rectangle(x, diffY, btnSize, btnSize, 0x2c1856, 1);
-      btn.setStrokeStyle(1, 0xffd34d, 0.6);
-      const txt = this.add.text(x, diffY, String(lvl), {
-        ...fontBase,
-        fontStyle: 'bold',
-        fontSize: '14px',
-        color: '#ffd34d',
-      }).setOrigin(0.5);
-      container.add([btn, txt]);
-      diffButtons.push(btn);
-      diffTexts.push(txt);
-    }
-    updateSelection(this.selectedDifficulty);
-
-    const playY = cy + 88;
-    const playW = 140;
+    const playY = cy + 6;
+    const playW = 180;
     const playH = 44;
     const playBg = this.add.rectangle(cx, playY, playW, playH, 0xffd34d, 1);
-    const playText = this.add.text(cx, playY, 'PLAY', {
+    const playText = this.add.text(cx, playY, '▶ PLAY', {
       ...fontBase,
       fontStyle: 'bold',
       fontSize: '18px',
@@ -410,28 +348,24 @@ export class Game extends Scene {
     }).setOrigin(0.5);
     container.add([playBg, playText]);
 
+    const backY = cy + 68;
+    const backText = this.add.text(cx, backY, '← BACK TO EDITOR', {
+      ...fontBase,
+      fontSize: '12px',
+      color: '#c0a0e6',
+    }).setOrigin(0.5);
+    container.add(backText);
+
     // Defer making the buttons interactive for 200ms — Phaser fires
     // pointerup on whatever object sits under the finger at release,
     // and the hamburger-row tap that opened this scene often ends with
     // the finger somewhere on the playfield. Without the delay, that
     // residual pointerup destroys the modal instantly.
     this.time.delayedCall(200, () => {
-      for (let i = 0; i < DIFFICULTY_LEVELS.length; i++) {
-        const lvl = DIFFICULTY_LEVELS[i]!;
-        const btn = diffButtons[i]!;
-        btn.setInteractive({ useHandCursor: true });
-        btn.on('pointerup', () => updateSelection(lvl));
-      }
-
       playBg.setInteractive({ useHandCursor: true });
       playBg.on('pointerover', () => playBg.setFillStyle(0xffe680, 1));
       playBg.on('pointerout', () => playBg.setFillStyle(0xffd34d, 1));
       playBg.on('pointerup', () => {
-        // Swap whatever chart initChartPlayer loaded for the selected
-        // difficulty preset — that's the whole point of this modal for
-        // now (curated difficulty curve playtesting before chart-editor
-        // work resumes).
-        this.applySelectedDifficulty();
         void this.ensureSongStarted();
         this.readyModal?.destroy(true);
         this.readyModal = null;
@@ -439,24 +373,16 @@ export class Game extends Scene {
         this.startTimeMs = this.time.now;
         this.pendingStart = false;
       });
+
+      backText.setInteractive({ useHandCursor: true });
+      backText.on('pointerover', () => backText.setColor('#ffffff'));
+      backText.on('pointerout', () => backText.setColor('#c0a0e6'));
+      backText.on('pointerup', () => {
+        this.scene.start(SceneKeys.ChartEditor, { playerState: this.playerState });
+      });
     });
 
     this.readyModal = container;
-  }
-
-  /**
-   * Replace the ChartPlayer (built by initChartPlayer with whatever
-   * chart was available) with one running the difficulty preset the
-   * player picked on the Ready modal. SongPlayer is left alone — Game
-   * runs autoSchedule=false so its chart field doesn't drive playback.
-   */
-  private applySelectedDifficulty(): void {
-    const chart = makeChartForDifficulty(this.selectedDifficulty);
-    this.player = new ChartPlayer(chart, {
-      loopCount: Balance.loopCount,
-      noteFallMs: Balance.noteFallMs,
-    });
-    this.player.onSpawn((lane, hitAt) => this.spawnNote(lane, hitAt));
   }
 
   private buildSummaryOverlay(): void {
@@ -896,14 +822,21 @@ export class Game extends Scene {
       }
     }
 
-    // If we got a chart but it's empty (player hasn't authored one yet),
-    // generate a random pattern so they can play immediately. Authored
-    // charts (with any non-empty step) bypass this and play as-is.
-    const isEmptyChart = !chart || chart.steps.every((s) => s.lanes.length === 0);
-    const playChart: Chart = isEmptyChart ? makeRandomChart() : chart!;
+    // Play whatever the player saved — including an empty chart. The
+    // random-chart fallback was scaffolding from before the editor
+    // existed and made "I authored a beat, why am I hearing something
+    // else?" too easy to hit. If the user has zero notes they'll see a
+    // silent round, which is the truth.
+    const playChart: Chart = chart ?? emptyChart(this.playerState?.username ?? 'anon', 'Untitled');
+
+    // Loop the chart enough times to fill the round-duration cap. +1
+    // buffer so chart-finished doesn't beat the wall-clock check by a
+    // frame and stop note spawning early.
+    const onePassMs = (60000 / (playChart.bpm * 2)) * playChart.stepCount;
+    const loopCount = Math.max(1, Math.ceil(Balance.maxRoundMs / onePassMs) + 1);
 
     this.player = new ChartPlayer(playChart, {
-      loopCount: Balance.loopCount,
+      loopCount,
       noteFallMs: Balance.noteFallMs,
     });
 
@@ -1173,61 +1106,3 @@ export class Game extends Scene {
   }
 }
 
-/**
- * Generate a random 8-step chart for players who haven't authored one yet.
- * Faithful to the Phase 1 RhythmSystem feel — 80% of steps fire a note,
- * lanes chosen randomly. Replays deterministically once loaded into
- * ChartPlayer (the player just sees one fresh pattern per round).
- */
-function makeRandomChart(): Chart {
-  const generate = (): { lanes: LaneId[] }[] => {
-    const out: { lanes: LaneId[] }[] = [];
-    for (let i = 0; i < 8; i++) {
-      const lanes: LaneId[] = [];
-      // 60% spawn rate (was 80%) — gives breathing room while learning.
-      if (Math.random() < 0.6) {
-        lanes.push(Math.floor(Math.random() * 3) as LaneId);
-        // 10% double-tap (was 18%) — two-lane reach is hard to land
-        // first-time, save it for authored charts.
-        if (Math.random() < 0.1) {
-          const second = Math.floor(Math.random() * 3) as LaneId;
-          if (!lanes.includes(second)) lanes.push(second);
-        }
-      }
-      out.push({ lanes });
-    }
-    return out;
-  };
-  const allThreeLanes = (s: { lanes: LaneId[] }[]): boolean => {
-    const seen = new Set<LaneId>();
-    for (const step of s) for (const lane of step.lanes) seen.add(lane);
-    return seen.size === 3;
-  };
-  // Naive random + 60% empty-step probability means ~17% of generations
-  // never roll one of the three lanes, and the player sees that lane
-  // sit silent for the whole 3.5-minute round (the chart loops with the
-  // same pattern). Re-roll up to 16 times until all three lanes appear,
-  // then force-inject any missing lane into a random step as a safety net.
-  let steps = generate();
-  for (let i = 0; i < 16 && !allThreeLanes(steps); i++) steps = generate();
-  if (!allThreeLanes(steps)) {
-    const seen = new Set<LaneId>();
-    for (const step of steps) for (const lane of step.lanes) seen.add(lane);
-    for (const lane of [0, 1, 2] as LaneId[]) {
-      if (seen.has(lane)) continue;
-      const idx = Math.floor(Math.random() * steps.length);
-      const step = steps[idx]!;
-      if (!step.lanes.includes(lane)) step.lanes.push(lane);
-    }
-  }
-  return {
-    authorId: 'random',
-    title: 'random',
-    stepCount: 8,
-    // 90bpm (was 120) — feels like a slow groove instead of a sprint.
-    // Pairs with noteFallMs 2400 so peak density is ~6 notes on screen.
-    bpm: 90,
-    steps,
-    updatedAt: Date.now(),
-  };
-}

@@ -76,12 +76,12 @@ export const Balance = {
   // to the hit line. Pairs with the slower 90bpm random chart so density
   // stays around 6 notes on screen at peak instead of 9–10.
   noteFallMs: 2400,
-  // 80 loops × 8 steps × ~333ms/step (90bpm) ≈ 213s of play (~3.5 min).
-  // Was 32; at 32 the round naturally ended at ~85s and players who
-  // wanted to keep going saw the summary appear (looking like "notes
-  // stopped"). Long round + the always-available Skip button means the
-  // player ends when they want, not when the chart runs out.
-  loopCount: 80,
+  // Hard cap on round wall-clock time. The chart loops enough times to
+  // fill this budget; the round ends the moment the cap hits even if the
+  // chart is mid-loop. Loop count is derived per-round from the chart's
+  // BPM + step count so authored beats of any length play through the
+  // same fixed-duration round.
+  maxRoundMs: 30_000,
   pointsPerfect: 100,
   pointsGreat: 50,
   catReactionMs: 500,
