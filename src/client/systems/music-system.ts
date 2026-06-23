@@ -27,7 +27,11 @@ import {
  * accents. Tune in playtest.
  */
 const BACKING_VOLUME = 0.85;
-const MEOW_VOLUME = 0.55;
+// Meows turned way down from the initial 0.55 — Tim flagged them as
+// obnoxious at first playtest. Single legacy meow at full velocity over
+// a busy backing reads as clipping; richer stems + a softer per-tap
+// volume should let them sit as percussion instead of a foreground voice.
+const MEOW_VOLUME = 0.3;
 
 export class MusicSystem {
   private backing: Sound.BaseSound | null = null;
@@ -101,15 +105,20 @@ export class MusicSystem {
     this.lastMeowKey = null;
   }
 
-  /** Pick the backing this chart should play. Stable per chart so the
-   *  same author always hears the same song. */
+  /** Pick the backing this chart should play. Stable per saved version
+   *  of the chart — the hash includes `updatedAt`, so saving the chart
+   *  again may roll a different backing. That gives creators a "save to
+   *  shuffle" affordance during authoring while still keeping the same
+   *  saved chart sounding identical to every visitor on every play. */
   private pickBacking(): BackingTrack | null {
     const candidates = Object.values(BACKING_CATALOG).filter(
       (b) => b.bpm === this.chart.bpm,
     );
     if (candidates.length === 0) return null;
     if (candidates.length === 1) return candidates[0]!;
-    const hash = hashString(this.chart.authorId + ':' + this.chart.bpm);
+    const hash = hashString(
+      `${this.chart.authorId}:${this.chart.bpm}:${this.chart.updatedAt}`,
+    );
     return candidates[hash % candidates.length]!;
   }
 
