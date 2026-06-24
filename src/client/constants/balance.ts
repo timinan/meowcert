@@ -80,6 +80,11 @@ export const Balance = {
   maxRoundMs: 60_000,
   pointsPerfect: 100,
   pointsGreat: 50,
+  /** Hold notes: per-step bonus awarded for the duration held within
+   *  window after a successful head tap. Tim's forgiving rule: early
+   *  release pays out partial credit prorated by fraction held, no
+   *  combo break. Full hold pays full (steps × pointsPerHoldStep). */
+  pointsPerHoldStep: 50,
   catReactionMs: 500,
   // Rehearsal pass gate. Author must hit at least this accuracy on their
   // own chart (in editor → REHEARSE / testMode) before they're allowed to

@@ -208,6 +208,7 @@ export class Game extends Scene {
   override update(_time: number, delta: number): void {
     if (this.pendingStart || this.roundOver) return;
     this.player.advance(delta);
+    this.tickHolds();
     this.checkMisses();
     this.tickPageTracking();
     // Wall-clock is the sole end signal. `initChartPlayer` already loops
@@ -883,6 +884,10 @@ export class Game extends Scene {
       const zone = this.add.rectangle(cx, midY, colW, laneH, 0x000000, 0);
       zone.setInteractive();
       zone.on('pointerdown', () => this.registerTap(laneId));
+      // Hold notes track pointerup (and pointerout as a slide-off proxy)
+      // so the player's finger leaving the lane ends the hold cleanly.
+      zone.on('pointerup', () => this.releaseHoldIfAny(laneId));
+      zone.on('pointerout', () => this.releaseHoldIfAny(laneId));
       this.tapZones.push(zone);
     }
 
@@ -890,6 +895,9 @@ export class Game extends Scene {
     this.input.keyboard?.on('keydown-ONE', () => this.registerTap(0));
     this.input.keyboard?.on('keydown-TWO', () => this.registerTap(1));
     this.input.keyboard?.on('keydown-THREE', () => this.registerTap(2));
+    this.input.keyboard?.on('keyup-ONE', () => this.releaseHoldIfAny(0));
+    this.input.keyboard?.on('keyup-TWO', () => this.releaseHoldIfAny(1));
+    this.input.keyboard?.on('keyup-THREE', () => this.releaseHoldIfAny(2));
   }
 
   // -----------------------------------------------------------------------
@@ -1113,6 +1121,7 @@ export class Game extends Scene {
     });
 
     this.player.onSpawn((lane, hitAt) => this.spawnNote(lane, hitAt));
+    this.player.onHoldSpawn((lane, hitAt, releaseAt) => this.spawnHoldNote(lane, hitAt, releaseAt));
 
     // Cache chart-derived timing so update() can drive the page-boundary
     // lines without going through ChartPlayer internals. Test mode only —
@@ -1269,6 +1278,31 @@ export class Game extends Scene {
     note.configure(laneId, x, startY, endY, totalFallMs, hitAtMs, this.laneTints[laneId]);
   }
 
+  /** Spawn a hold note — head ball + tail rectangle extending upward.
+   *  Tail height is derived from fall speed so the tail's TOP reaches
+   *  the target exactly at `releaseAtMs` (the trailing edge's crossing
+   *  time). */
+  private spawnHoldNote(laneId: LaneId, hitAtMs: number, releaseAtMs: number): void {
+    const note = this.acquireNote();
+    const x = L.laneCenterX(laneId, this.scale.width);
+    const scaleY = this.scale.height / L.DESIGN_H;
+    const startY = L.LANE_TOP_Y * scaleY;
+    const hitY = L.HIT_LINE_Y * scaleY;
+    const endY = this.scale.height + 80;
+    const totalFallMs = ((endY - startY) / (hitY - startY)) * Balance.noteFallMs;
+    // Pixels per ms while falling — used to size the tail so its length
+    // in screen space equals the time-distance between hit and release.
+    const fallSpeedPxPerMs = (endY - startY) / totalFallMs;
+    const tailHeightPx = Math.max(0, (releaseAtMs - hitAtMs) * fallSpeedPxPerMs);
+    // Tail width matches the visual width of the lane wash — narrower
+    // than the 54px ball so the ball still reads as the "head" cap.
+    const tailWidthPx = 40;
+    note.configure(
+      laneId, x, startY, endY, totalFallMs, hitAtMs, this.laneTints[laneId],
+      { tailHeightPx, tailWidthPx, releaseAtMs },
+    );
+  }
+
   /** Hot path: scan pre-allocated pool for an inactive note. Allocates only
    *  when pool is exhausted (shouldn't happen after pre-warm). */
   private acquireNote(): Note {
@@ -1341,8 +1375,15 @@ export class Game extends Scene {
       this.cats[laneId]?.playMeow(Balance.catReactionMs);
       this.cats[laneId]?.pulseEffectHit();
       this.flashLaneEffect(laneId);
-      note!.consumed = true;
-      note!.recycle();
+      if (note!.isHold) {
+        // Hold engaged. Don't consume — tickHolds + releaseHoldIfAny
+        // own the lifecycle from here. Per-step bonus accumulates while
+        // the player keeps the lane pressed.
+        note!.holdActive = true;
+      } else {
+        note!.consumed = true;
+        note!.recycle();
+      }
     }
     this.pulseCombo();
     this.updateHud();
@@ -1384,6 +1425,11 @@ export class Game extends Scene {
     for (let i = 0; i < this.notes.length; i++) {
       const n = this.notes[i]!;
       if (!n.active || n.consumed) continue;
+      // Holds being actively held don't auto-miss when the head passes
+      // the miss line — the player has already tapped and the tail is
+      // what's being judged now. tickHolds handles auto-end when the
+      // tail crosses.
+      if (n.isHold && n.holdActive) continue;
       if (n.y > missY) {
         this.score.registerHit('miss');
         // Same miss-buzz as a tap-but-missed grade so the player feels
@@ -1402,6 +1448,56 @@ export class Game extends Scene {
       this.pulseCombo();
       this.updateHud();
     }
+  }
+
+  // -----------------------------------------------------------------------
+  // Private — hold tracking
+  // -----------------------------------------------------------------------
+
+  /** Per-frame check for active holds whose trailing edge has reached
+   *  the target. Auto-ends those with full credit. Release-on-finger-up
+   *  is handled by releaseHoldIfAny. */
+  private tickHolds(): void {
+    if (this.roundOver) return;
+    const now = this.time.now - this.startTimeMs;
+    for (let i = 0; i < this.notes.length; i++) {
+      const n = this.notes[i]!;
+      if (!n.active || !n.isHold || !n.holdActive) continue;
+      if (now >= n.holdEndAtMs) {
+        this.endActiveHold(n, /* fullCredit */ true);
+      }
+    }
+  }
+
+  /** Called from per-lane pointerup / pointerout / keyup. Ends any
+   *  active hold in that lane with partial credit (forgiving rule). */
+  private releaseHoldIfAny(laneId: LaneId): void {
+    for (let i = 0; i < this.notes.length; i++) {
+      const n = this.notes[i]!;
+      if (!n.active || !n.isHold || !n.holdActive || n.laneId !== laneId) continue;
+      this.endActiveHold(n, /* fullCredit */ false);
+    }
+  }
+
+  /** Tally a hold's bonus and recycle the note. Full credit = entire
+   *  step range × pointsPerHoldStep. Partial = prorated by held fraction
+   *  (no combo break — Tim's forgiving rule). */
+  private endActiveHold(note: Note, fullCredit: boolean): void {
+    const totalMs = Math.max(1, note.holdEndAtMs - note.hitAtMs);
+    const stepsTotal = Math.max(1, Math.round(totalMs / this.playMsPerStep));
+    if (fullCredit) {
+      this.score.add(stepsTotal * Balance.pointsPerHoldStep);
+    } else {
+      const now = this.time.now - this.startTimeMs;
+      const heldMs = Math.max(0, now - note.hitAtMs);
+      const fraction = Math.max(0, Math.min(1, heldMs / totalMs));
+      const earned = Math.floor(stepsTotal * fraction * Balance.pointsPerHoldStep);
+      if (earned > 0) this.score.add(earned);
+    }
+    note.holdActive = false;
+    note.consumed = true;
+    note.recycle();
+    this.updateHud();
   }
 
   // -----------------------------------------------------------------------
