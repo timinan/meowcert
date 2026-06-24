@@ -74,9 +74,10 @@ export const Balance = {
   // fill this budget; the round ends the moment the cap hits even if the
   // chart is mid-loop. Loop count is derived per-round from the chart's
   // BPM + step count so authored beats of any length play through the
-  // same fixed-duration round. 45 s also sets the page count the
-  // Template generator targets when filling charts.
-  maxRoundMs: 45_000,
+  // same fixed-duration round. 60 s also sets the page count the
+  // Template generator targets when filling charts. Backings are sliced
+  // to 75 s so the 60 s round always finishes before the loop seam.
+  maxRoundMs: 60_000,
   pointsPerfect: 100,
   pointsGreat: 50,
   catReactionMs: 500,

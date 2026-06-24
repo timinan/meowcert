@@ -754,8 +754,10 @@ async function handleBgUpload(req, res, slug) {
 
 /**
  * Accepts raw mp3 bytes from the music calibrator. Runs ffmpeg to trim
- * to 32s, downmix to mono, and re-encode at 96kbps so the upload lands
- * the file in the same shape every other backing already has.
+ * to 75s, downmix to mono, and re-encode at 96kbps so the upload lands
+ * the file in the same shape every other backing already has. 75s gives
+ * the 60s round a comfortable 15s margin before the loop seam — the
+ * original 32s slice was exposing the cut at 32 s into a 60 s round.
  * Appends a default catalog entry to tools/music/music.json (FAST 130
  * UPBEAT; the calibrator UI then lets Tim tune speedLabel / vibe / bpm).
  */
@@ -798,7 +800,7 @@ async function handleMusicUpload(req, res, slug) {
           [
             '-hide_banner', '-loglevel', 'error', '-y',
             '-i', tmpPath,
-            '-t', '32',
+            '-t', '75',
             '-ac', '1',
             '-ar', '44100',
             '-b:a', '96k',
@@ -827,7 +829,7 @@ async function handleMusicUpload(req, res, slug) {
         speedLabel,
         vibe,
         bpm,
-        loopDurationMs: 30000,
+        loopDurationMs: 75000,
       };
       await rotateBackups(MUSIC_JSON);
       await fs.writeFile(MUSIC_JSON, JSON.stringify(raw, null, 2) + '\n');
