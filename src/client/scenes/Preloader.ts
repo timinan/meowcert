@@ -46,9 +46,12 @@ export class Preloader extends Scene {
     this.load.image(AssetKeys.Image.MeowBarFill, 'images/meowBarFill.png');
     this.load.image(AssetKeys.Image.MeowBarOutline, 'images/meowBarOutline.png');
     this.load.image(AssetKeys.Image.RhythmBarBackground, 'images/rythmBarBackground.png');
+    this.load.image(AssetKeys.Image.RhythmBarBackgroundWhite, 'images/rythmBarBackground-white.png');
     this.load.image(AssetKeys.Image.PspspsTarget, 'images/PSTarget.png');
+    this.load.image(AssetKeys.Image.PspspsTargetWhite, 'images/PSTarget-white.png');
     this.load.image(AssetKeys.Image.PspspsElement, 'images/PSElement.png');
     this.load.image(AssetKeys.Image.PspspsElementBall, 'images/PSElement_ball.png');
+    this.load.image(AssetKeys.Image.PspspsElementBallWhite, 'images/PSElement_ball-white.png');
     this.load.image(AssetKeys.Image.PspspsElementLetters, 'images/PSElement_letters.png');
     // Backgrounds loaded straight from the catalog so adding a new bg via
     // the themes calibrator (which writes themes.json → regens the catalog)
@@ -61,6 +64,10 @@ export class Preloader extends Scene {
     // this from cache to ride static cosmetics along with their cat. Falls
     // back to a no-op (no offset applied) if the file is missing.
     this.load.json(AssetKeys.Json.CatFrameOffsets, 'atlas/cat-frame-offsets.json');
+    // Per-bg lane tint trios. Game.drawLanes reads from this so the lanes
+    // pick up colors that already live in the active bg's floor. Falls
+    // back to LANE_COLORS when the active bg isn't sampled.
+    this.load.json(AssetKeys.Json.BgLaneColors, 'atlas/bg-lane-colors.json');
 
     this.load.audio(AssetKeys.Audio.Background, ['sounds/background.mp3']);
     this.load.audio(AssetKeys.Audio.Pspsps, ['sounds/pspsps.mp3']);

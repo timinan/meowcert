@@ -1,0 +1,187 @@
+{
+  "arcade": [
+    "#007fe6",
+    "#d17d15",
+    "#17eb47"
+  ],
+  "beach": [
+    "#fa22fa",
+    "#40902c",
+    "#86fe5e"
+  ],
+  "bedroom": [
+    "#fa22fa",
+    "#40902c",
+    "#86fe5e"
+  ],
+  "blossom": [
+    "#fa22fa",
+    "#40902c",
+    "#86fe5e"
+  ],
+  "cabin": [
+    "#fa22fa",
+    "#40902c",
+    "#86fe5e"
+  ],
+  "candybakery": [
+    "#f0c0b0",
+    "#d84050",
+    "#f08088"
+  ],
+  "casino": [
+    "#c17725",
+    "#8828d8",
+    "#4b4b9b"
+  ],
+  "cathedral": [
+    "#9b5b4b",
+    "#d08070",
+    "#f0b098"
+  ],
+  "cattemple": [
+    "#9b874b",
+    "#569e48",
+    "#9c0c7a"
+  ],
+  "cozy": [
+    "#ac7339",
+    "#f2e16b",
+    "#384f9d"
+  ],
+  "cyberpunk": [
+    "#fa22fa",
+    "#40902c",
+    "#86fe5e"
+  ],
+  "default": [
+    "#fa22fa",
+    "#40902c",
+    "#86fe5e"
+  ],
+  "diner": [
+    "#c6a88a",
+    "#9b654b",
+    "#c62a1f"
+  ],
+  "dojo": [
+    "#b47832",
+    "#fae664",
+    "#405496"
+  ],
+  "forest": [
+    "#fa22fa",
+    "#40902c",
+    "#86fe5e"
+  ],
+  "hauntedmansion": [
+    "#9d7c4b",
+    "#e3ea7d",
+    "#2958af"
+  ],
+  "icecave": [
+    "#6098d8",
+    "#3868b8",
+    "#7ed6ea"
+  ],
+  "islands": [
+    "#9b4b80",
+    "#4b4b9b",
+    "#91b9cd"
+  ],
+  "japanesegarden": [
+    "#c9c91d",
+    "#ac8639",
+    "#f2f46b"
+  ],
+  "mushroom": [
+    "#9b654b",
+    "#4b9b4b",
+    "#c09878"
+  ],
+  "mushroomgrove": [
+    "#fa22fa",
+    "#40902c",
+    "#86fe5e"
+  ],
+  "observatory": [
+    "#e8c0a8",
+    "#c4849e",
+    "#8880c8"
+  ],
+  "pirate": [
+    "#c74c1f",
+    "#0dba51",
+    "#532883"
+  ],
+  "pizzastore": [
+    "#cc661a",
+    "#12d44c",
+    "#58427e"
+  ],
+  "pumpkinpatch": [
+    "#fa22fa",
+    "#40902c",
+    "#86fe5e"
+  ],
+  "ramenshop": [
+    "#9b804b",
+    "#e1ee7d",
+    "#275caf"
+  ],
+  "robotfactory": [
+    "#bf7979",
+    "#bfbf79",
+    "#4b4b9b"
+  ],
+  "saloon": [
+    "#d08848",
+    "#16f67a",
+    "#5c64ac"
+  ],
+  "spooky": [
+    "#fa22fa",
+    "#40902c",
+    "#86fe5e"
+  ],
+  "stage": [
+    "#a24444",
+    "#3964ac",
+    "#b53085"
+  ],
+  "subwaystation": [
+    "#9b654b",
+    "#9b4b9b",
+    "#4b4b9b"
+  ],
+  "sushi": [
+    "#e8a860",
+    "#b87038",
+    "#4b9b4b"
+  ],
+  "treehouse": [
+    "#c75c1f",
+    "#0dca51",
+    "#533883"
+  ],
+  "underwater": [
+    "#5b4b9b",
+    "#9b4b73",
+    "#e1b9a5"
+  ],
+  "volcanicpalace": [
+    "#fa22fa",
+    "#40902c",
+    "#86fe5e"
+  ],
+  "wizard": [
+    "#4b659b",
+    "#a87a3d",
+    "#682abc"
+  ],
+  "wizardlab": [
+    "#4b739b",
+    "#91e1cd",
+    "#d74fff"
+  ]
+}

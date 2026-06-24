@@ -8,9 +8,22 @@ export const AssetKeys = {
     MeowBarFill: 'meow-bar-fill',
     MeowBarOutline: 'meow-bar-outline',
     RhythmBarBackground: 'rhythm-bar-background',
+    /** White-base (greyscale) version of the rhythm bar — meant to be
+     *  tinted to any color cleanly. Used in `Game.drawLanes` so the
+     *  sampled bg tints render true instead of multiplying through the
+     *  prototype's saturated original. */
+    RhythmBarBackgroundWhite: 'rhythm-bar-background-white',
     PspspsTarget: 'pspsps-target',
+    /** White-base hit target — same reason as above. Game tints this
+     *  with the sampled lane color so the targets visually anchor each
+     *  lane without the prototype's colored undertone leaking through. */
+    PspspsTargetWhite: 'pspsps-target-white',
     PspspsElement: 'pspsps-element',
     PspspsElementBall: 'pspsps-element-ball',
+    /** White-base falling-note ball — greyscale-stretched so `setTint`
+     *  produces a clean colored fuzzball. `Note.configure` paints this
+     *  with the per-bg sampled lane tint so notes match their target. */
+    PspspsElementBallWhite: 'pspsps-element-ball-white',
     PspspsElementLetters: 'pspsps-element-letters',
     // Background textures load via Preloader.ts iteration over
     // BACKGROUND_CATALOG — keys live on the catalog entries themselves
@@ -29,5 +42,12 @@ export const AssetKeys = {
      *  cosmetics ride these to bob with their cat without their own
      *  per-frame art. */
     CatFrameOffsets: 'cat-frame-offsets',
+    /** Three dominant colors per bg, sampled from the floor zone of each
+     *  themes/<id>-bg.png by the extractor. `Game.drawLanes` uses these
+     *  as the lane tint trio so the lanes feel "in the scene" instead of
+     *  "UI stamped on top." Falls back to the global LANE_COLORS when
+     *  the active bg isn't in the JSON. Shape:
+     *  `{ "<id>": ["#rrggbb", "#rrggbb", "#rrggbb"], ... }`. */
+    BgLaneColors: 'bg-lane-colors',
   },
 } as const;

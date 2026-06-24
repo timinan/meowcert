@@ -186,6 +186,9 @@ export type BackingVibe = 'upbeat' | 'melodic' | 'smooth';
 export interface BackingTrack {
   /** Stable id, e.g. 'fast-130'. */
   id: string;
+  /** Optional human-readable name shown in the music calibrator + future
+   *  player-facing pickers. The id stays stable; this can be re-titled. */
+  displayName?: string;
   /** User-facing tempo label shown in the editor's tempo cycle button. */
   speedLabel: 'slow' | 'medium' | 'fast' | 'faster';
   /** User-facing vibe category shown in the editor's vibe picker. */

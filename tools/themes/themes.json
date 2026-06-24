@@ -12,8 +12,8 @@
     "backdropKey": "theme-cattemple-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 52,
-    "bgScale": 1.11
+    "bgShiftUp": 49,
+    "bgScale": 1.13
   },
   "pumpkinpatch": {
     "displayName": "Pumpkin Patch",
@@ -23,37 +23,13 @@
     "bgShiftUp": -13,
     "bgScale": 1.19
   },
-  "pizzastore": {
-    "displayName": "Pizza Store",
-    "backdropKey": "theme-pizzastore-bg",
-    "musicKey": "theme-default-music",
-    "rarity": "rare",
-    "bgShiftUp": 66,
-    "bgScale": 1.09
-  },
   "icecave": {
     "displayName": "Ice Cave",
     "backdropKey": "theme-icecave-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 91,
-    "bgScale": 1.01
-  },
-  "diner": {
-    "displayName": "Diner",
-    "backdropKey": "theme-diner-bg",
-    "musicKey": "theme-default-music",
-    "rarity": "rare",
-    "bgShiftUp": 132,
-    "bgScale": 1
-  },
-  "casino": {
-    "displayName": "Casino",
-    "backdropKey": "theme-casino-bg",
-    "musicKey": "theme-default-music",
-    "rarity": "rare",
-    "bgShiftUp": 109,
-    "bgScale": 1
+    "bgShiftUp": 70,
+    "bgScale": 1.24
   },
   "volcanicpalace": {
     "displayName": "Volcanic Palace",
@@ -61,23 +37,15 @@
     "musicKey": "theme-default-music",
     "rarity": "legendary",
     "bgShiftUp": 24,
-    "bgScale": 1.04
+    "bgScale": 1.09
   },
   "underwater": {
     "displayName": "Under Water",
     "backdropKey": "theme-underwater-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 76,
-    "bgScale": 1
-  },
-  "observatory": {
-    "displayName": "Observatory",
-    "backdropKey": "theme-observatory-bg",
-    "musicKey": "theme-default-music",
-    "rarity": "rare",
-    "bgShiftUp": 98,
-    "bgScale": 1
+    "bgShiftUp": 75,
+    "bgScale": 1.08
   },
   "saloon": {
     "displayName": "Saloon",
@@ -85,30 +53,6 @@
     "musicKey": "theme-default-music",
     "rarity": "rare",
     "bgShiftUp": 84,
-    "bgScale": 1
-  },
-  "subwaystation": {
-    "displayName": "Subway Station",
-    "backdropKey": "theme-subwaystation-bg",
-    "musicKey": "theme-default-music",
-    "rarity": "rare",
-    "bgShiftUp": 113,
-    "bgScale": 1
-  },
-  "sushi": {
-    "displayName": "Sushi Restaurant",
-    "backdropKey": "theme-sushi-bg",
-    "musicKey": "theme-default-music",
-    "rarity": "rare",
-    "bgShiftUp": 104,
-    "bgScale": 1
-  },
-  "robotfactory": {
-    "displayName": "Robot Factory",
-    "backdropKey": "theme-robotfactory-bg",
-    "musicKey": "theme-default-music",
-    "rarity": "rare",
-    "bgShiftUp": 95,
     "bgScale": 1
   },
   "cathedral": {
@@ -124,12 +68,12 @@
     "backdropKey": "theme-candybakery-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 51,
-    "bgScale": 1.11
+    "bgShiftUp": 53,
+    "bgScale": 1.13
   },
-  "huantedmansion": {
+  "hauntedmansion": {
     "displayName": "Haunted Mansion",
-    "backdropKey": "theme-huantedmansion-bg",
+    "backdropKey": "theme-hauntedmansion-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
     "bgShiftUp": 62,
@@ -141,14 +85,6 @@
     "musicKey": "theme-default-music",
     "rarity": "rare",
     "bgShiftUp": 55,
-    "bgScale": 1
-  },
-  "ramenshop": {
-    "displayName": "Ramen Shop",
-    "backdropKey": "theme-ramenshop-bg",
-    "musicKey": "theme-default-music",
-    "rarity": "rare",
-    "bgShiftUp": 94,
     "bgScale": 1
   },
   "japanesegarden": {
@@ -172,7 +108,7 @@
     "backdropKey": "theme-dojo-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 39,
-    "bgScale": 1.12
+    "bgShiftUp": 41,
+    "bgScale": 1.15
   }
 }

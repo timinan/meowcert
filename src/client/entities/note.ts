@@ -1,7 +1,7 @@
 import { GameObjects, Scene } from 'phaser';
 import type { LaneId } from '../../shared/state';
 import { AssetKeys } from '../constants/assets';
-import { LANE_COLORS } from './note-colors';
+import { LANE_COLORS, liftTowardWhite, BALL_BRIGHTNESS_LIFT } from './note-colors';
 
 export { LANE_COLORS };
 
@@ -22,7 +22,10 @@ export class Note extends GameObjects.Container {
     super(scene, 0, 0);
     // 54px — matches the 50% bump applied to the lane hit targets (48 → 72)
     // so the falling notes read at the same visual weight as the target.
-    this.ball = scene.add.image(0, 0, AssetKeys.Image.PspspsElementBall);
+    // White-base ball — greyscale-stretched so the per-bg sampled tint
+    // paints a clean fuzzball instead of multiplying through the
+    // prototype's saturated orange.
+    this.ball = scene.add.image(0, 0, AssetKeys.Image.PspspsElementBallWhite);
     this.ball.setDisplaySize(54, 54);
     this.letters = scene.add.image(0, 0, AssetKeys.Image.PspspsElementLetters);
     this.letters.setDisplaySize(54, 54);
@@ -42,6 +45,10 @@ export class Note extends GameObjects.Container {
     endY: number,
     fallMs: number,
     hitAtMs: number,
+    /** Override the default LANE_COLORS tint — typically the per-bg
+     *  sampled color from `Game.laneTints` so the falling note matches
+     *  its lane's hit target. Omit / pass undefined for the default. */
+    tintColor?: number,
   ): void {
     // Kill any in-flight tween from the pool's previous use FIRST. If we
     // set position before killing, a still-running fall tween from the
@@ -55,7 +62,10 @@ export class Note extends GameObjects.Container {
     this.setActive(true).setVisible(true);
     this.setAlpha(1);
     this.setScale(1);
-    this.ball.setTint(LANE_COLORS[laneId]);
+    // Lift the ball tint toward white so the falling note pops against
+    // the alpha-0.55 lane underneath (lane + ball were previously the
+    // exact same hue and blended on busy bgs).
+    this.ball.setTint(liftTowardWhite(tintColor ?? LANE_COLORS[laneId], BALL_BRIGHTNESS_LIFT));
     // Letters stay white so the "PS" reads clearly on top of any lane tint.
     this.letters.clearTint();
     this.scene.tweens.add({

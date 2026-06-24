@@ -716,6 +716,271 @@ async function writeCatFrameOffsets(): Promise<void> {
   );
 }
 
+/** Round-trip an RGB color through HSL and enforce minimum lightness +
+ *  saturation so a sampled "very dark muddy brown" lifts into a visible
+ *  warm tone. Lane tints get this before being written to JSON so the
+ *  game never has to brighten at runtime. */
+function ensureBrightness(c: { r: number; g: number; b: number }): { r: number; g: number; b: number } {
+  const MIN_L = 0.45;
+  const MIN_S = 0.35;
+  const r = c.r / 255;
+  const g = c.g / 255;
+  const b = c.b / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  const newL = Math.max(l, MIN_L);
+  const newS = Math.max(s, MIN_S);
+  const q = newL < 0.5 ? newL * (1 + newS) : newL + newS - newL * newS;
+  const p = 2 * newL - q;
+  const hue2rgb = (t: number) => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+  return {
+    r: Math.round(hue2rgb(h + 1 / 3) * 255),
+    g: Math.round(hue2rgb(h) * 255),
+    b: Math.round(hue2rgb(h - 1 / 3) * 255),
+  };
+}
+
+/**
+ * Sample three dominant lane colors per background by scanning the floor
+ * zone of each `themes/<id>-bg.png`. The bg's bottom 75% is open floor
+ * (per the v7 prompt spec), so picking three distinct dominant colors
+ * from image y 600–1500 gives us hues that already live in the scene —
+ * `Game.drawLanes` paints semi-transparent fills with these so the lanes
+ * feel like they belong to the bg instead of "UI stamped on top."
+ *
+ * Quantization: posterize each pixel to 5 bits per channel (32 levels)
+ * and count buckets. Pick the most common, then keep walking the sorted
+ * list and add the next bucket only if it's >= MIN_DIST away in RGB
+ * from every already-picked color. Caps at 3.
+ *
+ * Output shape:
+ *   {
+ *     "stage":  ["#1a0a2e", "#3a2050", "#5a3070"],
+ *     "arcade": ["#2a1450", "#4a2090", "#6a3070"],
+ *     ...
+ *   }
+ */
+async function writeBgLaneColors(): Promise<void> {
+  const themesDir = path.join(OUT_PUBLIC, 'themes');
+  const entries = await fs.readdir(themesDir).catch(() => [] as string[]);
+  const bgs = entries.filter((f) => f.endsWith('-bg.png')).sort();
+  if (bgs.length === 0) {
+    console.warn('[lane-colors] no bg pngs found — skipping');
+    return;
+  }
+
+  const MIN_DIST = 70; // RGB euclidean — keeps the 3 lane colors visually distinct
+  const result: Record<string, [string, string, string]> = {};
+
+  for (const file of bgs) {
+    const id = file.replace(/-bg\.png$/, '');
+    const filepath = path.join(themesDir, file);
+    try {
+      // Floor zone scales with the image. Standard bgs are 1024×1536
+      // (floor zone roughly y 600–1500), but Tim's older bgs landed at
+      // other sizes — compute the zone from the actual metadata so we
+      // never miss past the image edge.
+      const meta = await sharp(filepath).metadata();
+      const W = meta.width ?? 1024;
+      const H = meta.height ?? 1536;
+      const top = Math.floor(H * 0.40);  // skip the decorated upper portion
+      const bot = Math.floor(H * 0.95);  // skip a couple of px of bottom edge
+      const cropH = bot - top;
+      const { data, info } = await sharp(filepath)
+        .extract({ left: 0, top, width: W, height: cropH })
+        .resize(48, 48, { fit: 'fill' })
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+
+      const buckets = new Map<number, { count: number; r: number; g: number; b: number }>();
+      const stride = info.channels;
+      for (let i = 0; i < data.length; i += stride) {
+        const r5 = data[i]! >> 3;
+        const g5 = data[i + 1]! >> 3;
+        const b5 = data[i + 2]! >> 3;
+        const key = (r5 << 10) | (g5 << 5) | b5;
+        const prev = buckets.get(key);
+        if (prev) prev.count++;
+        else buckets.set(key, { count: 1, r: r5 << 3, g: g5 << 3, b: b5 << 3 });
+      }
+
+      const sorted = [...buckets.values()].sort((a, b) => b.count - a.count);
+      const picks: { r: number; g: number; b: number }[] = [];
+      // Skip ultra-dark buckets entirely — they collapse to identical bright
+      // hues after the brightness boost. Luminance via Rec. 709 weights.
+      const MIN_LUMA = 50;
+      // Distance check operates on BRIGHTENED candidates, not raw, so two
+      // distinct near-black floor pixels don't collapse to the same bright
+      // tint and become duplicate lanes.
+      for (const c of sorted) {
+        const luma = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+        if (luma < MIN_LUMA) continue;
+        const bright = ensureBrightness({ r: c.r, g: c.g, b: c.b });
+        let tooClose = false;
+        for (const p of picks) {
+          const dr = bright.r - p.r;
+          const dg = bright.g - p.g;
+          const db = bright.b - p.b;
+          if (Math.sqrt(dr * dr + dg * dg + db * db) < MIN_DIST) {
+            tooClose = true;
+            break;
+          }
+        }
+        if (!tooClose) {
+          picks.push(bright);
+          if (picks.length === 3) break;
+        }
+      }
+      // Synthesize a fallback by shifting hue if we couldn't find 3
+      // distinct colors (very monochrome floors like marble).
+      while (picks.length < 3) {
+        const last = picks[picks.length - 1] ?? { r: 180, g: 180, b: 200 };
+        picks.push({
+          r: (last.r + 70) % 256,
+          g: (last.g + 110) % 256,
+          b: (last.b + 50) % 256,
+        });
+      }
+
+      const toHex = (n: number) => n.toString(16).padStart(2, '0');
+      result[id] = picks.map(
+        (p) => `#${toHex(p.r)}${toHex(p.g)}${toHex(p.b)}`,
+      ) as [string, string, string];
+    } catch (e) {
+      console.warn(`[lane-colors] sampling ${id} failed: ${(e as Error).message}`);
+    }
+  }
+
+  const outPath = path.join(OUT_ATLAS_DIR, 'bg-lane-colors.json');
+  await fs.writeFile(outPath, JSON.stringify(result, null, 2));
+  console.log(
+    `[lane-colors] ${Object.keys(result).length} bgs sampled -> ${path.relative(PROJECT_ROOT, outPath)}`,
+  );
+}
+
+/**
+ * Generate tintable greyscale versions of the lane backdrop + hit target.
+ * The hard requirement (from playtest feedback): the original's texture
+ * detail — paw print, fuzzy edges, drawn borders — has to stay visible
+ * after tinting, but the asset should read as "mostly white with grey
+ * shadows" so `setTint(color)` produces a bright-tinted shape rather
+ * than a muddy multiplication of two saturated colors.
+ *
+ * Approach (per-image histogram stretch, NOT the earlier "normalize
+ * brightest to 255" which crushed the dark-light variation):
+ *   1. Compute Rec. 709 luma for each visible pixel.
+ *   2. Find the actual luma range of the source (minLuma .. maxLuma,
+ *      ignoring fully transparent pixels).
+ *   3. Linearly stretch that range to OUT_MIN .. 255, where OUT_MIN is
+ *      set high (~110) so the output is predominantly bright. The
+ *      stretch preserves every brightness DIFFERENCE in the source —
+ *      so a paw-print pixel that was 10 luma darker than its
+ *      surrounding fill stays 10ish luma darker in the output, just
+ *      lifted into the bright half of the range.
+ *   4. Anti-aliased edge pixels (luma close to minLuma but with low
+ *      alpha) keep their alpha so the silhouette stays clean.
+ *
+ * Alpha is preserved verbatim. File suffix stays `-white.png` for
+ * backwards compatibility with AssetKeys / Preloader; the content
+ * inside is greyscale-stretched, not flat white.
+ */
+async function makeWhiteBaseTintables(): Promise<void> {
+  const sources: Array<{ src: string; dst: string }> = [
+    { src: 'rythmBarBackground.png', dst: 'rythmBarBackground-white.png' },
+    { src: 'PSTarget.png', dst: 'PSTarget-white.png' },
+    // Falling-note ball — same logic as the lane track + target so the
+    // note matches its lane's hit target on every bg. Splits ran in
+    // splitPsElementIntoBallAndLetters() before this loop, so the input
+    // file is already in OUT_IMAGES.
+    { src: 'PSElement_ball.png', dst: 'PSElement_ball-white.png' },
+  ];
+  // Output range: shadows stay distinctly grey (so paw print / borders
+  // remain visible darker areas inside the tinted shape), highlights
+  // hit 255 so the tint comes through at full saturation.
+  const OUT_MIN = 110;
+  const OUT_MAX = 255;
+  const OUT_RANGE = OUT_MAX - OUT_MIN;
+
+  for (const { src, dst } of sources) {
+    const srcPath = path.join(OUT_IMAGES, src);
+    const dstPath = path.join(OUT_IMAGES, dst);
+    try {
+      const { data, info } = await sharp(srcPath)
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      const stride = info.channels;
+      const pxCount = data.length / stride;
+      const lumas = new Uint16Array(pxCount);
+
+      // Pass 1: compute Rec. 709 luma per visible pixel + track the
+      // ACTUAL source range. Skipping transparent pixels makes the
+      // stretch reflect the artwork's own contrast envelope, not the
+      // transparent border's zero floor.
+      let minLuma = 255;
+      let maxLuma = 0;
+      for (let i = 0; i < data.length; i += stride) {
+        const idx = i / stride;
+        if (data[i + 3]! === 0) {
+          lumas[idx] = 0;
+          continue;
+        }
+        const luma = Math.round(
+          0.2126 * data[i]! + 0.7152 * data[i + 1]! + 0.0722 * data[i + 2]!,
+        );
+        lumas[idx] = luma;
+        if (luma > maxLuma) maxLuma = luma;
+        if (luma < minLuma) minLuma = luma;
+      }
+
+      // Pass 2: stretch [minLuma..maxLuma] -> [OUT_MIN..255]. Each
+      // visible pixel ends up greyscale (R=G=B=stretched). Alpha is
+      // already verbatim from the source so anti-aliased edges keep
+      // their silhouette.
+      const sourceRange = Math.max(1, maxLuma - minLuma);
+      for (let i = 0; i < data.length; i += stride) {
+        if (data[i + 3]! === 0) continue;
+        const luma = lumas[i / stride]!;
+        const t = (luma - minLuma) / sourceRange; // 0..1
+        const v = Math.round(OUT_MIN + t * OUT_RANGE);
+        data[i] = v;
+        data[i + 1] = v;
+        data[i + 2] = v;
+      }
+      await sharp(data, {
+        raw: { width: info.width, height: info.height, channels: info.channels },
+      })
+        .png()
+        .toFile(dstPath);
+      console.log(
+        `[tint-base] ${src} -> ${path.relative(PROJECT_ROOT, dstPath)} (src ${minLuma}..${maxLuma} → ${OUT_MIN}..${OUT_MAX})`,
+      );
+    } catch (e) {
+      console.warn(`[tint-base] ${src} failed: ${(e as Error).message}`);
+    }
+  }
+}
+
 async function main(): Promise<void> {
   await ensureDirs();
   const catFrames = await extractCatGifs();
@@ -726,6 +991,8 @@ async function main(): Promise<void> {
   await copyStaticAssets();
   await splitPsElementIntoBallAndLetters();
   await trimMeowBarFill();
+  await makeWhiteBaseTintables();
+  await writeBgLaneColors();
   console.log('done.');
 }
 
