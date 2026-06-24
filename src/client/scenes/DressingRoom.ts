@@ -380,8 +380,12 @@ export class DressingRoom extends Scene {
     const cols = 3;
     const visibleRows = 3;
     const gridStartX = (this.scale.width - (cellSize * cols + gap * (cols - 1))) / 2;
-    const imageYOffset = -14;
-    const labelYOffset = 22;
+    // Head atlas frames are authored with the hat at the very top of
+    // the canvas (where the cat's head would be), so the default
+    // -14 offset positions them way too high in the cell. Push head
+    // cosmetics down by 14 px more to bring them closer to centered.
+    const imageYOffset = this.activeSlot === 'head' ? 0 : -14;
+    const labelYOffset = this.activeSlot === 'head' ? 28 : 22;
     const labelFontSize = 9;
     const labelWrapWidth = cellSize - 10;
 
