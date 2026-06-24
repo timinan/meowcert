@@ -51,5 +51,11 @@
     "name": "Snow White",
     "rarity": "common",
     "scale": 1
+  },
+  {
+    "id": "cat10",
+    "name": "Jade",
+    "rarity": "common",
+    "scale": 1
   }
 ]

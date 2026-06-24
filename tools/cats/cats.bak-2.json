@@ -2,37 +2,38 @@
   {
     "id": "cat1",
     "name": "Mochi",
-    "rarity": "common"
+    "rarity": "common",
+    "scale": 1
   },
   {
     "id": "cat2",
     "name": "Biscuit",
-    "rarity": "common"
+    "rarity": "common",
+    "scale": 1
   },
   {
     "id": "cat3",
     "name": "Pebble",
-    "rarity": "common"
+    "rarity": "common",
+    "scale": 1
   },
   {
     "id": "cat4",
     "name": "Marble",
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "scale": 1
   },
   {
     "id": "cat5",
     "name": "Saffron",
-    "rarity": "rare"
+    "rarity": "rare",
+    "scale": 1
   },
   {
     "id": "cat6",
     "name": "Inkwell",
-    "rarity": "rare"
-  },
-  {
-    "id": "rainbow",
-    "name": "Rainbow Whiskers",
-    "rarity": "legendary"
+    "rarity": "rare",
+    "scale": 1
   },
   {
     "id": "cat7",
@@ -55,7 +56,7 @@
   {
     "id": "cat10",
     "name": "Jade",
-    "rarity": "common",
+    "rarity": "legendary",
     "scale": 1
   }
 ]

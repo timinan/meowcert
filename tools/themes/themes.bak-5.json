@@ -4,7 +4,7 @@
     "backdropKey": "theme-stage-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 2,
+    "bgShiftUp": 33,
     "bgScale": 1.19
   },
   "wizard": {
@@ -132,16 +132,16 @@
     "backdropKey": "theme-cathedral-bg",
     "musicKey": "theme-default-music",
     "rarity": "legendary",
-    "bgShiftUp": 54,
-    "bgScale": 1.01
+    "bgShiftUp": 52,
+    "bgScale": 1.09
   },
   "candybakery": {
     "displayName": "Candyland Bakery",
     "backdropKey": "theme-candybakery-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 62,
-    "bgScale": 1
+    "bgShiftUp": 51,
+    "bgScale": 1.11
   },
   "huantedmansion": {
     "displayName": "Haunted Mansion",
@@ -164,7 +164,7 @@
     "backdropKey": "theme-ramenshop-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 101,
+    "bgShiftUp": 93,
     "bgScale": 1
   },
   "japanesegarden": {
@@ -172,7 +172,23 @@
     "backdropKey": "theme-japanesegarden-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 36,
-    "bgScale": 1
+    "bgShiftUp": 19,
+    "bgScale": 1.07
+  },
+  "wizardlab": {
+    "displayName": "Wizard's Lab",
+    "backdropKey": "theme-wizardlab-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 15,
+    "bgScale": 1.11
+  },
+  "dojo": {
+    "displayName": "Dojo",
+    "backdropKey": "theme-dojo-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 39,
+    "bgScale": 1.12
   }
 }

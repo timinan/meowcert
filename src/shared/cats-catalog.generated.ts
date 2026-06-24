@@ -76,4 +76,10 @@ export const GENERATED_CAT_CATALOG: readonly CatEntry[] = [
     rarity: "legendary",
     scale: 1,
   },
+  {
+    id: "cat12",
+    name: "Sakura",
+    rarity: "common",
+    scale: 1,
+  },
 ];

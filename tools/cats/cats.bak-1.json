@@ -1,5 +1,10 @@
 [
   {
+    "id": "rainbow",
+    "name": "Rainbow Whiskers",
+    "rarity": "legendary"
+  },
+  {
     "id": "cat1",
     "name": "Mochi",
     "rarity": "common",
@@ -56,6 +61,12 @@
   {
     "id": "cat10",
     "name": "Jade",
+    "rarity": "legendary",
+    "scale": 1
+  },
+  {
+    "id": "cat11",
+    "name": "Purps",
     "rarity": "legendary",
     "scale": 1
   }
