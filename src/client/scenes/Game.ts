@@ -14,6 +14,8 @@ import { fetchState, loadChart } from '@/services/state-client';
 import { CAT_CATALOG, emptyChart } from '@/../shared/state';
 import type { PlayerState, LaneId, Chart, SeatId } from '@/../shared/state';
 import type { CatModel } from '@/types/game';
+import { generateChart } from '@/../shared/chart-generator';
+import { GenerateModal } from '@/ui/generate-modal';
 
 /**
  * Phase 5 Game scene — vertical lane rhythm gameplay.
@@ -68,6 +70,7 @@ export class Game extends Scene {
    *  isn't fighting the modal for user attention. */
   private pendingStart = true;
   private readyModal: Phaser.GameObjects.Container | null = null;
+  private generateModal: GenerateModal | null = null;
 
   // -----------------------------------------------------------------------
   // Live hit / miss feedback (one floating "PERFECT" / "GREAT" / "MISS"
@@ -135,8 +138,6 @@ export class Game extends Scene {
       this.notes.push(n);
     }
 
-    await this.initChartPlayer();
-
     this.bindInput();
     // Tap zones live but disabled until PLAY is pressed. The modal
     // re-enables them in its onPlay handler.
@@ -144,7 +145,19 @@ export class Game extends Scene {
 
     this.events.on(Scenes.Events.SHUTDOWN, () => this.cleanup());
 
-    this.showReadyModal();
+    if (this.testMode) {
+      // Editor → TRY path: chart is already authored. Wire it now and
+      // show the Ready modal so the player gets the standard pre-round
+      // breather.
+      await this.initChartPlayer();
+      this.showReadyModal();
+    } else {
+      // Fresh Play entry: skip Ready entirely, present the Generate
+      // modal so the player picks difficulty/tempo/vibe before the
+      // round starts. ChartPlayer + MusicSystem are wired off the
+      // generated chart inside the modal's onGenerate handler.
+      this.showGenerateModal();
+    }
   }
 
   override update(_time: number, delta: number): void {
@@ -841,8 +854,9 @@ export class Game extends Scene {
   // -----------------------------------------------------------------------
 
   /**
-   * Load the chart and wire ChartPlayer.
-   * Priority: registry.hostChart → loadChart(hostUsername) → emptyChart dev stub.
+   * Resolve the test-mode chart and wire ChartPlayer.
+   * Priority: registry.hostChart → playerState.chart → loadChart(host) →
+   * fetchState → empty stub.
    */
   private async initChartPlayer(): Promise<void> {
     let chart: Chart | undefined = this.registry.get('hostChart');
@@ -890,7 +904,13 @@ export class Game extends Scene {
     // else?" too easy to hit. If the user has zero notes they'll see a
     // silent round, which is the truth.
     const playChart: Chart = chart ?? emptyChart(this.playerState?.username ?? 'anon', 'Untitled');
+    this.attachChartAndMusic(playChart);
+  }
 
+  /** Build ChartPlayer + MusicSystem from a fully-resolved chart. The
+   *  TRY path resolves via initChartPlayer; the Generate path passes the
+   *  freshly generated chart directly. */
+  private attachChartAndMusic(playChart: Chart): void {
     // Loop the chart enough times to fill the round-duration cap. +1
     // buffer so chart-finished doesn't beat the wall-clock check by a
     // frame and stop note spawning early.
@@ -905,16 +925,55 @@ export class Game extends Scene {
     this.player.onSpawn((lane, hitAt) => this.spawnNote(lane, hitAt));
 
     // Music for the round: real backing track from BACKING_CATALOG
-    // (selected by chart.bpm + vibe + author hash) and meow stems from
-    // MEOW_STEM_CATALOG fired on each successful lane tap. Phaser's
-    // sound manager handles the WebAudio gesture unlock for free on
-    // first user interaction — no manual unlock dance needed.
-    //
-    // Backings are lazy-loaded, so kick the download off RIGHT NOW —
-    // it runs in parallel with the player reading the Ready modal so
-    // the file's usually cached by the time they tap PLAY.
+    // (selected by chart.bpm + vibe + author hash). Backings are lazy-
+    // loaded, so kick the download off RIGHT NOW — in the editor TRY
+    // path the Ready modal gives it plenty of time to land; in the
+    // Generate path showGenerateModal awaits start() before begin.
     this.music = new MusicSystem(this, playChart);
     void this.music.preload();
+  }
+
+  /** Show the pre-round Generate modal (non-test entry). On generate,
+   *  build a chart that fills the round at the chosen tempo, wire
+   *  player + music, await the backing preload + start, then enable
+   *  taps and begin the round. */
+  private showGenerateModal(): void {
+    if (!this.generateModal) this.generateModal = new GenerateModal(this);
+    this.generateModal.open({
+      initial: {
+        bpm: this.playerState?.chart?.bpm,
+        vibe: this.playerState?.chart?.vibe,
+      },
+      onGenerate: (result) => {
+        const chart = generateChart({
+          authorId: this.playerState?.username ?? 'anon',
+          title: 'Generated',
+          difficulty: result.difficulty,
+          bpm: result.bpm,
+          vibe: result.vibe,
+          targetDurationMs: Balance.maxRoundMs,
+        });
+        this.attachChartAndMusic(chart);
+        void this.beginRound();
+      },
+      // Generate is the only entry point for non-test mode; cancelling
+      // means the player wants out — kick them to Decorate which has its
+      // own hamburger nav.
+      onCancel: () => {
+        this.scene.start(SceneKeys.Decorate, { playerState: this.playerState });
+      },
+    });
+  }
+
+  /** Common round kick-off used after the Generate path. Awaits the
+   *  music start, then unblocks input + records startTimeMs. */
+  private async beginRound(): Promise<void> {
+    if (!this.scene.isActive()) return;
+    await this.music?.start();
+    if (!this.scene.isActive()) return;
+    for (const z of this.tapZones) z.setInteractive();
+    this.startTimeMs = this.time.now;
+    this.pendingStart = false;
   }
 
   // -----------------------------------------------------------------------
@@ -1104,6 +1163,10 @@ export class Game extends Scene {
     tearDown('ready-modal', () => {
       this.readyModal?.destroy(true);
       this.readyModal = null;
+    });
+    tearDown('generate-modal', () => {
+      this.generateModal?.destroy();
+      this.generateModal = null;
     });
 
     // Destroy entities BEFORE tweens.killAll so each owner can cleanly

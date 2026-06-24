@@ -10,45 +10,16 @@ import {
   emptyChart,
   validateChart,
   CHART_PAGE_SIZE,
-  BACKING_CATALOG,
 } from '@/../shared/state';
 import type { PlayerState, Chart, LaneId, BackingVibe } from '@/../shared/state';
-
-interface TempoEntry {
-  speedLabel: string;
-  bpm: number;
-}
-
-/** Derive the tempo cycle from BACKING_CATALOG so the editor only
- *  offers BPMs we actually have music for. One entry per unique
- *  speedLabel, sorted by BPM. Picks the lowest-BPM backing per label
- *  if multiple share a label. */
-function buildTempoCycle(): TempoEntry[] {
-  const byLabel = new Map<string, TempoEntry>();
-  for (const backing of Object.values(BACKING_CATALOG)) {
-    const existing = byLabel.get(backing.speedLabel);
-    if (!existing || backing.bpm < existing.bpm) {
-      byLabel.set(backing.speedLabel, {
-        speedLabel: backing.speedLabel,
-        bpm: backing.bpm,
-      });
-    }
-  }
-  return [...byLabel.values()].sort((a, b) => a.bpm - b.bpm);
-}
-
-const VIBE_DISPLAY_ORDER: BackingVibe[] = ['upbeat', 'melodic', 'smooth'];
-
-/** Vibes available at a given BPM. Player's vibe picker only shows
- *  options that actually have at least one backing at the current
- *  tempo so an empty pick is impossible. */
-function buildVibeCycle(bpm: number): BackingVibe[] {
-  const set = new Set<BackingVibe>();
-  for (const backing of Object.values(BACKING_CATALOG)) {
-    if (backing.bpm === bpm) set.add(backing.vibe);
-  }
-  return VIBE_DISPLAY_ORDER.filter((v) => set.has(v));
-}
+import {
+  buildTempoCycle,
+  buildVibeCycle,
+  type TempoEntry,
+} from '@/systems/tempo-vibe-cycles';
+import { generateChart } from '@/../shared/chart-generator';
+import { GenerateModal } from '@/ui/generate-modal';
+import { Balance } from '@/constants/balance';
 
 /**
  * Chart editor — 3-lane × 32-step beat sequencer paged in 8-row windows.
@@ -94,6 +65,9 @@ export class ChartEditor extends Scene {
   private pageLabel!: GameObjects.Text;
   private addPageBtn!: GameObjects.Rectangle;
   private addPageBtnText!: GameObjects.Text;
+  private tmplBtn!: GameObjects.Rectangle;
+  private tmplBtnText!: GameObjects.Text;
+  private generateModal: GenerateModal | null = null;
 
   // Bottom controls
   private bpmBtnText!: GameObjects.Text;
@@ -156,8 +130,11 @@ export class ChartEditor extends Scene {
     this.colCenterXs = [];
   }
 
-  /** Max chart length, in pages. Lift if 32+ pages becomes a real need. */
-  private static readonly MAX_PAGES = 16;
+  /** Max chart length, in pages. Tuned to fit a 45-second round at the
+   *  slowest tempo we support — Template-generated charts at 130bpm pack
+   *  about 25 pages, so 32 leaves headroom for a slower future BPM and
+   *  hand-extended authoring without ever needing a runtime clamp. */
+  private static readonly MAX_PAGES = 32;
 
   create(): void {
     this.root = this.add.container(0, 0).setDepth(0);
@@ -318,10 +295,32 @@ export class ChartEditor extends Scene {
       .setOrigin(0.5);
     this.addPageBtn.on('pointerdown', () => this.onAddPage());
 
+    // TEMPLATE — opens the Generate modal so the player can fill the
+    // chart with a procedurally generated pattern. Sits between the
+    // page nav cluster and ADD PAGE so it never overlaps either.
+    const tmplW = 96;
+    const tmplH = 28;
+    const tmplX = addX - addW / 2 - 8 - tmplW / 2;
+    this.tmplBtn = this.add
+      .rectangle(tmplX, navY, tmplW, tmplH, 0x2c1856, 1)
+      .setStrokeStyle(1, 0xffd34d, 0.7)
+      .setInteractive({ useHandCursor: true });
+    this.tmplBtnText = this.add
+      .text(tmplX, navY, 'TEMPLATE', {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontStyle: 'bold',
+        fontSize: '11px',
+        color: '#ffd34d',
+      })
+      .setOrigin(0.5);
+    this.tmplBtn.on('pointerdown', () => this.onTemplateTap());
+
     this.root.add([
       this.upPageBtn,
       this.pageLabel,
       this.downPageBtn,
+      this.tmplBtn,
+      this.tmplBtnText,
       this.addPageBtn,
       this.addPageBtnText,
     ]);
@@ -533,6 +532,55 @@ export class ChartEditor extends Scene {
     this.refreshPage();
   }
 
+  private onTemplateTap(): void {
+    if (!this.generateModal) this.generateModal = new GenerateModal(this);
+    this.generateModal.open({
+      initial: {
+        bpm: this.chart.bpm,
+        vibe: this.chart.vibe,
+      },
+      onGenerate: (result) => {
+        const generated = generateChart({
+          authorId: this.chart.authorId,
+          title: this.chart.title,
+          difficulty: result.difficulty,
+          bpm: result.bpm,
+          vibe: result.vibe,
+          targetDurationMs: Balance.maxRoundMs,
+        });
+        // Mutate the existing chart in place so any other reference (e.g.
+        // playerState.chart pointing at this object) sees the update,
+        // then re-sync the editor's tempo/vibe pickers to match.
+        this.chart.steps = generated.steps;
+        this.chart.stepCount = generated.stepCount;
+        this.chart.bpm = generated.bpm;
+        this.chart.vibe = generated.vibe;
+        this.chart.updatedAt = generated.updatedAt;
+        this.syncTempoVibeIndexes();
+        this.bpmBtnText.setText(this.tempoButtonLabel());
+        this.vibeBtnText.setText(this.vibeButtonLabel());
+        this.scrollOffset = 0;
+        this.refreshPage();
+      },
+    });
+  }
+
+  /** After a generator run flips bpm + vibe under us, snap the editor's
+   *  cycle indexes back into sync so the next tempo/vibe tap continues
+   *  from the right slot instead of jumping to a stale position. */
+  private syncTempoVibeIndexes(): void {
+    if (this.tempoCycle.length > 0) {
+      const idx = this.tempoCycle.findIndex((t) => t.bpm === this.chart.bpm);
+      this.tempoIndex = idx >= 0 ? idx : 0;
+    }
+    this.vibeCycle = buildVibeCycle(this.chart.bpm);
+    if (this.vibeCycle.length > 0) {
+      const idx = this.chart.vibe ? this.vibeCycle.indexOf(this.chart.vibe) : -1;
+      this.vibeIndex = idx >= 0 ? idx : 0;
+      this.chart.vibe = this.vibeCycle[this.vibeIndex]!;
+    }
+  }
+
   private onBpmTap(): void {
     if (this.tempoCycle.length === 0) return;
     this.tempoIndex = (this.tempoIndex + 1) % this.tempoCycle.length;
@@ -630,6 +678,8 @@ export class ChartEditor extends Scene {
     this.scale.off('resize');
     this.hud.destroy();
     this.bg.destroy();
+    this.generateModal?.destroy();
+    this.generateModal = null;
     this.root.destroy(true);
   }
 }
