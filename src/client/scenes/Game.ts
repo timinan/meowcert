@@ -755,11 +755,11 @@ export class Game extends Scene {
     });
   }
 
-  /** Apply the seated cat's equipped effect to the lane's hit target for
-   *  a brief burst on a successful hit. No-op if the lane has no cat or
-   *  the cat has no effect cosmetic. The effect runs on the hit target
-   *  itself, scaled down to read at fuzzball size rather than cat size,
-   *  and self-destructs after EFFECT_BURST_MS. */
+  /** Echo the seated cat's equipped effect out of the lane's fuzzball
+   *  target as a one-shot radial burst. Glow effects pulse a colored
+   *  halo outward; particle effects (hearts, fire, etc.) shoot the
+   *  emoji in all directions around the ball. The effect's `burst`
+   *  is self-cleaning — no handle to track. */
   private flashLaneEffect(laneId: LaneId): void {
     const effectId = this.laneEffects[laneId];
     if (!effectId) return;
@@ -767,11 +767,7 @@ export class Game extends Scene {
     if (!target) return;
     const effect = CAT_EFFECT_BY_ID[effectId];
     if (!effect) return;
-    // Effects were sized against ~1.4× cat sprites; the fuzzball target
-    // is 72px, roughly half a cat's footprint, so 0.5 reads at the right
-    // visual weight without the glow eating the whole lane.
-    const handle = effect.apply(this, target, 0.5);
-    this.time.delayedCall(EFFECT_BURST_MS, () => handle.destroy());
+    effect.burst(this, target);
   }
 
   /** Pop the lane's grade text and float it upward. Reuses the same Text
@@ -1307,8 +1303,4 @@ export class Game extends Scene {
   }
 }
 
-/** How long a lane's hit-effect burst stays alive after a successful tap.
- *  Long enough for glow flicker / a couple particles to read, short
- *  enough that back-to-back hits don't stack into a constant emitter. */
-const EFFECT_BURST_MS = 650;
 

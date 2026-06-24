@@ -55,6 +55,15 @@ export interface CatEffect {
    * weight as the (possibly scaled-up) cat it's attached to.
    */
   apply(scene: Scene, target: EffectTarget, scale?: number): EffectHandle;
+  /**
+   * One-shot radial BURST centered on the target. Used by Game on a hit
+   * so the cat's effect "echoes" out of the fuzzball — glows pulse out
+   * as a halo, particle effects shoot the emoji out radially. Self-
+   * cleaning; no handle returned. Distinct from `apply` (which is the
+   * continuous cat-attached form) so the hit feedback can read at
+   * fuzzball scale + radial vibe rather than "rises up from feet".
+   */
+  burst(scene: Scene, target: EffectTarget, scale?: number): void;
 }
 
 // ---------------------------------------------------------------------------
@@ -268,6 +277,80 @@ function makeParticles(opts: ParticleOpts): CatEffect['apply'] {
 }
 
 // ---------------------------------------------------------------------------
+// Burst variants used by Game's hit-feedback so the cat's effect echoes
+// out of the fuzzball. Glows expand outward as a halo; particle effects
+// shoot the emoji out radially. Both self-clean — Game just calls them
+// and forgets, no handle to hold.
+// ---------------------------------------------------------------------------
+
+/** Expanding circular halo at the target. Starts small + bright, scales
+ *  outward while alpha fades to zero. Stacked concentric fills give the
+ *  glow a soft edge that reads as "aura" instead of "hard ring". */
+function makeGlowBurst(color: number): CatEffect['burst'] {
+  return (scene, target, scale = 1) => {
+    const g = scene.add.graphics();
+    g.setPosition(target.x, target.y);
+    g.setDepth(target.depth + 1);
+    // 4 concentric circles with falling alpha = soft radial gradient.
+    // Drawn once at radius 1 then scaled via the tween so the gradient
+    // expands cleanly without redrawing every frame.
+    const baseR = 32;
+    const layers: Array<{ r: number; a: number }> = [
+      { r: baseR * 1.00, a: 0.55 },
+      { r: baseR * 0.75, a: 0.42 },
+      { r: baseR * 0.50, a: 0.32 },
+      { r: baseR * 0.30, a: 0.22 },
+    ];
+    for (const l of layers) {
+      g.fillStyle(color, l.a);
+      g.fillCircle(0, 0, l.r);
+    }
+    g.setScale(0.4 * scale);
+    scene.tweens.add({
+      targets: g,
+      scaleX: 1.4 * scale,
+      scaleY: 1.4 * scale,
+      alpha: 0,
+      duration: 550,
+      ease: 'Quad.easeOut',
+      onComplete: () => g.destroy(),
+    });
+  };
+}
+
+/** Radial particle burst — emit `count` emoji from the target's center,
+ *  each flying outward along an angle slice with a small jitter, fading
+ *  to zero alpha as it travels. Particle size scales with the effect's
+ *  `apply` size so the visual weight stays consistent across effects. */
+function makeParticleBurst(emoji: string, size: number, count = 8): CatEffect['burst'] {
+  return (scene, target, scale = 1) => {
+    const baseDist = 48 * scale;
+    const lifeMs = 600;
+    const px = size * scale;
+    for (let i = 0; i < count; i++) {
+      const slice = (Math.PI * 2) / count;
+      const angle = i * slice + (Math.random() - 0.5) * slice * 0.6;
+      const dist = baseDist * (0.75 + Math.random() * 0.5);
+      const dx = Math.cos(angle) * dist;
+      const dy = Math.sin(angle) * dist;
+      const p = scene.add
+        .text(target.x, target.y, emoji, { fontSize: `${px}px` })
+        .setOrigin(0.5)
+        .setDepth(target.depth + 1);
+      scene.tweens.add({
+        targets: p,
+        x: target.x + dx,
+        y: target.y + dy,
+        alpha: 0,
+        duration: lifeMs,
+        ease: 'Quad.easeOut',
+        onComplete: () => p.destroy(),
+      });
+    }
+  };
+}
+
+// ---------------------------------------------------------------------------
 // The effect list. Movement effects (bob / pulse / spin / wobble) removed —
 // Tim found them distracting. Keeping ghost (alpha-only) plus six fresh
 // particle variants alongside the originals.
@@ -275,15 +358,15 @@ function makeParticles(opts: ParticleOpts): CatEffect['apply'] {
 
 export const CAT_EFFECTS: CatEffect[] = [
   // Auras — fuzzy ground glow at the feet
-  { id: 'effect-red-glow',    name: 'Red Aura',    iconEmoji: '🔴', rarity: 'common',    apply: makeGlow(0xff3333) },
-  { id: 'effect-blue-glow',   name: 'Blue Aura',   iconEmoji: '🔵', rarity: 'common',    apply: makeGlow(0x3399ff) },
-  { id: 'effect-gold-glow',   name: 'Gold Aura',   iconEmoji: '🟡', rarity: 'rare',      apply: makeGlow(0xffd34d) },
-  { id: 'effect-green-glow',  name: 'Green Aura',  iconEmoji: '🟢', rarity: 'uncommon',  apply: makeGlow(0x33ff66) },
-  { id: 'effect-purple-glow', name: 'Purple Aura', iconEmoji: '🟣', rarity: 'uncommon',  apply: makeGlow(0xa64dff) },
-  { id: 'effect-pink-glow',   name: 'Pink Aura',   iconEmoji: '🩷', rarity: 'common',    apply: makeGlow(0xff66cc) },
+  { id: 'effect-red-glow',    name: 'Red Aura',    iconEmoji: '🔴', rarity: 'common',    apply: makeGlow(0xff3333), burst: makeGlowBurst(0xff3333) },
+  { id: 'effect-blue-glow',   name: 'Blue Aura',   iconEmoji: '🔵', rarity: 'common',    apply: makeGlow(0x3399ff), burst: makeGlowBurst(0x3399ff) },
+  { id: 'effect-gold-glow',   name: 'Gold Aura',   iconEmoji: '🟡', rarity: 'rare',      apply: makeGlow(0xffd34d), burst: makeGlowBurst(0xffd34d) },
+  { id: 'effect-green-glow',  name: 'Green Aura',  iconEmoji: '🟢', rarity: 'uncommon',  apply: makeGlow(0x33ff66), burst: makeGlowBurst(0x33ff66) },
+  { id: 'effect-purple-glow', name: 'Purple Aura', iconEmoji: '🟣', rarity: 'uncommon',  apply: makeGlow(0xa64dff), burst: makeGlowBurst(0xa64dff) },
+  { id: 'effect-pink-glow',   name: 'Pink Aura',   iconEmoji: '🩷', rarity: 'common',    apply: makeGlow(0xff66cc), burst: makeGlowBurst(0xff66cc) },
 
-  // Filter-style
-  { id: 'effect-ghost',       name: 'Ghost',       iconEmoji: '👻', rarity: 'rare',      apply: makeGhost() },
+  // Filter-style — ghost reads as a desaturated white halo on hit
+  { id: 'effect-ghost',       name: 'Ghost',       iconEmoji: '👻', rarity: 'rare',      apply: makeGhost(),        burst: makeGlowBurst(0xffffff) },
 
   // Particles — originals Tim liked. riseDistancePx ~95 across the board
   // so the particle column reaches roughly the same apex as the aura's
@@ -292,40 +375,49 @@ export const CAT_EFFECTS: CatEffect[] = [
   {
     id: 'effect-sparkle',     name: 'Sparkles',    iconEmoji: '✨', rarity: 'uncommon',
     apply: makeParticles({ emoji: '✨', size: 14, spawnIntervalMs: 200, riseDistancePx: 95, lifeMs: 1600, spreadX: 50 }),
+    burst: makeParticleBurst('✨', 14),
   },
   {
     id: 'effect-hearts',      name: 'Hearts',      iconEmoji: '💕', rarity: 'rare',
     apply: makeParticles({ emoji: '💕', size: 14, spawnIntervalMs: 220, riseDistancePx: 95, lifeMs: 1700, spreadX: 50 }),
+    burst: makeParticleBurst('💕', 14),
   },
 
   // Particles — new variants for Tim to evaluate
   {
     id: 'effect-stars',       name: 'Stars',       iconEmoji: '⭐', rarity: 'uncommon',
     apply: makeParticles({ emoji: '⭐', size: 14, spawnIntervalMs: 240, riseDistancePx: 95, lifeMs: 1800, spreadX: 60 }),
+    burst: makeParticleBurst('⭐', 14),
   },
   {
     id: 'effect-music',       name: 'Music',       iconEmoji: '🎵', rarity: 'uncommon',
     apply: makeParticles({ emoji: '🎵', size: 16, spawnIntervalMs: 280, riseDistancePx: 100, lifeMs: 1900, spreadX: 40, wobbleX: 14 }),
+    burst: makeParticleBurst('🎵', 16),
   },
   {
     id: 'effect-snow',        name: 'Snow',        iconEmoji: '❄️', rarity: 'rare',
     apply: makeParticles({ emoji: '❄️', size: 14, spawnIntervalMs: 180, riseDistancePx: 95, lifeMs: 1800, spreadX: 60, wobbleX: 8 }),
+    burst: makeParticleBurst('❄️', 14),
   },
   {
     id: 'effect-blossom',     name: 'Blossoms',    iconEmoji: '🌸', rarity: 'rare',
     apply: makeParticles({ emoji: '🌸', size: 14, spawnIntervalMs: 240, riseDistancePx: 95, lifeMs: 1900, spreadX: 60, wobbleX: 10 }),
+    burst: makeParticleBurst('🌸', 14),
   },
   {
     id: 'effect-fire',        name: 'Fire',        iconEmoji: '🔥', rarity: 'rare',
     apply: makeParticles({ emoji: '🔥', size: 16, spawnIntervalMs: 120, riseDistancePx: 95, lifeMs: 1100, spreadX: 30 }),
+    burst: makeParticleBurst('🔥', 16),
   },
   {
     id: 'effect-bubbles',     name: 'Bubbles',     iconEmoji: '🫧', rarity: 'uncommon',
     apply: makeParticles({ emoji: '🫧', size: 14, spawnIntervalMs: 220, riseDistancePx: 100, lifeMs: 2000, spreadX: 40, wobbleX: 6 }),
+    burst: makeParticleBurst('🫧', 14),
   },
   {
     id: 'effect-butterfly',   name: 'Butterflies', iconEmoji: '🦋', rarity: 'legendary',
     apply: makeParticles({ emoji: '🦋', size: 16, spawnIntervalMs: 350, riseDistancePx: 110, lifeMs: 2200, spreadX: 70, wobbleX: 24 }),
+    burst: makeParticleBurst('🦋', 16),
   },
 ];
 
