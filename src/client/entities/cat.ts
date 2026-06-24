@@ -69,6 +69,11 @@ export class Cat {
    * via POST_UPDATE keeps working without an extra parent.
    */
   private cosmeticSprites: Record<string, GameObjects.Sprite> = {};
+  /** Last frame-offset successfully applied per slot. Falls back to this
+   *  when the cat's current animation has no entry in the offsets
+   *  table — keeps static cosmetics from snapping to cat-center on
+   *  unmapped anims (e.g. `happy`, which isn't in the offsets json). */
+  private lastCosmeticOffset: Record<string, [number, number]> = {};
   /** Active effect-cosmetic handles keyed by slot. Effects don't render a
    *  sprite — they hold tweens, preFX, or particle timers. */
   private activeEffects: Record<string, EffectHandle> = {};
@@ -439,6 +444,7 @@ export class Cat {
     if (catalogEntry?.isStatic) {
       const catAnimKey = this.sprite.anims.currentAnim?.key;
       const frameIdx = this.sprite.anims.currentFrame?.index;
+      let resolved: [number, number] | null = null;
       if (catAnimKey && typeof frameIdx === 'number') {
         // Animation key shape: "<breed>_<anim>". Use renderBreed so rainbow
         // (which uses cat6's frames) resolves to cat6 in the offsets table.
@@ -449,11 +455,20 @@ export class Cat {
           const off = this.frameOffsets[breed]?.[anim]?.[frameIdx - 1];
           if (off) {
             const strength = catalogEntry.motionStrength ?? Cat.motionStrengthForSlot(slot);
-            dx = off[0] * strength;
-            dy = off[1] * strength;
+            resolved = [off[0] * strength, off[1] * strength];
           }
         }
       }
+      // No offset entry for this frame/anim (the celebration's `happy`
+      // step has no row in cat-frame-offsets.json, for one) — reuse
+      // the most recent valid offset so the cosmetic doesn't visibly
+      // snap to cat-center every time we hit one of those anims.
+      const fallback = resolved ?? this.lastCosmeticOffset[slot];
+      if (fallback) {
+        dx = fallback[0];
+        dy = fallback[1];
+      }
+      if (resolved) this.lastCosmeticOffset[slot] = resolved;
     }
 
     // Offsets are in SOURCE pixels (91×64 canvas). Scale to display pixels
@@ -523,6 +538,15 @@ export class Cat {
       sprite.play(key, true);
       return;
     }
+    // No frames for the requested anim. If the cosmetic is already
+    // playing SOMETHING, leave it — falling through to idle here was
+    // the visible "cosmetic swapped to something else then back"
+    // glitch during the celebration cycle: the cosmetics atlas has
+    // idle/lick/happy but no meow, so meow steps were snapping every
+    // hat / bow / glasses back to its idle pose mid-cycle, which
+    // reads as a different cosmetic when its idle frame looks
+    // markedly different from its lick/happy pose.
+    if (sprite.anims.isPlaying) return;
     const idleKey = Cat.cosmeticAnimationKey(renderId, 'idle');
     this.ensureCosmeticAnimation(renderId, 'idle');
     if (this.scene.anims.exists(idleKey)) {
