@@ -34,6 +34,12 @@ export class Game extends Scene {
   /** Name labels rendered below each seated cat (matches Decorate preview). */
   private seatedNameLabels: Phaser.GameObjects.Text[] = [];
   private laneRects: Phaser.GameObjects.Rectangle[] = [];
+  /** Resolved tint trio for the active background — per-bg sampled colors
+   *  if `bg-lane-colors.json` has an entry, otherwise the global default.
+   *  Set in `drawLanes`, read by `flashTarget` (so post-tap reset uses
+   *  the same color the lane started with) and by the spawner (so falling
+   *  notes match their lane's target). */
+  private laneTints: readonly [number, number, number] = L.LANE_COLORS;
   /** Hit targets per lane — kept separate so we can flash them on hit/miss. */
   private hitTargets: Phaser.GameObjects.Image[] = [];
   /** Base scale of each hit target so flashTarget can always reset to it
@@ -167,14 +173,15 @@ export class Game extends Scene {
     const inner = width - L.LANE_GUTTER_PX * 2;
     const colW = (inner - L.LANE_GAP_PX * (L.LANE_COUNT - 1)) / L.LANE_COUNT;
 
-    // Resolve the lane tint trio for the active background: per-bg sampled
-    // colors win, fall back to the global LANE_COLORS default. Sampled
-    // values come from `atlas/bg-lane-colors.json` (extractor output).
-    const tintTrio = this.resolveLaneTints();
+    // Resolve the lane tint trio for the active background and cache on
+    // the scene so flashTarget + spawnNote use the SAME colors. Per-bg
+    // sampled colors win, fall back to the global LANE_COLORS default.
+    // Sampled values come from `atlas/bg-lane-colors.json`.
+    this.laneTints = this.resolveLaneTints();
 
     for (let i = 0; i < L.LANE_COUNT; i++) {
       const cx = L.laneCenterX(i as 0 | 1 | 2, width);
-      const color = tintTrio[i]!;
+      const color = this.laneTints[i]!;
 
       // Lane backdrop: the original Phase 1 rhythm bar track rotated -90°
       // (was +90°, which rendered the track upside down — the texture's
@@ -624,7 +631,10 @@ export class Game extends Scene {
     const target = this.hitTargets[laneId];
     const base = this.hitTargetBaseScale[laneId];
     if (!target || base === undefined) return;
-    const baseTint = L.LANE_COLORS[laneId]!;
+    // Reset to the SAMPLED lane tint, not the hardcoded default — otherwise
+    // every post-tap reset reverts to cyan/magenta/gold and the lane's
+    // bg-derived color is lost after the first hit.
+    const baseTint = this.laneTints[laneId]!;
     const flashTint =
       grade === 'perfect' ? 0xffffff : grade === 'great' ? 0xffd34d : 0xff6b6b;
     target.setTint(flashTint);
@@ -748,9 +758,13 @@ export class Game extends Scene {
       const n = this.notes[i]!;
       if (n.active) n.recycle();
     }
-    // Stop the backing track immediately; any in-flight meow one-shots
-    // are cheap and brief, no need to interrupt.
-    this.music?.stop();
+    // Backing track keeps playing through the summary — Phaser's scene
+    // shutdown will tear it down via `cleanup` when the player closes
+    // the scene. Round-end isn't a hard "cut off the music" moment;
+    // letting it ride keeps the room feeling alive.
+    // Switch every seated cat to a content "lick paw" pose so it
+    // visibly registers that the song's over and the cats are happy.
+    for (const c of this.cats) c.setAnimation('lick');
     this.showSummary();
   }
 
@@ -874,7 +888,7 @@ export class Game extends Scene {
     // to keep hit timing locked to Balance.noteFallMs at the target.
     const endY = this.scale.height + 80;
     const totalFallMs = ((endY - startY) / (hitY - startY)) * Balance.noteFallMs;
-    note.configure(laneId, x, startY, endY, totalFallMs, hitAtMs);
+    note.configure(laneId, x, startY, endY, totalFallMs, hitAtMs, this.laneTints[laneId]);
   }
 
   /** Hot path: scan pre-allocated pool for an inactive note. Allocates only
