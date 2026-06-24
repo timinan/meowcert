@@ -365,12 +365,25 @@ export class ChartEditor extends Scene {
       this.cellNotes[localStep] = [];
       const cy = this.gridTop + localStep * this.cellH + this.cellH / 2;
 
+      // Beat-tier visual emphasis: every 2nd row (step 0/2/4/6) is a
+      // QUARTER-NOTE beat in the chart's 8th-note grid; among those,
+      // step 0 + 4 are the strong DOWNBEATS. We brighten + thicken those
+      // rows so the author can read note spacing at a glance and judge
+      // density against the song's beat — addresses Tim's "notes between
+      // pages" feedback by making the rhythmic grid explicit.
+      const isDownbeat = localStep % 4 === 0;
+      const isBeat = localStep % 2 === 0;
+      const cellAlpha = isDownbeat ? 0.5 : isBeat ? 0.42 : 0.32;
+      const strokeColor = isDownbeat ? 0xffd34d : isBeat ? 0xc678ff : 0xffffff;
+      const strokeAlpha = isDownbeat ? 0.55 : isBeat ? 0.32 : 0.12;
+      const strokeWidth = isDownbeat ? 2 : 1;
+
       for (let lane = 0; lane < L.LANE_COUNT; lane++) {
         const cx = this.colCenterXs[lane]!;
 
         const panel = this.add
-          .rectangle(cx, cy, this.cellW - 6, this.cellH - 4, 0x0b041a, 0.35)
-          .setStrokeStyle(1, 0xffffff, 0.12)
+          .rectangle(cx, cy, this.cellW - 6, this.cellH - 4, 0x0b041a, cellAlpha)
+          .setStrokeStyle(strokeWidth, strokeColor, strokeAlpha)
           .setInteractive({ useHandCursor: true });
         const ls = localStep;
         const ln = lane;

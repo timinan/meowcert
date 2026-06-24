@@ -223,8 +223,11 @@ export class Game extends Scene {
   /** Drive the page indicator HUD pill + spawn page-boundary lines.
    *  Page boundary LINES fire at SPAWN time (so they fall with the
    *  notes); page-number HUD updates fire at HIT-LINE time (so they
-   *  reflect what the player is currently playing). */
+   *  reflect what the player is currently playing). Test mode only —
+   *  rehearsing from the drawer doesn't need page noise since the
+   *  player didn't author the chart. */
   private tickPageTracking(): void {
+    if (!this.testMode) return;
     if (!this.playChart || this.playMsPerStep <= 0) return;
     const elapsedMs = this.time.now - this.startTimeMs;
 
@@ -1154,13 +1157,15 @@ export class Game extends Scene {
 
     // Cache chart-derived timing so update() can drive the page indicator
     // + page-boundary lines without going through ChartPlayer internals.
+    // Page UI is editor-context only — when rehearsing from the drawer
+    // the player didn't author the chart, so the page markers are noise.
     this.playChart = playChart;
     this.playMsPerStep = 60000 / (playChart.bpm * 2);
     this.playPagesPerLoop = Math.max(
       1,
       Math.ceil(playChart.stepCount / CHART_PAGE_SIZE),
     );
-    this.buildPageIndicator();
+    if (this.testMode) this.buildPageIndicator();
 
     // Music for the round: real backing track from BACKING_CATALOG
     // (selected by chart.bpm + vibe + author hash). Backings are lazy-
@@ -1171,30 +1176,29 @@ export class Game extends Scene {
     void this.music.preload();
   }
 
-  /** Small floating pill that displays "PAGE N / M" during play. Renders
-   *  above the lane area, hidden until the first page is reached. */
+  /** Persistent "PAGE N / M" banner that sits just above the lane area
+   *  so the author can always see which section of their chart is
+   *  playing — useful for jumping back to fix a specific page after
+   *  the rehearsal. Test mode only; non-test rehearse hides it. */
   private buildPageIndicator(): void {
     if (this.pageIndicatorText) return;
-    const { width } = this.scale;
-    const x = width - 12;
-    const y = TopHud.HEIGHT + 6;
+    const { width, height } = this.scale;
+    const scaleY = height / L.DESIGN_H;
+    const laneTopY = L.LANE_TOP_Y * scaleY;
+    const cx = width / 2;
+    const y = laneTopY - 4;
     const text = this.add
-      .text(x, y, '', {
+      .text(cx, y, '', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
-        fontSize: '10px',
+        fontSize: '13px',
         color: '#ffd34d',
         backgroundColor: '#1a0a2e',
-        padding: { x: 6, y: 3 },
-        stroke: '#1a0a2e',
-        strokeThickness: 0,
+        padding: { x: 10, y: 4 },
       })
-      .setOrigin(1, 0)
-      .setDepth(60)
+      .setOrigin(0.5, 1)
+      .setDepth(70)
       .setAlpha(0);
-    // Sit just below the test-mode "← EDITOR" chip when present so they
-    // don't overlap. Test chip is 26px tall + 6px pad, so shift down.
-    if (this.testMode) text.setY(y + 26 + 6);
     this.pageIndicatorText = text;
   }
 

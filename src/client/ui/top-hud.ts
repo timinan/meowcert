@@ -43,7 +43,12 @@ export class TopHud {
     const showStats = options.showStats !== false;
     const w = scene.scale.width;
 
-    this.container = scene.add.container(0, 0).setDepth(100);
+    // TopHud sits above EVERYTHING (modals, ready modal, summary) so
+    // the hamburger remains tappable regardless of what dialog is open.
+    // Tim's rule: hamburger overrides any other menu and can switch at
+    // any state. Drawer scrim/panel below run at correspondingly higher
+    // depths so they overlay the rest of the scene cleanly when opened.
+    this.container = scene.add.container(0, 0).setDepth(2000);
 
     const strip = scene.add
       .rectangle(0, 0, w, TopHud.HEIGHT, 0x0b041a, 0.78)
@@ -146,7 +151,7 @@ export class TopHud {
     this.bestText?.setVisible(false);
 
     const w = this.scene.scale.width;
-    this.modeContainer = this.scene.add.container(0, 0).setDepth(100);
+    this.modeContainer = this.scene.add.container(0, 0).setDepth(2000);
 
     const labelText = mode === 'edit'
       ? '🏠 EDITING HOME'
@@ -207,13 +212,13 @@ export class TopHud {
     this.drawerScrim = this.scene.add
       .rectangle(0, TopHud.HEIGHT, width, height - TopHud.HEIGHT, 0x0b041a, 0)
       .setOrigin(0, 0)
-      .setDepth(200)
+      .setDepth(2100)
       .setInteractive();
     this.drawerScrim.on('pointerdown', () => this.closeDrawer());
     this.scene.tweens.add({ targets: this.drawerScrim, alpha: 0.55, duration: 200 });
 
     const panelW = Math.min(280, Math.floor(width * 0.78));
-    const panel = this.scene.add.container(width, TopHud.HEIGHT).setDepth(201);
+    const panel = this.scene.add.container(width, TopHud.HEIGHT).setDepth(2101);
     const panelBg = this.scene.add
       .rectangle(0, 0, panelW, height - TopHud.HEIGHT, 0x2c1856, 1)
       .setOrigin(0, 0);
