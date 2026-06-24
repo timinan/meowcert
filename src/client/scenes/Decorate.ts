@@ -79,6 +79,8 @@ export class Decorate extends Scene {
   private tabCatsLine!: GameObjects.Rectangle;
   private tabBgText!: GameObjects.Text;
   private tabBgLine!: GameObjects.Rectangle;
+  private tabCatsBtnBg!: GameObjects.Rectangle;
+  private tabBgBtnBg!: GameObjects.Rectangle;
   private trayContainer!: GameObjects.Container;
 
   constructor() {
@@ -529,42 +531,55 @@ export class Decorate extends Scene {
     const topBorder = this.add.rectangle(0, 0, width, 1, 0xc0a0e6, 0.25).setOrigin(0, 0);
     this.root.add([panelBg, topBorder]);
 
-    const tabH = 38;
-    const tabRowBg = this.add.rectangle(0, 0, width, tabH, 0x0b041a, 1).setOrigin(0, 0);
-    const tabRowBorder = this.add.rectangle(0, tabH - 1, width, 1, 0xc0a0e6, 0.15).setOrigin(0, 0);
-    this.root.add([tabRowBg, tabRowBorder]);
+    // Tab strip styled like the dressing room's slot tabs (HEAD / FACE /
+    // NECK / EFFECT) for visual consistency: filled pill with a yellow
+    // stroke + label on the active side, dim + faint purple on the
+    // inactive. Switching toggles fill / stroke / text colour together.
+    const tabH = 32;
+    const tabRowBg = this.add.rectangle(0, 0, width, tabH + 6, 0x0b041a, 1).setOrigin(0, 0);
+    this.root.add([tabRowBg]);
+
+    const inset = 10;
+    const gap = 6;
+    const tabW = (width - inset * 2 - gap) / 2;
+    const tabY = 3;
 
     const catsBtnBg = this.add
-      .rectangle(0, 0, width / 2, tabH, 0x000000, 0)
+      .rectangle(inset, tabY, tabW, tabH, 0x2c1856, 1)
       .setOrigin(0, 0)
+      .setStrokeStyle(2, 0xffd34d, 1)
       .setInteractive({ useHandCursor: true });
-    this.tabCatsText = this.add.text(width / 4, tabH / 2, 'CATS', {
-      fontFamily: '"Courier New", monospace',
+    this.tabCatsText = this.add.text(inset + tabW / 2, tabY + tabH / 2, 'CATS', {
+      fontFamily: 'Pixeloid Sans, sans-serif',
       fontStyle: 'bold',
-      fontSize: '11px',
+      fontSize: '12px',
       color: '#ffd34d',
     }).setOrigin(0.5);
-    this.tabCatsLine = this.add
-      .rectangle(width / 4, tabH - 1, width / 2 - 24, 2, 0xffd34d, 1)
-      .setOrigin(0.5, 0);
+    // tabCatsLine retained as a no-op rect so the field type stays
+    // satisfied; the new style replaces the underline with a full stroke.
+    this.tabCatsLine = this.add.rectangle(0, 0, 1, 1, 0x000000, 0).setVisible(false);
     catsBtnBg.on('pointerdown', () => this.switchTab('CATS'));
     this.root.add([catsBtnBg, this.tabCatsText, this.tabCatsLine]);
 
+    const bgX = inset + tabW + gap;
     const bgBtnBg = this.add
-      .rectangle(width / 2, 0, width / 2, tabH, 0x000000, 0)
+      .rectangle(bgX, tabY, tabW, tabH, 0x0b041a, 0.6)
       .setOrigin(0, 0)
+      .setStrokeStyle(2, 0xc0a0e6, 0.35)
       .setInteractive({ useHandCursor: true });
-    this.tabBgText = this.add.text((width * 3) / 4, tabH / 2, 'BACKGROUNDS', {
-      fontFamily: '"Courier New", monospace',
+    this.tabBgText = this.add.text(bgX + tabW / 2, tabY + tabH / 2, 'BACKGROUNDS', {
+      fontFamily: 'Pixeloid Sans, sans-serif',
       fontStyle: 'bold',
-      fontSize: '11px',
+      fontSize: '12px',
       color: '#c0a0e6',
     }).setOrigin(0.5);
-    this.tabBgLine = this.add
-      .rectangle((width * 3) / 4, tabH - 1, width / 2 - 24, 2, 0xffd34d, 0)
-      .setOrigin(0.5, 0);
+    this.tabBgLine = this.add.rectangle(0, 0, 1, 1, 0x000000, 0).setVisible(false);
     bgBtnBg.on('pointerdown', () => this.switchTab('BACKGROUNDS'));
     this.root.add([bgBtnBg, this.tabBgText, this.tabBgLine]);
+
+    // Hold the bg refs on the instance so switchTab can repaint them.
+    this.tabCatsBtnBg = catsBtnBg;
+    this.tabBgBtnBg = bgBtnBg;
 
     this.trayContainer = this.add.container(0, tabH);
     this.root.add(this.trayContainer);
@@ -578,14 +593,18 @@ export class Decorate extends Scene {
 
     if (tab === 'CATS') {
       this.tabCatsText.setColor('#ffd34d');
-      this.tabCatsLine.setAlpha(1);
+      this.tabCatsBtnBg.setFillStyle(0x2c1856, 1);
+      this.tabCatsBtnBg.setStrokeStyle(2, 0xffd34d, 1);
       this.tabBgText.setColor('#c0a0e6');
-      this.tabBgLine.setAlpha(0);
+      this.tabBgBtnBg.setFillStyle(0x0b041a, 0.6);
+      this.tabBgBtnBg.setStrokeStyle(2, 0xc0a0e6, 0.35);
     } else {
       this.tabBgText.setColor('#ffd34d');
-      this.tabBgLine.setAlpha(1);
+      this.tabBgBtnBg.setFillStyle(0x2c1856, 1);
+      this.tabBgBtnBg.setStrokeStyle(2, 0xffd34d, 1);
       this.tabCatsText.setColor('#c0a0e6');
-      this.tabCatsLine.setAlpha(0);
+      this.tabCatsBtnBg.setFillStyle(0x0b041a, 0.6);
+      this.tabCatsBtnBg.setStrokeStyle(2, 0xc0a0e6, 0.35);
     }
 
     this.renderTray();

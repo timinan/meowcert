@@ -112,6 +112,9 @@ export class Game extends Scene {
   /** Pass/fail blurb shown only in test mode when accuracy is below
    *  Balance.passAccuracyPct. Empty + invisible otherwise. */
   private summaryGateText!: Phaser.GameObjects.Text;
+  /** Summary title — swapped between 'MEOWCERT COMPLETE!' and
+   *  'MEOWCERT FAILED' based on the rehearsal pass gate. */
+  private summaryTitleText!: Phaser.GameObjects.Text;
 
   // Page boundary tracking — cached chart timing so update() can spawn
   // falling page-boundary lines at the right step crossings without
@@ -497,14 +500,15 @@ export class Game extends Scene {
 
     const fontBase = { fontFamily: 'Pixeloid Sans, sans-serif' };
 
-    // Title
-    const title = this.add.text(cx, cy - 112, 'MEOWCERT COMPLETE!', {
+    // Title — defaults to the success copy; showSummary() overrides for
+    // the test-mode fail case.
+    this.summaryTitleText = this.add.text(cx, cy - 112, 'MEOWCERT COMPLETE!', {
       ...fontBase,
       fontStyle: 'bold',
       fontSize: '13px',
       color: '#ffd34d',
     }).setOrigin(0.5, 0);
-    container.add(title);
+    container.add(this.summaryTitleText);
 
     // Divider line
     const divider = this.add.rectangle(cx, cy - 94, panelW - 32, 1, 0xc0a0e6, 0.3);
@@ -645,6 +649,7 @@ export class Game extends Scene {
     this.hud = new TopHud(this, {
       showStats: true,
       showCoins: false,
+      bigStats: this.testMode,
       currentKey: SceneKeys.Game,
       items: [
         {
@@ -700,28 +705,31 @@ export class Game extends Scene {
     const { width } = this.scale;
     const padX = 10;
     const padY = TopHud.HEIGHT + 6;
-    const w = 92;
-    const h = 26;
+    const w = 124;
+    const h = 36;
     const cx = width - padX - w / 2;
     const cy = padY + h / 2;
     const bg = this.add
-      .rectangle(cx, cy, w, h, 0x1a0a2e, 0.92)
-      .setStrokeStyle(1, 0xffd34d, 0.85)
+      .rectangle(cx, cy, w, h, 0x1a0a2e, 0.95)
+      .setStrokeStyle(2, 0xffd34d, 0.9)
       .setDepth(60)
       .setInteractive({ useHandCursor: true });
     const txt = this.add
       .text(cx, cy, '← EDITOR', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
-        fontSize: '11px',
+        fontSize: '15px',
         color: '#ffd34d',
       })
       .setOrigin(0.5)
       .setDepth(61);
     bg.on('pointerover', () => bg.setFillStyle(0x2c1856, 0.95));
-    bg.on('pointerout', () => bg.setFillStyle(0x1a0a2e, 0.92));
+    bg.on('pointerout', () => bg.setFillStyle(0x1a0a2e, 0.95));
     bg.on('pointerup', () => {
-      this.scene.start(SceneKeys.ChartEditor, { playerState: this.playerState });
+      this.scene.start(SceneKeys.ChartEditor, {
+        playerState: this.playerState,
+        initialPage: this.currentPlayPage(),
+      });
     });
     this.backToChartChip = [bg, txt];
   }
@@ -983,19 +991,31 @@ export class Game extends Scene {
     if (this.testMode) {
       const passed = accuracyPct >= Balance.passAccuracyPct;
       if (passed) {
+        this.summaryTitleText.setText('MEOWCERT COMPLETE!');
+        this.summaryTitleText.setColor('#ffd34d');
         this.summaryGateText.setText('Nice — your meowcert is ready to post.');
         this.summaryGateText.setColor('#a4ffb4');
         this.summaryRightBg.setVisible(true);
         this.summaryRightText.setVisible(true);
+        // Cats stay on the happy "thank you for coming" line.
+        this.comboText.setText('💕 thank you for coming to our meowcert 💕');
+        this.comboText.setColor('#ff9ed4');
       } else {
+        this.summaryTitleText.setText('MEOWCERT FAILED');
+        this.summaryTitleText.setColor('#ff8b8b');
         this.summaryGateText.setText(
-          "Sorry, we can't be putting on a meowcert with this performance. Please fix your chart and try again.",
+          'Please up your performance or fix your chart and try again.',
         );
         this.summaryGateText.setColor('#ff8b8b');
         this.summaryRightBg.setVisible(false);
         this.summaryRightText.setVisible(false);
+        // Disappointed cat-line — soft, cute, never harsh.
+        this.comboText.setText('😿 we expected more, please try again 😿');
+        this.comboText.setColor('#c6b3ff');
       }
     } else {
+      this.summaryTitleText.setText('MEOWCERT COMPLETE!');
+      this.summaryTitleText.setColor('#ffd34d');
       this.summaryGateText.setText('');
       this.summaryRightBg.setVisible(true);
       this.summaryRightText.setVisible(true);
@@ -1021,8 +1041,24 @@ export class Game extends Scene {
   // POST is a stub — when the real post flow lands, only onPostFromTestClicked
   // will diverge.
   private onBackToEditorClicked = (): void => {
-    this.scene.start(SceneKeys.ChartEditor, { playerState: this.playerState });
+    this.scene.start(SceneKeys.ChartEditor, {
+      playerState: this.playerState,
+      initialPage: this.currentPlayPage(),
+    });
   };
+
+  /** What page the playhead is on right now — used so jumping back to
+   *  the editor opens on the section the player was rehearsing instead
+   *  of always page 1. Clamped to the chart's actual page count. */
+  private currentPlayPage(): number {
+    if (!this.playChart || this.playMsPerStep <= 0) return 0;
+    const elapsedMs = this.time.now - this.startTimeMs;
+    const playStepFloat = Math.max(0, (elapsedMs - Balance.noteFallMs) / this.playMsPerStep);
+    const playStep = Math.floor(playStepFloat);
+    const playPage = Math.floor(playStep / CHART_PAGE_SIZE);
+    const totalPages = Math.max(1, Math.ceil(this.playChart.stepCount / CHART_PAGE_SIZE));
+    return Math.max(0, Math.min(totalPages - 1, playPage % totalPages));
+  }
 
   private onPostFromTestClicked = (): void => {
     console.info('[Game] Post (test mode) clicked. Score:', this.score.get());

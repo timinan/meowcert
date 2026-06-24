@@ -22,6 +22,10 @@ interface TopHudOptions {
    *  false in scenes where coins are a distraction (Tim's rule:
    *  Game/Rehearse hides coins, only Merch + Set Stage show them). */
   showCoins?: boolean;
+  /** Bump the hits/accuracy stack up to a larger size — used in editor
+   *  test-mode rehearsal where the author needs the running count
+   *  legible at arm's length. */
+  bigStats?: boolean;
   /** Scene key for the current scene — used to mark the matching
    *  drawer entry as the active page. */
   currentKey?: string;
@@ -101,12 +105,15 @@ export class TopHud {
       // compact lines stacked tight so the strip still fits inside
       // 320 px with the hamburger on the right. Shifts left when coins
       // are hidden so it doesn't sit awkwardly alone in the middle.
+      // `bigStats` bumps the font for test-mode rehearsal where the
+      // author needs to read the count at a glance.
       const hitsX = showCoins ? 196 : 112;
+      const hitsFontSize = options.bigStats ? '14px' : '9px';
       this.bestText = scene.add
         .text(hitsX, TopHud.HEIGHT / 2, '0/0\n0%', {
           fontFamily: 'Pixeloid Sans, sans-serif',
           fontStyle: 'bold',
-          fontSize: '9px',
+          fontSize: hitsFontSize,
           color: '#c0a0e6',
           align: 'left',
           lineSpacing: -1,

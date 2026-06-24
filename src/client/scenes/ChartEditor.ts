@@ -88,7 +88,7 @@ export class ChartEditor extends Scene {
     super(SceneKeys.ChartEditor);
   }
 
-  init(data: { playerState?: PlayerState | null }): void {
+  init(data: { playerState?: PlayerState | null; initialPage?: number }): void {
     this.playerState = data?.playerState ?? null;
     // Chart is not assigned here — it's seeded by SongPicker + Template/
     // Scratch in create(). Until then this.chart is undefined and the
@@ -96,9 +96,15 @@ export class ChartEditor extends Scene {
     this.cellPanels = [];
     this.cellNotes = [];
     this.scrollOffset = 0;
+    this.pendingInitialPage = data?.initialPage ?? 0;
     this.tryBusy = false;
     this.colCenterXs = [];
   }
+
+  /** Page index requested by the caller (e.g. Game's BACK TO EDITOR). Applied
+   *  in finishSetup once the chart is loaded so the editor opens on the
+   *  same page the player was rehearsing. */
+  private pendingInitialPage = 0;
 
   create(): void {
     this.root = this.add.container(0, 0).setDepth(0);
@@ -222,9 +228,14 @@ export class ChartEditor extends Scene {
     this.finishSetup(chart);
   }
 
-  /** Stamp the chart, build the grid + bottom bar, refresh the page. */
+  /** Stamp the chart, build the grid + bottom bar, refresh the page.
+   *  Applies any `initialPage` passed in by the caller (e.g. coming
+   *  back from rehearsal) so the editor opens on the right page. */
   private finishSetup(chart: Chart): void {
     this.chart = chart;
+    const totalPages = Math.max(1, Math.ceil(chart.stepCount / CHART_PAGE_SIZE));
+    const requested = Math.max(0, Math.min(totalPages - 1, this.pendingInitialPage));
+    this.scrollOffset = requested * CHART_PAGE_SIZE;
     this.buildPageNav();
     this.buildGrid();
     this.buildBottomBar();
@@ -344,13 +355,15 @@ export class ChartEditor extends Scene {
     // / next cluster centered horizontally.
     const navY = height - BOTTOM_STRIP_H - PAGE_NAV_ROW_H / 2;
     const centerX = width / 2;
-    const spacing = 60;
 
+    // Tighter pager — arrows hug a yellow chip in the middle so the
+    // 'page X / Y' reads as a unit instead of three free-floating items.
+    const chipSpacing = 38;
     this.upPageBtn = this.add
-      .text(centerX - spacing, navY, '▲', {
+      .text(centerX - chipSpacing, navY, '▲', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
-        fontSize: '20px',
+        fontSize: '18px',
         color: '#ffd34d',
       })
       .setOrigin(0.5)
@@ -362,15 +375,15 @@ export class ChartEditor extends Scene {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
         fontSize: '12px',
-        color: '#ffffff',
+        color: '#ffd34d',
       })
       .setOrigin(0.5);
 
     this.downPageBtn = this.add
-      .text(centerX + spacing, navY, '▼', {
+      .text(centerX + chipSpacing, navY, '▼', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
-        fontSize: '20px',
+        fontSize: '18px',
         color: '#ffd34d',
       })
       .setOrigin(0.5)
@@ -390,13 +403,12 @@ export class ChartEditor extends Scene {
       for (let lane = 0; lane < L.LANE_COUNT; lane++) {
         const cx = this.colCenterXs[lane]!;
 
-        // Cell stroke is a soft purple instead of the prior near-invisible
-        // white-at-0.12 — Tim flagged the grid lines as too dark to read
-        // against the dark background. Purple at 0.45 alpha gives the grid
-        // a visible structure without competing with the active fuzzballs.
+        // Cell stroke is a LIGHT overlay (white at 0.32 alpha) so the row
+        // dividers read as a soft highlight on top of the lane wash
+        // rather than a dark line cutting through it.
         const panel = this.add
-          .rectangle(cx, cy, this.cellW - 6, this.cellH - 2, 0x0b041a, 0.35)
-          .setStrokeStyle(1, 0xc678ff, 0.45)
+          .rectangle(cx, cy, this.cellW - 6, this.cellH - 2, 0x0b041a, 0.18)
+          .setStrokeStyle(1, 0xffffff, 0.32)
           .setInteractive({ useHandCursor: true });
         const ls = localStep;
         const ln = lane;
@@ -409,12 +421,10 @@ export class ChartEditor extends Scene {
         // some breathing room above + below in the half-height cells.
         const noteSize = Math.min(this.cellW - 4, this.cellH + 2, 56);
         const noteContainer = this.add.container(cx, cy);
-        // Mirror the in-game hit-target tint (raw lane color, no lift)
-        // so the editor preview matches what the player will see at the
-        // bottom of the lane. Was using BALL_BRIGHTNESS_LIFT (=0 anyway)
-        // — switching to the target color directly makes the intent
-        // explicit and easier to tune.
-        const ball = this.add.image(0, 0, AssetKeys.Image.PspspsElementBallWhite);
+        // Use the hit-target sprite (no PS letters) instead of the
+        // falling-note sprite. Tim's note: the editor preview should
+        // read as the bottom catching fuzzball, not the falling ball.
+        const ball = this.add.image(0, 0, AssetKeys.Image.PspspsTargetWhite);
         ball.setDisplaySize(noteSize, noteSize);
         ball.setTint(this.laneTints[lane]!);
         noteContainer.add(ball);
@@ -618,7 +628,7 @@ export class ChartEditor extends Scene {
     // view. Total pages = chart.stepCount / CHART_PAGE_SIZE.
     const page = Math.floor(this.scrollOffset / CHART_PAGE_SIZE) + 1;
     const totalPages = Math.max(1, Math.ceil(this.chart.stepCount / CHART_PAGE_SIZE));
-    this.pageLabel.setText(`PAGE ${page} / ${totalPages}`);
+    this.pageLabel.setText(`${page} / ${totalPages}`);
     this.upPageBtn.setAlpha(page === 1 ? 0.3 : 1);
     this.downPageBtn.setAlpha(page === totalPages ? 0.3 : 1);
   }
