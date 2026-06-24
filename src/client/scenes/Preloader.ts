@@ -160,9 +160,12 @@ export class Preloader extends Scene {
       ctx.drawImage(srcImage, 0, 0);
       const img = ctx.getImageData(0, 0, w, h);
       const data = img.data;
-      // Anything noticeably darker than the bar's white reads as a paw.
-      // Threshold tuned so faint anti-aliased paw edges still count.
-      const PAW_THRESHOLD = 200;
+      // Only pixels noticeably darker than the bar's white pass as
+      // paws. Threshold dropped 200 → 100 so the bar's faint edge
+      // gradient, frame details, and other near-white-but-not-quite
+      // pixels stop being misclassified as paws (which was causing the
+      // pink overlay to wash the whole lane + paint over the border).
+      const PAW_THRESHOLD = 100;
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i]!;
         const g = data[i + 1]!;

@@ -289,14 +289,14 @@ export class Game extends Scene {
       bar.setAlpha(0.78);
       this.laneRects.push(bar as unknown as Phaser.GameObjects.Rectangle);
 
-      // Opaque cat-color BORDER around the lane. Drawn as a stroked
-      // rectangle the size of the lane bar so the lane reads as a
-      // framed column in its cat's color. Depth -1 so it sits BEHIND
-      // the falling notes (depth 40) but in front of the bar fill.
+      // Opaque cat-color BORDER around the lane. Depth 5 so it sits
+      // ABOVE the pink-paw overlay (depth 2) — without this, the paws
+      // layer painted over the border at the bar's edges and made the
+      // border look pink instead of the cat color.
       this.add
         .rectangle(cx, laneTopY + laneH / 2, colW, laneH, 0x000000, 0)
         .setStrokeStyle(3, color, 1)
-        .setDepth(1);
+        .setDepth(5);
 
       // Sakura-pink toe-bean overlay. Uses the paws-only texture from
       // Preloader.generatePawsOnlyTexture — paws are solid (full alpha),
@@ -319,9 +319,9 @@ export class Game extends Scene {
       const target = this.add.image(cx, hitLineY, AssetKeys.Image.PspspsTargetWhite);
       target.setDisplaySize(72, 72);
       target.setTint(color);
-      // Catching fuzzball sits ABOVE the paw-overlay (depth 2) so the
-      // pink toe-bean texture never paints over the hit-target sprite.
-      target.setDepth(3);
+      // Catching fuzzball sits ABOVE the paw-overlay (depth 2) AND the
+      // lane border (depth 5) so neither layer paints over the target.
+      target.setDepth(6);
       this.hitTargets[i] = target;
       // Snapshot the base scale after setDisplaySize so flash tweens always
       // start from the same value instead of compounding off prior inflations.
