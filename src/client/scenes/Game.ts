@@ -285,18 +285,19 @@ export class Game extends Scene {
       bar.setAlpha(0.82);
       this.laneRects.push(bar as unknown as Phaser.GameObjects.Rectangle);
 
-      // Pink paw overlay — second copy of the same texture tinted pink
-      // and laid on top in MULTIPLY blend so the paw shapes (darker
-      // pixels in the texture) drag toward pink while the bar's white
-      // areas stay roughly neutral. Gives the playfield its "toe beans
-      // are pink" treatment without modifying the source asset.
+      // Pink toe-bean overlay — second copy of the same texture, tinted
+      // pink, laid on top in SCREEN blend. Screen keeps the bar's light
+      // areas roughly unchanged (1 - (1-white)(1-pink) ≈ white) while
+      // lifting the dark brown paw shapes toward pink (dark pixels are
+      // where screen blending shows the overlay strongest). Net result:
+      // the toe beans go pink, the bar stays cat-colored.
       const paws = this.add.image(cx, laneTopY + laneH / 2, AssetKeys.Image.RhythmBarBackgroundWhite);
       paws.displayWidth = laneH;
       paws.displayHeight = colW;
       paws.setRotation(-Math.PI / 2);
-      paws.setTint(0xff9ed4);
-      paws.setAlpha(0.45);
-      paws.setBlendMode(BlendModes.MULTIPLY);
+      paws.setTint(0xff5fb8);
+      paws.setAlpha(0.85);
+      paws.setBlendMode(BlendModes.SCREEN);
 
       // Hit target at the bottom of the lane — the original "fuzzy ball"
       // target from horizontal rhythm. Notes get consumed when they reach it.
