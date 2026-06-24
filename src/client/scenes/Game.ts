@@ -875,13 +875,6 @@ export class Game extends Scene {
     const endY = this.scale.height + 80;
     const totalFallMs = ((endY - startY) / (hitY - startY)) * Balance.noteFallMs;
     note.configure(laneId, x, startY, endY, totalFallMs, hitAtMs);
-    // Pre-schedule the backing-track amplification pulse to peak at
-    // this note's expected hit time. Web Audio's scheduler bakes the
-    // pulse into the audio buffer so it lands exactly with the song's
-    // beat — eliminates the output-buffer latency that made reactive
-    // pulses feel off. Fires whether or not the player hits the note;
-    // misses just feel like the song's own rhythmic accents.
-    this.music?.scheduleHitPulseAt(hitAtMs);
   }
 
   /** Hot path: scan pre-allocated pool for an inactive note. Allocates only

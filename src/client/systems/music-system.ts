@@ -27,31 +27,15 @@ const BACKING_VOLUME = 0.85;
 // gain inside the synth so this constant is sample-only.
 const TAP_SAMPLE_VOLUME = 0.4;
 
-// Backing pulse — briefly amplifies the song on a hit so the player
-// feels the impact in the music too. Tuning has been iterative:
-//
-//   1.55× / 0 ms attack / 220 ms decay — first try. Felt clicky and
-//     amplified quiet song sections too hard ("song becomes quiet
-//     then hitting the beat makes it sound weird").
-//
-//   1.30× / 4 ms attack / 160 ms decay — too gentle/swelly. The
-//     smoothing killed the click but the brain lost its "now" anchor
-//     in the absence of a sharp transient, so the amplification read
-//     as a delayed swell instead of a punch.
-//
-//   1.45× / 4 ms attack / 90 ms decay — current. Higher peak +
-//     shorter decay = punchier envelope that feels like a brief
-//     accent instead of a sustained swell. 4 ms ramp keeps the
-//     click-free start; the louder peak gives the brain the
-//     transient cue it was missing, so the pulse reads as synced
-//     to the tap rather than trailing it.
-//
-// The current gain value is anchored before the ramp so overlapping
-// pulses pick up smoothly from wherever the decay left off instead of
-// jumping back to peak.
-const PULSE_PEAK_MULTIPLIER = 1.45;
-const PULSE_ATTACK_SEC = 0.004;
-const PULSE_DECAY_SEC = 0.09;
+// Backing pulse was removed after the synth-taps iteration. The short
+// version of the design history: reactive amplification on tap fights
+// audio output buffer latency (5-50ms), and pre-scheduled amplification
+// aligned to the chart grid fights mismatch between chart beats and
+// the song's actual rhythm (especially bad on lo-fi like Midnight
+// Coffee which doesn't even have a strict beat grid). Neither approach
+// produced a synced "punch". The per-song tap sample carries the
+// impact on its own; if more oomph is needed it'll come from a
+// standalone additive thump that doesn't depend on the song timing.
 
 export class MusicSystem {
   private backing: Sound.BaseSound | null = null;
@@ -61,19 +45,6 @@ export class MusicSystem {
    *  more than once for the same round is cheap — subsequent calls reuse
    *  this promise so start() and an upfront preload() resolve together. */
   private loadPromise: Promise<void> | null = null;
-  /** AudioContext time at which the current pulse's decay finishes.
-   *  Concurrent pulses while we're still ramping down just push this
-   *  out further instead of cancelling + restarting the envelope.
-   *  Exposed via a getter so strict-noUnused doesn't fire while there's
-   *  no in-tree reader; the future visual-cue-on-pulse-decay feature
-   *  will read it. */
-  private _pulseEndsAt = 0;
-  get pulseEndsAt(): number { return this._pulseEndsAt; }
-  set pulseEndsAt(v: number) { this._pulseEndsAt = v; }
-  /** AudioContext time captured right after backing.play() so we can
-   *  convert game-relative timestamps (ms since round start) into
-   *  AudioContext-relative times for sample-accurate pre-scheduling. */
-  private audioRoundStartTime = 0;
 
   constructor(
     private readonly scene: Scene,
@@ -160,11 +131,6 @@ export class MusicSystem {
       volume: BACKING_VOLUME,
     });
     this.backing.play();
-    // Anchor the AudioContext clock to round start so future
-    // scheduleHitPulseAt(gameTimeMs) calls can translate game-time
-    // into AudioContext-time without drift.
-    const ctxNode = (this.backing as unknown as { volumeNode?: GainNode }).volumeNode;
-    if (ctxNode) this.audioRoundStartTime = ctxNode.context.currentTime;
   }
 
   /**
@@ -201,62 +167,6 @@ export class MusicSystem {
     this.noteSynth.playMiss();
   }
 
-  /**
-   * Pre-schedule a backing-track gain pulse to peak at the moment a
-   * note is supposed to be hit. Called by Game.spawnNote when a note
-   * spawns (typically ~2.4s before its hit time), so the gain change
-   * has plenty of lead time to land on the AudioContext clock with
-   * sample accuracy.
-   *
-   * Why pre-schedule instead of reactively pulsing on tap?
-   *
-   *   Reactive pulsing on tap always feels slightly off because of
-   *   audio output buffer latency — even with sample-accurate Web
-   *   Audio scheduling, a reactive call at "now" ends up amplifying
-   *   the song content the player will hear AFTER the buffer delay,
-   *   not the content they were tapping in response to. Net: the
-   *   amplified content is consistently a few ms ahead of what the
-   *   player just heard at tap time, which reads as lag.
-   *
-   *   Pre-scheduling sidesteps the buffer entirely. We know in
-   *   advance when the chart wants each note hit, so we schedule
-   *   the pulse to peak at THAT AudioContext time. By the time the
-   *   audio plays through to the speakers, the pulse is already
-   *   baked into the buffer and lands exactly with the song's beat.
-   *
-   * Tradeoff: the pulse fires whether or not the player actually
-   * hits the note. Feels like the song has natural rhythmic accents
-   * on each beat. If the player taps on time, the accent feels
-   * synced to their tap. If they miss, the accent still happens
-   * (just feels like the song's own dynamics).
-   */
-  scheduleHitPulseAt(gameTimeMs: number): void {
-    if (this.destroyed || !this.backing) return;
-    if (this.audioRoundStartTime === 0) return;
-    const node = (this.backing as unknown as { volumeNode?: GainNode }).volumeNode;
-    if (!node) return;
-    const ctx = node.context;
-    if (ctx.state !== 'running') return;
-
-    const targetTime = this.audioRoundStartTime + gameTimeMs / 1000;
-    // Note's hit time is already in the past — skip (this can happen
-    // if a chart loops and we re-schedule, or after a Skip button).
-    if (targetTime <= ctx.currentTime) return;
-
-    const baseline = BACKING_VOLUME;
-    const peak = baseline * PULSE_PEAK_MULTIPLIER;
-    const rampStart = Math.max(ctx.currentTime, targetTime - PULSE_ATTACK_SEC);
-    const decayEnd = targetTime + PULSE_DECAY_SEC;
-
-    // No cancelScheduledValues here — pre-scheduled pulses need to
-    // coexist, not overwrite each other. The chart's note spacing
-    // (~230ms at 130bpm 16th notes) is wider than our 90ms decay so
-    // overlap is rare in typical play.
-    node.gain.setValueAtTime(baseline, rampStart);
-    node.gain.linearRampToValueAtTime(peak, targetTime);
-    node.gain.exponentialRampToValueAtTime(baseline, decayEnd);
-    this.pulseEndsAt = decayEnd;
-  }
 
   /** Stop the backing track immediately. Pending meow one-shots will
    *  finish playing — they're cheap and brief, no need to interrupt. */
