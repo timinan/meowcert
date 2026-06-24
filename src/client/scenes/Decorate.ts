@@ -261,11 +261,14 @@ export class Decorate extends Scene {
       );
       this.catZones.push(zone);
 
-      // Red ✕ badge top-right of the cat for quick-unseat. Sits over the
-      // upper body / shoulder so it reads as "this belongs to the cat" not
-      // "this is floating above". Tuned in canvas px against a 1.4×-scaled
-      // 91×64 native cat sprite that reaches (catY - 90) at the head top.
-      const badge = new RemoveBadge(this, cx + 36, catY - 40, () => {
+      // Red ✕ badge in the TOP-RIGHT corner of the cat. Was at
+      // (cx+36, catY-40) which put it square in the middle of the body
+      // — Tim flagged it as floating over the chest instead of in the
+      // corner. The 1.4×-scaled cat artwork occupies roughly
+      // (cx ± 45, catY-90 … catY) on a 91×64 native canvas, so 42px
+      // right of center and 72px up from the feet lands at the head /
+      // ear area — visibly the upper-right corner of the sprite.
+      const badge = new RemoveBadge(this, cx + 42, catY - 72, () => {
         this.unseatCat(seatId);
       });
       this.add.existing(badge);
@@ -274,7 +277,7 @@ export class Decorate extends Scene {
   }
 
   /**
-   * Show the cat context menu (Dress up / Move / Take to bench, etc).
+   * Show the cat context menu (Dress up / Put on stage / Take off stage).
    * `seatId` is undefined when invoked from a tray thumb (cat is not yet placed).
    * `vAlign='top'` means anchorY is the menu's TOP edge (used by seated-cat
    * taps to land the menu at the lane-top row); default is centered on
@@ -585,7 +588,7 @@ export class Decorate extends Scene {
   private renderCatsTray(): void {
     const { width, height } = this.scale;
     const scaleY = height / L.DESIGN_H;
-    const panelTop = 252 * scaleY;
+    const panelTop = L.LANE_TOP_Y * scaleY;
     const panelH = height - panelTop;
     const tabH = 38;
     const trayH = panelH - tabH;
@@ -764,7 +767,7 @@ export class Decorate extends Scene {
     // grey out so the player gets a visual cue without the footer disappearing.
     const { width, height } = this.scale;
     const scaleY = height / L.DESIGN_H;
-    const panelTop = 252 * scaleY;
+    const panelTop = L.LANE_TOP_Y * scaleY;
     const panelH = height - panelTop;
     const tabH = 38;
     const trayH = panelH - tabH;
@@ -835,7 +838,7 @@ export class Decorate extends Scene {
   private renderBackgroundsTray(): void {
     const { width, height } = this.scale;
     const scaleY = height / L.DESIGN_H;
-    const panelTop = 252 * scaleY;
+    const panelTop = L.LANE_TOP_Y * scaleY;
     const panelH = height - panelTop;
     const tabH = 38;
     const trayH = panelH - tabH;

@@ -34,12 +34,10 @@ export function buildCatMenu(args: CatMenuArgs): MenuRow[] {
   return [
     args.isSeated
       ? { icon: '👔', label: 'Dress up', action: 'dressup', primary: true }
-      : { icon: '📍', label: 'Seat in scene', action: 'seat', primary: true },
+      : { icon: '📍', label: 'Put on stage', action: 'seat', primary: true },
     args.isSeated
-      ? { icon: '📤', label: 'Take to bench', action: 'unseat' }
+      ? { icon: '📤', label: 'Take off stage', action: 'unseat' }
       : { icon: '👔', label: 'Dress up', action: 'dressup' },
-    { icon: '🎁', label: 'Gift (soon)', action: 'gift', disabled: true },
-    { icon: '🏠', label: 'Rehome', action: 'rehome', danger: true },
   ];
 }
 
