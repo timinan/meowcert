@@ -753,13 +753,19 @@ async function handleBgUpload(req, res, slug) {
 }
 
 /**
- * Accepts raw mp3 bytes from the music calibrator. Runs ffmpeg to trim
- * to 75s, downmix to mono, and re-encode at 96kbps so the upload lands
- * the file in the same shape every other backing already has. 75s gives
- * the 60s round a comfortable 15s margin before the loop seam — the
- * original 32s slice was exposing the cut at 32 s into a 60 s round.
+ * Accepts raw mp3 bytes from the music calibrator. Runs ffmpeg with:
+ *   1. `silenceremove` to clip leading silence / soft intro so the
+ *      backing starts on something the player can actually hear.
+ *   2. `-t 62` to cut a 62-second clip (the 60-second round + 2 s
+ *      breathing room before the loop seam).
+ *   3. Fade-in (350 ms) + fade-out (1.5 s) to mask the seam when
+ *      Phaser loops the audio — end of clip eases to silence, start
+ *      eases back up, so the cut reads as a breath instead of a jump.
+ *   4. Downmix to mono + re-encode at 96 kbps so every backing in the
+ *      catalog has the same shape.
  * Appends a default catalog entry to tools/music/music.json (FAST 130
- * UPBEAT; the calibrator UI then lets Tim tune speedLabel / vibe / bpm).
+ * UPBEAT; the calibrator UI lets Tim tune speedLabel / vibe / bpm).
+ * Mirrors the retroactive script at scripts/audio/reprocess-backings.py.
  */
 async function handleMusicUpload(req, res, slug) {
   if (!/^[a-z][a-z0-9_-]{0,40}$/.test(slug)) {
@@ -794,13 +800,28 @@ async function handleMusicUpload(req, res, slug) {
       const outPath = path.join(MUSIC_UPLOAD_DIR, `${slug}.mp3`);
       await fs.writeFile(tmpPath, buf);
 
+      // Pipeline (also mirrored in scripts/audio/reprocess-backings.py):
+      //   silenceremove → strip leading silence / soft intro
+      //   atrim 0..62  → keep exactly 62 s
+      //   afade in 0.35 → ease in so loop seam reads as a breath
+      //   afade out 1.5 → ease out the tail before the cut
+      const fadeIn = 0.35;
+      const fadeOut = 1.5;
+      const clipS = 62;
+      const fadeOutStart = (clipS - fadeOut).toFixed(3);
+      const af = [
+        'silenceremove=start_periods=1:start_duration=0.1:start_threshold=-28dB',
+        `atrim=0:${clipS}`,
+        `afade=t=in:st=0:d=${fadeIn.toFixed(3)}`,
+        `afade=t=out:st=${fadeOutStart}:d=${fadeOut.toFixed(3)}`,
+      ].join(',');
       await new Promise((resolve, reject) => {
         const ff = spawn(
           'ffmpeg',
           [
             '-hide_banner', '-loglevel', 'error', '-y',
             '-i', tmpPath,
-            '-t', '75',
+            '-af', af,
             '-ac', '1',
             '-ar', '44100',
             '-b:a', '96k',
@@ -829,7 +850,7 @@ async function handleMusicUpload(req, res, slug) {
         speedLabel,
         vibe,
         bpm,
-        loopDurationMs: 75000,
+        loopDurationMs: 62000,
       };
       await rotateBackups(MUSIC_JSON);
       await fs.writeFile(MUSIC_JSON, JSON.stringify(raw, null, 2) + '\n');
