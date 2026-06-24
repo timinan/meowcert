@@ -745,8 +745,11 @@ export class Game extends Scene {
     // every post-tap reset reverts to cyan/magenta/gold and the lane's
     // bg-derived color is lost after the first hit.
     const baseTint = this.laneTints[laneId]!;
+    // Perfect → cyan, Great → mint, Miss → red. Cyan/mint pop against the
+    // dark stage; mint matches the accuracy stat color in the summary so
+    // the cue feels consistent across the round.
     const flashTint =
-      grade === 'perfect' ? 0xffffff : grade === 'great' ? 0xffd34d : 0xff6b6b;
+      grade === 'perfect' ? 0x4dffff : grade === 'great' ? 0x4dffb4 : 0xff6b6b;
     target.setTint(flashTint);
     this.tweens.killTweensOf(target);
     // Reset to the captured base scale BEFORE tweening so a killed mid-yoyo
@@ -789,7 +792,7 @@ export class Game extends Scene {
     const label =
       grade === 'perfect' ? 'PERFECT!' : grade === 'great' ? 'GREAT' : 'MISS';
     const color =
-      grade === 'perfect' ? '#ffffff' : grade === 'great' ? '#ffd34d' : '#ff6b6b';
+      grade === 'perfect' ? '#4dffff' : grade === 'great' ? '#4dffb4' : '#ff6b6b';
     txt.setText(label);
     txt.setColor(color);
     const startY = txt.y;
@@ -895,6 +898,22 @@ export class Game extends Scene {
     this.cats.forEach((c, i) => {
       this.time.delayedCall(i * 200, () => c.startCelebration());
     });
+    // Repurpose the combo callout into the cats' end-of-show line. Same
+    // slot above the lanes, shrunk and untweened so the message reads
+    // calmly instead of pulsing like a fresh combo. The Text was
+    // already alpha-0 — flip it to 1 once we've set the content.
+    this.tweens.killTweensOf(this.comboText);
+    this.comboText.setText('💕 thank you for coming to our show 💕');
+    this.comboText.setStyle({
+      fontFamily: 'Pixeloid Sans, sans-serif',
+      fontStyle: 'bold',
+      fontSize: '11px',
+      color: '#ff9ed4',
+      stroke: '#1a0a2e',
+      strokeThickness: 4,
+    });
+    this.comboText.setScale(1);
+    this.comboText.setAlpha(1);
     this.showSummary();
   }
 
@@ -1143,11 +1162,13 @@ export class Game extends Scene {
     this.flashTarget(laneId, grade);
     if (grade === 'miss') {
       this.cats[laneId]?.playAngry(Balance.catReactionMs);
+      this.cats[laneId]?.pulseEffectMiss();
       // Intentionally don't consume the note — the player can still land
       // a real hit on it when it actually reaches the target. Premature
       // tap costs combo but doesn't burn the note.
     } else {
       this.cats[laneId]?.playMeow(Balance.catReactionMs);
+      this.cats[laneId]?.pulseEffectHit();
       this.flashLaneEffect(laneId);
       note!.consumed = true;
       note!.recycle();
@@ -1192,6 +1213,7 @@ export class Game extends Scene {
         // wrong or didn't tap at all.
         this.music?.playMiss();
         this.cats[n.laneId]?.playAngry(Balance.catReactionMs);
+        this.cats[n.laneId]?.pulseEffectMiss();
         this.showHitFeedback(n.laneId, 'miss');
         this.flashTarget(n.laneId, 'miss');
         n.recycle();

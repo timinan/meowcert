@@ -28,6 +28,10 @@ const RAINBOW_CYCLE_MS = 3000;
  *  frame boundary (no mid-meow cut to lick that reads as a jump). */
 const CELEBRATION_CYCLE: CatAnimationState[] = ['lick', 'meow', 'happy'];
 const ANIMATION_REPEATS_PER_STEP = 1;
+/** Time spent on a brief idle pose between celebration steps. Gives the
+ *  cat a beat to "reset" before the next animation kicks in so the
+ *  paw-down → mouth-open transition doesn't read as a jump cut. */
+const CELEBRATION_BRIDGE_MS = 280;
 
 /**
  * Pull the parent cosmetic id out of a tint variant's sourceFrame string
@@ -203,6 +207,24 @@ export class Cat {
     }
   }
 
+  /** Trigger a brief intensity spike on every equipped EFFECT cosmetic
+   *  — called from Game on a successful lane tap so the cat's aura /
+   *  particles surge. Handles without a pulseHit (legacy effects like
+   *  ghost) just skip the call. */
+  pulseEffectHit(): void {
+    for (const handle of Object.values(this.activeEffects)) {
+      handle.pulseHit?.();
+    }
+  }
+
+  /** Mirror of pulseEffectHit for a missed note — dims the effect
+   *  briefly so the lane visually registers the failure. */
+  pulseEffectMiss(): void {
+    for (const handle of Object.values(this.activeEffects)) {
+      handle.pulseMiss?.();
+    }
+  }
+
   playHappy(durationMs = 500): void {
     this.cancelRevert();
     const key = `${this.model.breed}_happy`;
@@ -279,10 +301,11 @@ export class Cat {
   }
 
   /** Play the current celebration step. The step's animation plays for
-   *  (ANIMATION_REPEATS_PER_STEP + 1) loops then fires
-   *  ANIMATION_COMPLETE, which advances us to the next step. Steps the
-   *  breed has no frames for are skipped so legacy breeds without
-   *  `happy` fall through to whatever they DO have. */
+   *  (ANIMATION_REPEATS_PER_STEP + 1) loops, then ANIMATION_COMPLETE
+   *  triggers a brief idle-pose bridge (CELEBRATION_BRIDGE_MS) before
+   *  the next step kicks in. The idle bridge is what makes
+   *  lick → meow feel like the cat puts its paw down first instead of
+   *  snapping into meow mid-lick. */
   private playCelebrationStep(): void {
     if (!this.celebrating) return;
     // Find the next playable step, skipping any animation the breed has
@@ -299,14 +322,31 @@ export class Cat {
         this.playCosmeticAnimation(anim);
         this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
           if (!this.celebrating) return;
-          this.celebrationStep = (this.celebrationStep + 1) % CELEBRATION_CYCLE.length;
-          this.playCelebrationStep();
+          this.bridgeToNextStep();
         });
         return;
       }
       this.celebrationStep = (this.celebrationStep + 1) % CELEBRATION_CYCLE.length;
       tries++;
     }
+  }
+
+  /** Play idle briefly between celebration steps so the cat visibly
+   *  returns to a neutral pose before the next animation. Idle is
+   *  loop-able so we just play it then schedule the step advance. */
+  private bridgeToNextStep(): void {
+    if (!this.celebrating) return;
+    const idleKey = Cat.animationKey(this.model.breed, 'idle');
+    this.ensureAnimation(this.model.breed, 'idle');
+    if (this.scene.anims.exists(idleKey)) {
+      this.sprite.play(idleKey, true);
+      this.playCosmeticAnimation('idle');
+    }
+    this.scene.time.delayedCall(CELEBRATION_BRIDGE_MS, () => {
+      if (!this.celebrating) return;
+      this.celebrationStep = (this.celebrationStep + 1) % CELEBRATION_CYCLE.length;
+      this.playCelebrationStep();
+    });
   }
 
   private cancelRevert(): void {

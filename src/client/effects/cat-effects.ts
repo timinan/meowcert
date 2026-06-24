@@ -1,4 +1,4 @@
-import { Scene, Scenes, GameObjects } from 'phaser';
+import { Scene, Scenes, GameObjects, Tweens } from 'phaser';
 
 /**
  * Catalog of "effect cosmetics" — visual flair attached to a cat sprite via
@@ -16,7 +16,26 @@ import { Scene, Scenes, GameObjects } from 'phaser';
 
 export interface EffectHandle {
   destroy(): void;
+  /** Brief intensity spike — used by Game when the lane's cat lands a
+   *  perfect/great so the aura/particles surge. Auto-decays back to the
+   *  resting baseline over ~600 ms. Optional so older / simpler effect
+   *  implementations (ghost) can opt out. */
+  pulseHit?(): void;
+  /** Brief intensity dip — used by Game when the lane's cat misses, so
+   *  the aura/particles momentarily fade out. Auto-restores to baseline
+   *  over ~600 ms. Optional, same reasoning as pulseHit. */
+  pulseMiss?(): void;
 }
+
+/** Resting intensity multiplier the cat-attached effects render at when
+ *  no recent hit/miss is biasing them. Tim's note: the on-stage effects
+ *  were too loud at baseline — particles spawned too dense, glow was
+ *  too bright. 0.55 dampens both so a hit's pulse back up to 1.0 reads
+ *  as a meaningful spike instead of "the usual". */
+const REST_INTENSITY = 0.55;
+const HIT_INTENSITY = 1.0;
+const MISS_INTENSITY = 0.3;
+const PULSE_DECAY_MS = 600;
 
 /** Anything Phaser-y that the effects can be applied to. Sprite and Image
  * both supply the position / depth / alpha / scale properties the effects
@@ -109,6 +128,7 @@ function makeGlow(color: number): CatEffect['apply'] {
       graphics.fillEllipse(0, y, w, sliceThickness);
     }
     graphics.setDepth(sprite.depth - 1);
+    graphics.alpha = REST_INTENSITY;
 
     const sync = (): void => {
       // Compute the on-screen foot position regardless of the target's
@@ -120,25 +140,45 @@ function makeGlow(color: number): CatEffect['apply'] {
     };
     sync();
 
-    // Flicker: gentle horizontal scale tween so the flame feels alive rather
-    // than reading as a frozen decal. Width-only — keeps the bottom anchored.
+    // Per-instance phase offset desyncs flicker across multiple cats
+    // wearing the same aura — without it, three red-aura cats all
+    // breathe in unison and the effect reads as one big light source
+    // instead of three independent auras.
     const flicker = scene.tweens.add({
       targets: graphics,
       scaleX: 1.08,
       duration: 380,
+      delay: Math.random() * 380,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut',
     });
-    // Subtle alpha breath as well.
-    const pulse = scene.tweens.add({
-      targets: graphics,
-      alpha: 0.85,
-      duration: 900,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
+
+    // Hit/miss intensity reactions. Brief spike to HIT_INTENSITY (or dip
+    // to MISS_INTENSITY) over 80 ms, then a gentle ease back to
+    // REST_INTENSITY over PULSE_DECAY_MS. We track the pulse tween so
+    // back-to-back taps stack cleanly without orphaning a half-finished
+    // ramp on the graphics object.
+    let pulseTween: Tweens.Tween | null = null;
+    let pulseDecay: Tweens.Tween | null = null;
+    const pulseTo = (peak: number): void => {
+      pulseTween?.stop();
+      pulseDecay?.stop();
+      pulseTween = scene.tweens.add({
+        targets: graphics,
+        alpha: peak,
+        duration: 80,
+        ease: 'Quad.easeOut',
+        onComplete: () => {
+          pulseDecay = scene.tweens.add({
+            targets: graphics,
+            alpha: REST_INTENSITY,
+            duration: PULSE_DECAY_MS,
+            ease: 'Sine.easeOut',
+          });
+        },
+      });
+    };
 
     scene.events.on(Scenes.Events.POST_UPDATE, sync);
     return {
@@ -146,10 +186,14 @@ function makeGlow(color: number): CatEffect['apply'] {
         scene.events.off(Scenes.Events.POST_UPDATE, sync);
         flicker.stop();
         flicker.remove();
-        pulse.stop();
-        pulse.remove();
+        pulseTween?.stop();
+        pulseTween?.remove();
+        pulseDecay?.stop();
+        pulseDecay?.remove();
         graphics.destroy();
       },
+      pulseHit: () => pulseTo(HIT_INTENSITY),
+      pulseMiss: () => pulseTo(MISS_INTENSITY),
     };
   };
 }
@@ -208,20 +252,56 @@ function makeParticles(opts: ParticleOpts): CatEffect['apply'] {
     // stays the same — denser spawning at high scales feels noisy.
     const size = opts.size * scale;
     const spreadX = opts.spreadX * scale;
-    const riseDistancePx = opts.riseDistancePx * scale;
+    // Rise distance gets the intensity treatment too: at REST, particles
+    // travel ~70% as far up so the column reads softer; HIT bumps it
+    // back to ~100%. We sample intensity per spawn, not after, so the
+    // tween's max height matches the current vibe.
+    const baseRise = opts.riseDistancePx * scale;
     const wobbleX = opts.wobbleX ? opts.wobbleX * scale : undefined;
     const live: GameObjects.Text[] = [];
+    // Per-instance intensity (0..1) drives both per-particle alpha and
+    // rise distance, so the column visibly dampens/brightens together
+    // on miss/hit. pulseTween manipulates this object's `v` field.
+    const intensity = { v: REST_INTENSITY };
+    let pulseTween: Tweens.Tween | null = null;
+    let pulseDecay: Tweens.Tween | null = null;
+    const pulseTo = (peak: number): void => {
+      pulseTween?.stop();
+      pulseDecay?.stop();
+      pulseTween = scene.tweens.add({
+        targets: intensity,
+        v: peak,
+        duration: 80,
+        ease: 'Quad.easeOut',
+        onComplete: () => {
+          pulseDecay = scene.tweens.add({
+            targets: intensity,
+            v: REST_INTENSITY,
+            duration: PULSE_DECAY_MS,
+            ease: 'Sine.easeOut',
+          });
+        },
+      });
+    };
+
     const spawnOne = (): void => {
+      // Skip the spawn outright at very low intensity so MISS doesn't
+      // just dim particles — it visibly thins them out too.
+      if (intensity.v < REST_INTENSITY * 0.55 && Math.random() > intensity.v / REST_INTENSITY) {
+        return;
+      }
       const offsetX = (Math.random() - 0.5) * spreadX;
       // Spawn around the cat's feet so particles look like they're rising
       // up from the ground around the cat, not bursting out of its torso.
-      // Use the foot position helper so origin (Sprite vs Image) doesn't matter.
       const foot = footPosition(sprite);
       const startY = foot.y - sprite.displayHeight * 0.1;
+      const startAlpha = Math.min(1, intensity.v + 0.05);
+      const riseDistancePx = baseRise * (0.6 + intensity.v * 0.5);
       const t = scene.add
         .text(foot.x + offsetX, startY, opts.emoji, {
           fontSize: `${size}px`,
         })
+        .setAlpha(startAlpha)
         .setOrigin(0.5)
         // Render BEHIND the cat — particles are ambience around the
         // sprite, not foreground noise on top of it.
@@ -242,9 +322,10 @@ function makeParticles(opts: ParticleOpts): CatEffect['apply'] {
         ease: 'Sine.easeOut',
       });
 
-      // Alpha tween — hold at 1 for the first 60% of life so the particle
-      // stays vivid all the way up to its apex, then fade over the last
-      // 40%. Owns the destroy because it's the tween that finishes last.
+      // Alpha tween — hold at startAlpha for the first 60% of life so the
+      // particle stays vivid all the way up to its apex, then fade over
+      // the last 40%. Owns the destroy because it's the tween that
+      // finishes last.
       scene.tweens.add({
         targets: t,
         alpha: 0,
@@ -259,19 +340,28 @@ function makeParticles(opts: ParticleOpts): CatEffect['apply'] {
       });
     };
     const timer = scene.time.addEvent({
+      // Per-instance phase offset on the FIRST spawn desyncs particle
+      // cadence across cats wearing the same effect.
       delay: opts.spawnIntervalMs,
+      startAt: Math.random() * opts.spawnIntervalMs,
       callback: spawnOne,
       loop: true,
     });
     return {
       destroy: () => {
         timer.remove(false);
+        pulseTween?.stop();
+        pulseTween?.remove();
+        pulseDecay?.stop();
+        pulseDecay?.remove();
         for (const t of live) {
           scene.tweens.killTweensOf(t);
           t.destroy();
         }
         live.length = 0;
       },
+      pulseHit: () => pulseTo(HIT_INTENSITY),
+      pulseMiss: () => pulseTo(MISS_INTENSITY),
     };
   };
 }
@@ -283,17 +373,20 @@ function makeParticles(opts: ParticleOpts): CatEffect['apply'] {
 // and forgets, no handle to hold.
 // ---------------------------------------------------------------------------
 
-/** Expanding circular halo at the target. Starts small + bright, scales
- *  outward while alpha fades to zero. Stacked concentric fills give the
- *  glow a soft edge that reads as "aura" instead of "hard ring". */
+/** Expanding circular halo at the target. Starts at roughly the
+ *  fuzzball's own radius and grows out past it so the aura visibly
+ *  radiates AROUND the target, not just within it. Stacked concentric
+ *  fills give the glow a soft edge that reads as "aura" instead of
+ *  "hard ring".
+ *
+ *  Radii: fuzzball target is 72 px (radius 36). baseR=32 with start
+ *  scale 1.2 ≈ outer radius 38 ≈ ball edge; end scale 2.5 ≈ outer
+ *  radius 80 so the halo expands a full ball-width past the rim. */
 function makeGlowBurst(color: number): CatEffect['burst'] {
   return (scene, target, scale = 1) => {
     const g = scene.add.graphics();
     g.setPosition(target.x, target.y);
     g.setDepth(target.depth + 1);
-    // 4 concentric circles with falling alpha = soft radial gradient.
-    // Drawn once at radius 1 then scaled via the tween so the gradient
-    // expands cleanly without redrawing every frame.
     const baseR = 32;
     const layers: Array<{ r: number; a: number }> = [
       { r: baseR * 1.00, a: 0.55 },
@@ -305,13 +398,13 @@ function makeGlowBurst(color: number): CatEffect['burst'] {
       g.fillStyle(color, l.a);
       g.fillCircle(0, 0, l.r);
     }
-    g.setScale(0.4 * scale);
+    g.setScale(1.2 * scale);
     scene.tweens.add({
       targets: g,
-      scaleX: 1.4 * scale,
-      scaleY: 1.4 * scale,
+      scaleX: 2.5 * scale,
+      scaleY: 2.5 * scale,
       alpha: 0,
-      duration: 550,
+      duration: 600,
       ease: 'Quad.easeOut',
       onComplete: () => g.destroy(),
     });

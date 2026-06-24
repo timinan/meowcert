@@ -25,15 +25,11 @@ const THUMB_ROWS = 2;
 const MAX_TRAY = THUMB_COLS * THUMB_ROWS; // 8
 /** Reserved height for the always-visible pagination footer in CATS / BACKGROUNDS trays. */
 const PAGE_FOOTER_H = 36;
-const THUMB_LABEL_MAX = 11; // characters before ellipsis
+/** Visible gap between the last thumb row and the pagination footer so
+ *  cells don't visually butt right up against the page-nav strip. */
+const GRID_BOTTOM_MARGIN = 8;
 
 type ActiveTab = 'CATS' | 'BACKGROUNDS';
-
-/** Truncate a cat name to fit the two-line thumb label capacity. */
-function truncateName(name: string): string {
-  if (name.length <= THUMB_LABEL_MAX) return name;
-  return name.slice(0, THUMB_LABEL_MAX) + '…';
-}
 
 /**
  * Phase 5 Decorate scene.
@@ -594,8 +590,9 @@ export class Decorate extends Scene {
     const tabH = 38;
     const trayH = panelH - tabH;
     // Reserve the bottom strip for the always-visible pagination footer so
-    // the thumbnail grid never overlaps with it.
-    const gridH = trayH - PAGE_FOOTER_H;
+    // the thumbnail grid never overlaps with it. Extra GRID_BOTTOM_MARGIN
+    // gives the bottom row visible breathing room above the page nav.
+    const gridH = trayH - PAGE_FOOTER_H - GRID_BOTTOM_MARGIN;
 
     const padding = 10;
     const gapX = 6;
@@ -635,8 +632,9 @@ export class Decorate extends Scene {
         .setInteractive({ useHandCursor: true });
 
       const { frame, tint } = catThumbFrame(catEntry);
-      // Reserve ~22px at the bottom of the cell for the name label.
-      const labelReserve = 22;
+      // Reserve enough at the bottom for a two-line wrapped name label —
+      // 11px font × 1.2 line-height × 2 lines ≈ 27, plus a 4px gutter.
+      const labelReserve = 32;
       const sprite = this.add.image(
         x + thumbW / 2,
         y + (thumbH - labelReserve) / 2 + 4,
@@ -701,16 +699,20 @@ export class Decorate extends Scene {
         }
       }
 
-      // Label uses the instance's custom name, truncated to fit.
+      // Label uses the instance's custom name. wordWrap kicks in for any
+      // name wider than the cell minus a small inset — "RAINBOW WHISKERS"
+      // wraps to "RAINBOW\nWHISKERS" instead of needing an ellipsis cut.
       const label = this.add.text(
         x + thumbW / 2,
-        y + thumbH - 8,
-        truncateName(catInstance.name).toUpperCase(),
+        y + thumbH - 6,
+        catInstance.name.toUpperCase(),
         {
           fontFamily: '"Courier New", monospace',
           fontStyle: 'bold',
-          fontSize: '13px',
+          fontSize: '11px',
           color: '#ffffff',
+          align: 'center',
+          wordWrap: { width: thumbW - 8, useAdvancedWrap: true },
         },
       ).setOrigin(0.5, 1);
 
@@ -837,8 +839,9 @@ export class Decorate extends Scene {
     const panelH = height - panelTop;
     const tabH = 38;
     const trayH = panelH - tabH;
-    // Same footer reserve as CATS tray so the pagination strip lines up.
-    const gridH = trayH - PAGE_FOOTER_H;
+    // Same footer reserve + bottom-margin as the CATS tray so the
+    // pagination strip lines up flush across tabs.
+    const gridH = trayH - PAGE_FOOTER_H - GRID_BOTTOM_MARGIN;
 
     const padding = 10;
     const gapX = 6;
@@ -885,13 +888,17 @@ export class Decorate extends Scene {
         .rectangle(x + thumbW / 2, y + thumbH / 2, thumbW, thumbH, 0x000000, 0)
         .setStrokeStyle(2, borderColor, borderAlpha);
 
-      const label = this.add.text(x + thumbW / 2, y + thumbH - 10, entry.displayName.toUpperCase(), {
+      // Bigger than the 7px stub — backdrop labels read at 11px now and
+      // wrap into the cell width if the name is too long for one line.
+      const label = this.add.text(x + thumbW / 2, y + thumbH - 6, entry.displayName.toUpperCase(), {
         fontFamily: '"Courier New", monospace',
         fontStyle: 'bold',
-        fontSize: '7px',
+        fontSize: '11px',
         color: '#ffffff',
         stroke: '#000000',
         strokeThickness: 3,
+        align: 'center',
+        wordWrap: { width: thumbW - 8, useAdvancedWrap: true },
       }).setOrigin(0.5, 1);
 
       this.trayContainer.add([thumb, border, label]);
