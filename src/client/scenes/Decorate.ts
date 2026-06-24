@@ -613,8 +613,22 @@ export class Decorate extends Scene {
     const gapY = TRAY_VPAD;
 
     // ownedCats is now OwnedCat[]. Iterate instances directly.
-    const ownedCats = this.playerState?.ownedCats ?? [];
+    const rawOwnedCats = this.playerState?.ownedCats ?? [];
     const seatedCats = this.playerState?.seatedCats ?? {};
+
+    // Reorder so the currently-seated cats appear first in the tray,
+    // in seat order (left → center → right). Unseated cats follow in
+    // their original catalog order. Tim's rule: preselected cats up
+    // top so the player sees their stage lineup at a glance.
+    const seatedIdsInOrder = SEAT_ORDER
+      .map((sid) => seatedCats[sid])
+      .filter((id): id is string => !!id);
+    const seatedSet = new Set(seatedIdsInOrder);
+    const seatedFirst = seatedIdsInOrder
+      .map((id) => rawOwnedCats.find((c) => c.id === id))
+      .filter((c): c is NonNullable<typeof c> => !!c);
+    const restCats = rawOwnedCats.filter((c) => !seatedSet.has(c.id));
+    const ownedCats = [...seatedFirst, ...restCats];
 
     const totalPages = Math.max(1, Math.ceil(ownedCats.length / MAX_TRAY));
     if (this.catsPage >= totalPages) this.catsPage = totalPages - 1;

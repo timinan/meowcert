@@ -13,6 +13,7 @@ import { AssetKeys } from '@/constants/assets';
 import { Balance } from '@/constants/balance';
 import { fetchState, loadChart } from '@/services/state-client';
 import { CAT_CATALOG, emptyChart, CHART_PAGE_SIZE } from '@/../shared/state';
+import { CAT_COLOR_BY_BREED } from '@/constants/cat-colors';
 import type { PlayerState, LaneId, Chart, SeatId } from '@/../shared/state';
 import type { CatModel } from '@/types/game';
 import { generateChart, type GenDifficulty } from '@/../shared/chart-generator';
@@ -299,20 +300,59 @@ export class Game extends Scene {
     }
   }
 
-  /** Look up the three sampled lane colors for the active bg from cache.
-   *  Returns the default `LANE_COLORS` trio when the bg has no sampled
-   *  entry or the JSON didn't load — so adding a new bg always renders
-   *  with sane colors even before extract:assets runs again. */
+  /** Lane tints follow the seated cats: each lane takes the primary
+   *  color of the cat on that seat. Empty seats inherit the color of
+   *  the nearest occupied lane (so a lone cat colors all three lanes
+   *  the same shade). Falls back to the bg-sampled or default trio
+   *  when no cats are seated at all. */
   private resolveLaneTints(): readonly [number, number, number] {
-    const sampled = this.cache.json.get(AssetKeys.Json.BgLaneColors) as
-      | Record<string, [string, string, string]>
-      | undefined;
-    const activeBg = this.playerState?.activeBackground ?? 'stage';
-    const trio = sampled?.[activeBg];
-    if (!trio || trio.length !== 3) {
-      return L.LANE_COLORS;
+    const SEAT_ORDER: SeatId[] = ['seat-left', 'seat-center', 'seat-right'];
+    const seatedCats = this.playerState?.seatedCats ?? {};
+    const ownedCats = this.playerState?.ownedCats ?? [];
+    const laneColors: (number | null)[] = [null, null, null];
+    for (let i = 0; i < 3; i++) {
+      const seatId = SEAT_ORDER[i]!;
+      const instanceId = seatedCats[seatId];
+      if (!instanceId) continue;
+      const catInstance = ownedCats.find((c) => c.id === instanceId);
+      if (!catInstance) continue;
+      const color = CAT_COLOR_BY_BREED[catInstance.breed];
+      if (color !== undefined) laneColors[i] = color;
     }
-    return trio.map((hex) => parseInt(hex.replace('#', ''), 16)) as unknown as readonly [number, number, number];
+
+    // Fill empty lanes with the nearest occupied lane's color so a
+    // single-cat / two-cat lineup never mixes a cat tint with a stale
+    // default. Falls through to bg-sampled or default trio when ZERO
+    // lanes have a cat color.
+    const hasAny = laneColors.some((c) => c !== null);
+    if (!hasAny) {
+      const sampled = this.cache.json.get(AssetKeys.Json.BgLaneColors) as
+        | Record<string, [string, string, string]>
+        | undefined;
+      const activeBg = this.playerState?.activeBackground ?? 'stage';
+      const trio = sampled?.[activeBg];
+      if (!trio || trio.length !== 3) return L.LANE_COLORS;
+      return trio.map((hex) => parseInt(hex.replace('#', ''), 16)) as unknown as readonly [number, number, number];
+    }
+    for (let i = 0; i < 3; i++) {
+      if (laneColors[i] !== null) continue;
+      // Walk outward looking for an occupied neighbour color to copy.
+      for (let d = 1; d < 3; d++) {
+        const right = i + d;
+        const left = i - d;
+        const rightColor = right < 3 ? laneColors[right] : null;
+        if (rightColor !== null && rightColor !== undefined) {
+          laneColors[i] = rightColor;
+          break;
+        }
+        const leftColor = left >= 0 ? laneColors[left] : null;
+        if (leftColor !== null && leftColor !== undefined) {
+          laneColors[i] = leftColor;
+          break;
+        }
+      }
+    }
+    return [laneColors[0]!, laneColors[1]!, laneColors[2]!] as const;
   }
 
   /**
@@ -707,15 +747,18 @@ export class Game extends Scene {
       .setAlpha(0)
       .setDepth(50);
 
-    // Hits running tally — sits on the right edge at combo height. Same
-    // row as combo so the eye picks them up together, but smaller +
-    // muted so combo stays the main character.
+    // Hits running tally — sits on the right edge at combo height in a
+    // two-line stack (count on top, accuracy on the bottom) so it stays
+    // narrow next to combo + never overlaps it. Combo stays the visual
+    // main character; this is a tight, muted sibling.
     this.hitsIndicatorText = this.add
-      .text(width - 8, comboY, '0 / 0  ·  0%', {
+      .text(width - 8, comboY, '0 / 0\n0%', {
         ...fontBase,
         fontStyle: 'bold',
-        fontSize: '11px',
+        fontSize: '10px',
         color: '#c0a0e6',
+        align: 'right',
+        lineSpacing: -1,
         stroke: '#1a0a2e',
         strokeThickness: 3,
       })
@@ -733,7 +776,7 @@ export class Game extends Scene {
       const landed = this.score.getLanded();
       const judged = this.score.getJudged();
       const pct = judged > 0 ? Math.round((landed / judged) * 100) : 0;
-      this.hitsIndicatorText.setText(`${landed} / ${judged}  ·  ${pct}%`);
+      this.hitsIndicatorText.setText(`${landed} / ${judged}\n${pct}%`);
     }
   }
 

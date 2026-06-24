@@ -209,8 +209,13 @@ export class TopHud {
 
     const { width, height } = this.scene.scale;
 
+    // Scrim + panel both cover the FULL canvas (including the top
+    // banner area). Tim's rule: hamburger drawer overlays everything
+    // when open. The hamburger button itself sits at TopHud depth 2000,
+    // below the scrim (2100), so tapping its spot while open just
+    // closes the drawer via the scrim's pointerdown handler.
     this.drawerScrim = this.scene.add
-      .rectangle(0, TopHud.HEIGHT, width, height - TopHud.HEIGHT, 0x0b041a, 0)
+      .rectangle(0, 0, width, height, 0x0b041a, 0)
       .setOrigin(0, 0)
       .setDepth(2100)
       .setInteractive();
@@ -218,9 +223,9 @@ export class TopHud {
     this.scene.tweens.add({ targets: this.drawerScrim, alpha: 0.55, duration: 200 });
 
     const panelW = Math.min(280, Math.floor(width * 0.78));
-    const panel = this.scene.add.container(width, TopHud.HEIGHT).setDepth(2101);
+    const panel = this.scene.add.container(width, 0).setDepth(2101);
     const panelBg = this.scene.add
-      .rectangle(0, 0, panelW, height - TopHud.HEIGHT, 0x2c1856, 1)
+      .rectangle(0, 0, panelW, height, 0x2c1856, 1)
       .setOrigin(0, 0);
     panelBg.setStrokeStyle(2, 0xffd34d, 0.35);
     panelBg.setInteractive(); // swallow taps so they don't reach the scrim
@@ -236,35 +241,45 @@ export class TopHud {
       .setOrigin(0.5, 0);
     panel.add(header);
 
+    // Smaller item layout so long labels like "PUT ON A MEOWCERT" don't
+    // overflow + the full list (up to ~6 items) fits comfortably in the
+    // 580 px portrait canvas without spilling off the bottom.
+    const itemH = 44;
+    const itemSpacing = 50;
+    const labelWrap = panelW - 32 - 56;
     for (let i = 0; i < this.items.length; i++) {
       const item = this.items[i]!;
-      const y = 56 + i * 64;
+      const y = 56 + i * itemSpacing;
       const itemBg = this.scene.add
-        .rectangle(16, y, panelW - 32, 52, 0x0b041a, 0.6)
+        .rectangle(16, y, panelW - 32, itemH, 0x0b041a, 0.6)
         .setOrigin(0, 0)
         .setInteractive({ useHandCursor: true });
       itemBg.setStrokeStyle(1, 0xc0a0e6, 0.3);
 
       const icon = this.scene.add
-        .text(40, y + 26, item.icon, {
-          fontSize: '20px',
+        .text(40, y + itemH / 2, item.icon, {
+          fontSize: '16px',
         })
         .setOrigin(0.5);
 
       const label = this.scene.add
-        .text(68, y + 14, item.label, {
+        .text(68, y + 11, item.label, {
           fontFamily: 'Pixeloid Sans, sans-serif',
           fontStyle: 'bold',
-          fontSize: '15px',
+          fontSize: '12px',
           color: '#ffffff',
+          wordWrap: { width: labelWrap },
+          maxLines: 1,
         })
         .setOrigin(0, 0);
 
       const desc = this.scene.add
-        .text(68, y + 32, item.description, {
+        .text(68, y + 26, item.description, {
           fontFamily: 'Pixeloid Sans, sans-serif',
-          fontSize: '10px',
+          fontSize: '9px',
           color: '#c0a0e6',
+          wordWrap: { width: labelWrap },
+          maxLines: 1,
         })
         .setOrigin(0, 0);
 
@@ -290,9 +305,9 @@ export class TopHud {
     }
 
     const hint = this.scene.add
-      .text(panelW / 2, height - TopHud.HEIGHT - 28, 'tap outside to close', {
+      .text(panelW / 2, height - 24, 'tap outside to close', {
         fontFamily: 'Pixeloid Sans, sans-serif',
-        fontSize: '10px',
+        fontSize: '9px',
         color: '#c0a0e6',
       })
       .setOrigin(0.5);
