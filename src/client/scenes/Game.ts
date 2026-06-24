@@ -286,17 +286,17 @@ export class Game extends Scene {
       this.laneRects.push(bar as unknown as Phaser.GameObjects.Rectangle);
 
       // Pink toe-bean overlay — second copy of the same texture, tinted
-      // pink, laid on top in SCREEN blend. Screen keeps the bar's light
-      // areas roughly unchanged (1 - (1-white)(1-pink) ≈ white) while
-      // lifting the dark brown paw shapes toward pink (dark pixels are
-      // where screen blending shows the overlay strongest). Net result:
-      // the toe beans go pink, the bar stays cat-colored.
+      // pink, laid on top in SCREEN blend. Screen's effect on light
+      // pixels (bar body) is tiny; on dark pixels (paws) it's strong —
+      // so the bar reads as the cat color while the toe beans tint
+      // pink. Alpha kept low (0.35) so the cat color dominates instead
+      // of getting washed pink.
       const paws = this.add.image(cx, laneTopY + laneH / 2, AssetKeys.Image.RhythmBarBackgroundWhite);
       paws.displayWidth = laneH;
       paws.displayHeight = colW;
       paws.setRotation(-Math.PI / 2);
-      paws.setTint(0xff5fb8);
-      paws.setAlpha(0.85);
+      paws.setTint(0xff66cc);
+      paws.setAlpha(0.35);
       paws.setBlendMode(BlendModes.SCREEN);
 
       // Hit target at the bottom of the lane — the original "fuzzy ball"

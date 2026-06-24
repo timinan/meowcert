@@ -32,8 +32,10 @@ export function liftTowardWhite(rgb: number, amount: number): number {
 export const BALL_BRIGHTNESS_LIFT = 0;
 
 /** Amount the lane fill is lifted toward white before being applied as
- *  a tint on top of the alpha-0.55 RhythmBarBackgroundWhite. Bumped
- *  0.4 → 0.72 so the cat-color tint reads as a much paler pastel, the
- *  paw-print texture inside the bar softens into a cute washed shape,
- *  and the lane edges look light rather than darker than the bg. */
-export const LANE_BRIGHTNESS_LIFT = 0.72;
+ *  a tint on top of the RhythmBarBackgroundWhite. Was 0.72 (very pale
+ *  wash) which made the three cat colors all blur together into near-
+ *  white. Pulled back to 0.35 so each lane reads as its cat's actual
+ *  color — Snow White stays white-ish, Jade pops green, Sakura sits
+ *  pink — while still pastel enough that the falling note + hit target
+ *  read as the darker shape against it. */
+export const LANE_BRIGHTNESS_LIFT = 0.35;
