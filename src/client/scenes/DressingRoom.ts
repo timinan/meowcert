@@ -184,11 +184,12 @@ export class DressingRoom extends Scene {
     this.renderGrid();
 
     // Pagination anchored below the grid (not the modal) so the strip
-    // never overlaps the bottom row of cosmetics when the modal is
-    // shorter than the content's ideal height. The grid is 4 rows of
-    // 48 px cells with 8 px gaps → 216 px, plus 24 px breathing room.
-    const gridContentH = 4 * 48 + 3 * 8;
-    const paginationY = Math.min(gridTop + gridContentH + 24, modalY + modalH - 18);
+    // never overlaps the bottom row of cosmetics. Must match the actual
+    // GRID_CONTENT_H above — 3 rows × 76 + 2 × 8 gap = 244 — plus
+    // breathing room. (Previously this lagged behind the renderGrid
+    // resize and clipped the bottom row of cells.)
+    const gridContentH = 3 * 76 + 2 * 8;
+    const paginationY = Math.min(gridTop + gridContentH + 22, modalY + modalH - 18);
     this.pageLabel = this.add
       .text(cx, paginationY, '', {
         fontFamily: 'Pixeloid Sans, sans-serif',
@@ -261,8 +262,15 @@ export class DressingRoom extends Scene {
       if (!cos) continue;
       const renderId = parentIdFor(cos) ?? cos.id;
       const frame = `cosmetic_${renderId}_idle_00`;
+      // Head items sit too high relative to the hero in the modal —
+      // the cosmetic atlas was authored for the Game scene's bottom-
+      // anchor cat, while the dressing-room hero uses default center
+      // anchor. Shift head sprites down so the hat lands on the cat's
+      // head instead of floating above it. Scale-aware so it stays
+      // consistent if the hero scale ever changes.
+      const slotShiftY = slotKey === 'head' ? 22 * this.heroSprite.scaleY : 0;
       const sprite = this.add
-        .sprite(this.heroSprite.x, this.heroSprite.y, AssetKeys.Atlas.Cosmetics, frame)
+        .sprite(this.heroSprite.x, this.heroSprite.y + slotShiftY, AssetKeys.Atlas.Cosmetics, frame)
         .setScale(this.heroSprite.scaleX, this.heroSprite.scaleY)
         .setOrigin(this.heroSprite.originX, this.heroSprite.originY)
         .setDepth(this.heroSprite.depth + i++);

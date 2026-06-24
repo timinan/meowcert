@@ -50,8 +50,8 @@ export class VisitShows extends Scene {
           onTap: () => this.scene.start(SceneKeys.ChartEditor, { playerState: this.playerState }),
         },
         {
-          label: 'PURCHASE',
-          description: 'Boxes',
+          label: 'MERCH',
+          description: 'Cat + cosmetic drops',
           icon: '🛒',
           onTap: () => this.scene.start(SceneKeys.Purchase, { playerState: this.playerState }),
         },
@@ -90,7 +90,7 @@ export class VisitShows extends Scene {
       .text(
         cx,
         cy + 28,
-        'Browse other players\' meowcerts and jump straight into their reddit post.',
+        'Browse who\'s on stage and jump straight into their reddit post.',
         {
           ...fontBase,
           fontSize: '11px',

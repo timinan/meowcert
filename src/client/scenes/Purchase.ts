@@ -75,8 +75,8 @@ export class Purchase extends Scene {
           onTap: () => this.scene.start(SceneKeys.ChartEditor, { playerState: this.playerState }),
         },
         {
-          label: 'VISIT MEOWCERTS',
-          description: 'Other players\' meowcerts',
+          label: 'CATCH A MEOWCERT',
+          description: 'See who\'s playing',
           icon: '🎪',
           onTap: () => this.scene.start(SceneKeys.VisitShows, { playerState: this.playerState }),
         },
