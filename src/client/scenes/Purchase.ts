@@ -69,8 +69,8 @@ export class Purchase extends Scene {
           onTap: () => this.scene.start(SceneKeys.Decorate, { playerState: this.playerState }),
         },
         {
-          label: 'SETLIST',
-          description: 'Write the beat',
+          label: 'PUT ON A MEOWCERT',
+          description: 'Pick song + author chart',
           icon: '🎼',
           onTap: () => this.scene.start(SceneKeys.ChartEditor, { playerState: this.playerState }),
         },

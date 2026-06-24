@@ -461,8 +461,8 @@ export class Decorate extends Scene {
         },
         // DECORATE (self) is omitted
         {
-          label: 'SETLIST',
-          description: 'Write the beat',
+          label: 'PUT ON A MEOWCERT',
+          description: 'Pick song + author chart',
           icon: '🎼',
           onTap: () => this.scene.start(SceneKeys.ChartEditor, { playerState: this.playerState }),
         },

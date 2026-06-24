@@ -59,4 +59,14 @@ export class ScoreSystem {
   getMisses(): number {
     return this.hits.miss;
   }
+
+  /** Successful taps so far (perfect + great). */
+  getLanded(): number {
+    return this.hits.perfect + this.hits.great;
+  }
+
+  /** Total judged notes so far (perfect + great + miss). */
+  getJudged(): number {
+    return this.hits.perfect + this.hits.great + this.hits.miss;
+  }
 }

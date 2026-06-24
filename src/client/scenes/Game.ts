@@ -73,12 +73,11 @@ export class Game extends Scene {
   private music: MusicSystem | null = null;
   private startTimeMs = 0;
   private roundOver = false;
-  /** True between scene boot and the player tapping PLAY on the Ready
-   *  modal. While set, update() skips chart advance and the lane tap
-   *  zones are disabled, so notes don't start falling and bg music
-   *  isn't fighting the modal for user attention. */
+  /** True between scene boot and the round actually starting. While set,
+   *  update() skips chart advance and the lane tap zones are disabled.
+   *  Cleared by beginRound() once the song has been resolved + music has
+   *  started. */
   private pendingStart = true;
-  private readyModal: Phaser.GameObjects.Container | null = null;
   private generateModal: GenerateModal | null = null;
   private songPicker: SongPickerModal | null = null;
   private difficultyPicker: DifficultyPickerModal | null = null;
@@ -97,6 +96,11 @@ export class Game extends Scene {
   // -----------------------------------------------------------------------
   private hitFeedbackTexts: Phaser.GameObjects.Text[] = [];
   private comboText!: Phaser.GameObjects.Text;
+  /** Persistent "X / Y · Z%" running tally that sits to the side of the
+   *  combo callout. Combo stays the main character — this is a quieter
+   *  sibling that always reflects landed-of-judged so the player can
+   *  watch their accuracy in real time. */
+  private hitsIndicatorText!: Phaser.GameObjects.Text;
 
   // Summary overlay — built once in create(), shown by endRound()
   private summary: Phaser.GameObjects.Container | null = null;
@@ -113,16 +117,13 @@ export class Game extends Scene {
    *  Balance.passAccuracyPct. Empty + invisible otherwise. */
   private summaryGateText!: Phaser.GameObjects.Text;
 
-  // Page indicator — small HUD pill that ticks through "PAGE N/M" as the
-  // playhead crosses page boundaries. The playChart + msPerStep cache
-  // are populated by attachChartAndMusic so update() can compute the
-  // current page without going through ChartPlayer.
+  // Page boundary tracking — cached chart timing so update() can spawn
+  // falling page-boundary lines at the right step crossings without
+  // touching ChartPlayer internals.
   private playChart: Chart | null = null;
   private playMsPerStep = 0;
   private playPagesPerLoop = 1;
-  private pageIndicatorText: Phaser.GameObjects.Text | null = null;
   private lastEmittedPageBoundary = 0;
-  private lastDisplayedPage = -1;
 
   constructor() {
     super(SceneKeys.Game);
@@ -145,13 +146,10 @@ export class Game extends Scene {
     this.cleanedUp = false;
     this.music = null;
     this.pendingStart = true;
-    this.readyModal = null;
     this.playChart = null;
     this.playMsPerStep = 0;
     this.playPagesPerLoop = 1;
-    this.pageIndicatorText = null;
     this.lastEmittedPageBoundary = 0;
-    this.lastDisplayedPage = -1;
   }
 
   async create(): Promise<void> {
@@ -191,11 +189,12 @@ export class Game extends Scene {
     this.events.on(Scenes.Events.SHUTDOWN, () => this.cleanup());
 
     if (this.testMode) {
-      // Editor → TRY path: chart is already authored. Wire it now and
-      // show the Ready modal so the player gets the standard pre-round
-      // breather.
+      // Editor → REHEARSE path: chart is already authored. Tim's rule:
+      // hitting REHEARSE in the editor starts the round immediately —
+      // no Ready modal. We wire the chart + music + kick beginRound the
+      // moment the scene boots.
       await this.initChartPlayer();
-      this.showReadyModal();
+      void this.beginRound();
     } else {
       // Fresh Rehearse entry: two-step picker. SongPicker (vibe → song
       // list → preview + select) → DifficultyPicker (easy/normal/hard
@@ -220,45 +219,23 @@ export class Game extends Scene {
     }
   }
 
-  /** Drive the page indicator HUD pill + spawn page-boundary lines.
-   *  Page boundary LINES fire at SPAWN time (so they fall with the
-   *  notes); page-number HUD updates fire at HIT-LINE time (so they
-   *  reflect what the player is currently playing). Test mode only —
-   *  rehearsing from the drawer doesn't need page noise since the
+  /** Spawn page-boundary lines at SPAWN time so they fall with the
+   *  notes and visually mark where the next page begins. Test mode
+   *  only — rehearsing from the drawer doesn't get markers since the
    *  player didn't author the chart. */
   private tickPageTracking(): void {
     if (!this.testMode) return;
     if (!this.playChart || this.playMsPerStep <= 0) return;
     const elapsedMs = this.time.now - this.startTimeMs;
-
-    // Spawn-time crossings → new page lines falling from top.
     const spawnStep = Math.floor(elapsedMs / this.playMsPerStep);
     const spawnPageBoundary = Math.floor(spawnStep / CHART_PAGE_SIZE);
     while (this.lastEmittedPageBoundary < spawnPageBoundary) {
       this.lastEmittedPageBoundary += 1;
       const pageIdx = this.lastEmittedPageBoundary % this.playPagesPerLoop;
-      // Skip page 0 of every loop — round start (loop 0) needs no
-      // banner, and subsequent loop returns to page 0 already get one
-      // from the previous loop's "PAGE M" being the last in cycle.
+      // Skip the first page of every loop — round start needs no marker,
+      // and the previous loop's "last page" line already covers the wrap.
       if (pageIdx === 0) continue;
       this.spawnPageBoundaryLine(pageIdx);
-    }
-
-    // Hit-line crossings → HUD pill updates.
-    const playStepFloat = (elapsedMs - Balance.noteFallMs) / this.playMsPerStep;
-    if (playStepFloat < 0) return;
-    const playStep = Math.floor(playStepFloat);
-    const playPage = Math.floor(playStep / CHART_PAGE_SIZE) % this.playPagesPerLoop;
-    if (playPage !== this.lastDisplayedPage && this.pageIndicatorText) {
-      this.lastDisplayedPage = playPage;
-      this.pageIndicatorText.setText(`PAGE ${playPage + 1}/${this.playPagesPerLoop}`);
-      if (this.pageIndicatorText.alpha < 1) {
-        this.tweens.add({
-          targets: this.pageIndicatorText,
-          alpha: 1,
-          duration: 180,
-        });
-      }
     }
   }
 
@@ -436,106 +413,7 @@ export class Game extends Scene {
    * taps PLAY. The PLAY click is also the user gesture WebAudio needs
    * to unlock the audio context; Phaser's sound manager handles that
    * unlock transparently on the first user interaction.
-   *
-   * Plays the player's authored chart as-is — no difficulty preset
-   * picker, no random-chart fallback (those were calibration scaffolding
-   * before the editor existed). BACK TO EDITOR routes to the chart
-   * editor for quick iteration.
    */
-  private showReadyModal(): void {
-    if (!this.scene.isActive()) return;
-    const { width, height } = this.scale;
-    const cx = width / 2;
-    const cy = height / 2;
-
-    const container = this.add.container(0, 0).setDepth(1000);
-
-    const backdrop = this.add
-      .rectangle(cx, cy, width, height, 0x000000, 0.75)
-      .setInteractive();
-    container.add(backdrop);
-
-    const panelW = Math.min(280, width - 32);
-    const panelH = 220;
-    const panel = this.add.rectangle(cx, cy, panelW, panelH, 0x1a0a2e, 1);
-    panel.setStrokeStyle(2, 0xc678ff, 0.8);
-    container.add(panel);
-
-    const fontBase = { fontFamily: 'Pixeloid Sans, sans-serif' };
-
-    const title = this.add.text(cx, cy - 78, this.testMode ? 'READY TO TEST?' : 'READY?', {
-      ...fontBase,
-      fontStyle: 'bold',
-      fontSize: '22px',
-      color: '#ffd34d',
-    }).setOrigin(0.5);
-    container.add(title);
-
-    const subtitle = this.add.text(
-      cx,
-      cy - 42,
-      this.testMode ? 'Try your beat before posting' : 'Rehearse your beat',
-      {
-        ...fontBase,
-        fontSize: '11px',
-        color: '#c0a0e6',
-        align: 'center',
-      },
-    ).setOrigin(0.5);
-    container.add(subtitle);
-
-    const playY = cy + 6;
-    const playW = 180;
-    const playH = 44;
-    const playBg = this.add.rectangle(cx, playY, playW, playH, 0xffd34d, 1);
-    const playText = this.add.text(cx, playY, '▶ REHEARSE', {
-      ...fontBase,
-      fontStyle: 'bold',
-      fontSize: '18px',
-      color: '#1a0a2e',
-    }).setOrigin(0.5);
-    container.add([playBg, playText]);
-
-    const backY = cy + 68;
-    const backText = this.add.text(cx, backY, '← BACK TO EDITOR', {
-      ...fontBase,
-      fontSize: '12px',
-      color: '#c0a0e6',
-    }).setOrigin(0.5);
-    container.add(backText);
-
-    // Defer making the buttons interactive for 200ms — Phaser fires
-    // pointerup on whatever object sits under the finger at release,
-    // and the hamburger-row tap that opened this scene often ends with
-    // the finger somewhere on the playfield. Without the delay, that
-    // residual pointerup destroys the modal instantly.
-    this.time.delayedCall(200, () => {
-      playBg.setInteractive({ useHandCursor: true });
-      playBg.on('pointerover', () => playBg.setFillStyle(0xffe680, 1));
-      playBg.on('pointerout', () => playBg.setFillStyle(0xffd34d, 1));
-      playBg.on('pointerup', () => {
-        // MusicSystem.start awaits the lazy load if it hasn't finished
-        // yet. In the common case (modal sat open for >1s) the audio
-        // is already cached and this resolves synchronously.
-        void this.music?.start();
-        this.readyModal?.destroy(true);
-        this.readyModal = null;
-        for (const z of this.tapZones) z.setInteractive();
-        this.startTimeMs = this.time.now;
-        this.pendingStart = false;
-      });
-
-      backText.setInteractive({ useHandCursor: true });
-      backText.on('pointerover', () => backText.setColor('#ffffff'));
-      backText.on('pointerout', () => backText.setColor('#c0a0e6'));
-      backText.on('pointerup', () => {
-        this.scene.start(SceneKeys.ChartEditor, { playerState: this.playerState });
-      });
-    });
-
-    this.readyModal = container;
-  }
-
   private buildSummaryOverlay(): void {
     const { width, height } = this.scale;
     const scaleY = height / L.DESIGN_H;
@@ -691,18 +569,21 @@ export class Game extends Scene {
     this.summaryRightBg = rightBg;
     this.summaryRightText = rightText;
 
-    // Pass/fail message that sits just above the buttons. Visible only
-    // in test mode when the player rehearsed below the threshold.
+    // Pass/fail message that sits between the stats row and the buttons.
+    // Anchored to the BOTTOM of its bounding box so the text grows
+    // upward — keeps the bottom edge well clear of the buttons no matter
+    // how many lines wrap. Visible only in test mode.
     this.summaryGateText = this.add
-      .text(cx, btnY - 30, '', {
+      .text(cx, btnY - 24, '', {
         ...fontBase,
         fontStyle: 'bold',
-        fontSize: '10px',
+        fontSize: '9px',
         color: '#ff8b8b',
         align: 'center',
-        wordWrap: { width: panelW - 28 },
+        lineSpacing: 1,
+        wordWrap: { width: panelW - 18 },
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5, 1);
     container.add(this.summaryGateText);
 
     this.summary = container;
@@ -720,8 +601,8 @@ export class Game extends Scene {
           onTap: () => this.scene.start(SceneKeys.Decorate, { playerState: this.playerState }),
         },
         {
-          label: 'SETLIST',
-          description: 'Write the beat',
+          label: 'PUT ON A MEOWCERT',
+          description: 'Pick song + author chart',
           icon: '🎼',
           onTap: () => this.scene.start(SceneKeys.ChartEditor, { playerState: this.playerState }),
         },
@@ -825,6 +706,21 @@ export class Game extends Scene {
       .setOrigin(0.5)
       .setAlpha(0)
       .setDepth(50);
+
+    // Hits running tally — sits on the right edge at combo height. Same
+    // row as combo so the eye picks them up together, but smaller +
+    // muted so combo stays the main character.
+    this.hitsIndicatorText = this.add
+      .text(width - 8, comboY, '0 / 0  ·  0%', {
+        ...fontBase,
+        fontStyle: 'bold',
+        fontSize: '11px',
+        color: '#c0a0e6',
+        stroke: '#1a0a2e',
+        strokeThickness: 3,
+      })
+      .setOrigin(1, 0.5)
+      .setDepth(50);
   }
 
   /** Refresh score / coins / best in the TopHud. Cheap — call after every
@@ -833,6 +729,12 @@ export class Game extends Scene {
     const coins = this.playerState?.coins ?? 0;
     const best = this.playerState?.bestScore ?? 0;
     this.hud.setStats(this.score.get(), coins, Math.max(best, this.score.get()));
+    if (this.hitsIndicatorText) {
+      const landed = this.score.getLanded();
+      const judged = this.score.getJudged();
+      const pct = judged > 0 ? Math.round((landed / judged) * 100) : 0;
+      this.hitsIndicatorText.setText(`${landed} / ${judged}  ·  ${pct}%`);
+    }
   }
 
   /** Punch the lane's hit target on a tap so the player sees their action
@@ -1040,7 +942,7 @@ export class Game extends Scene {
         this.summaryRightText.setVisible(true);
       } else {
         this.summaryGateText.setText(
-          `Need ${Balance.passAccuracyPct}% to put on a meowcert.\nYou hit ${accuracyPct.toFixed(0)}% — fix the chart and rehearse again.`,
+          "Sorry, we can't be putting on a meowcert with this performance. Please fix your chart and try again.",
         );
         this.summaryGateText.setColor('#ff8b8b');
         this.summaryRightBg.setVisible(false);
@@ -1155,17 +1057,16 @@ export class Game extends Scene {
 
     this.player.onSpawn((lane, hitAt) => this.spawnNote(lane, hitAt));
 
-    // Cache chart-derived timing so update() can drive the page indicator
-    // + page-boundary lines without going through ChartPlayer internals.
-    // Page UI is editor-context only — when rehearsing from the drawer
-    // the player didn't author the chart, so the page markers are noise.
+    // Cache chart-derived timing so update() can drive the page-boundary
+    // lines without going through ChartPlayer internals. Test mode only —
+    // rehearsing from the drawer doesn't get page markers since the
+    // player didn't author the chart.
     this.playChart = playChart;
     this.playMsPerStep = 60000 / (playChart.bpm * 2);
     this.playPagesPerLoop = Math.max(
       1,
       Math.ceil(playChart.stepCount / CHART_PAGE_SIZE),
     );
-    if (this.testMode) this.buildPageIndicator();
 
     // Music for the round: real backing track from BACKING_CATALOG
     // (selected by chart.bpm + vibe + author hash). Backings are lazy-
@@ -1176,36 +1077,13 @@ export class Game extends Scene {
     void this.music.preload();
   }
 
-  /** Persistent "PAGE N / M" banner that sits just above the lane area
-   *  so the author can always see which section of their chart is
-   *  playing — useful for jumping back to fix a specific page after
-   *  the rehearsal. Test mode only; non-test rehearse hides it. */
-  private buildPageIndicator(): void {
-    if (this.pageIndicatorText) return;
-    const { width, height } = this.scale;
-    const scaleY = height / L.DESIGN_H;
-    const laneTopY = L.LANE_TOP_Y * scaleY;
-    const cx = width / 2;
-    const y = laneTopY - 4;
-    const text = this.add
-      .text(cx, y, '', {
-        fontFamily: 'Pixeloid Sans, sans-serif',
-        fontStyle: 'bold',
-        fontSize: '13px',
-        color: '#ffd34d',
-        backgroundColor: '#1a0a2e',
-        padding: { x: 10, y: 4 },
-      })
-      .setOrigin(0.5, 1)
-      .setDepth(70)
-      .setAlpha(0);
-    this.pageIndicatorText = text;
-  }
-
-  /** Spawn a page-boundary marker that falls top → hit line over the
+  /** Spawn a page-boundary line that falls top → hit line over the
    *  same noteFallMs the notes use, so it visually marks where the next
-   *  page begins. Skip page 0 (round start needs no marker). */
-  private spawnPageBoundaryLine(pageIdx: number): void {
+   *  page begins. No floating label — the persistent banner above the
+   *  lanes already shows the current page number. Skip page 0 (round
+   *  start needs no marker). `pageIdx` is unused but kept for future
+   *  per-page styling (e.g. brighter line for downbeat pages). */
+  private spawnPageBoundaryLine(_pageIdx: number): void {
     if (!this.scene.isActive() || this.roundOver) return;
     const { width, height } = this.scale;
     const scaleY = height / L.DESIGN_H;
@@ -1214,23 +1092,12 @@ export class Game extends Scene {
     const fallMs = Balance.noteFallMs;
 
     const cx = width / 2;
+    // Depth above notes (depth 40) so the boundary line reads over the
+    // falling balls instead of getting hidden behind them.
     const line = this.add
       .rectangle(cx, laneTopY, width - 12, 2, 0xffd34d, 0.85)
-      .setDepth(35);
-    const label = this.add
-      .text(cx, laneTopY + 12, `PAGE ${pageIdx + 1}`, {
-        fontFamily: 'Pixeloid Sans, sans-serif',
-        fontStyle: 'bold',
-        fontSize: '11px',
-        color: '#ffd34d',
-        stroke: '#1a0a2e',
-        strokeThickness: 3,
-      })
-      .setOrigin(0.5)
-      .setDepth(36);
+      .setDepth(48);
 
-    // Tween both down at the same rate as notes. Once the line passes
-    // the hit line by 28 px, fade out and destroy.
     this.tweens.add({
       targets: line,
       y: hitLineY,
@@ -1243,21 +1110,6 @@ export class Game extends Scene {
           alpha: 0,
           duration: 240,
           onComplete: () => line.destroy(),
-        });
-      },
-    });
-    this.tweens.add({
-      targets: label,
-      y: hitLineY + 12,
-      duration: fallMs,
-      ease: 'Linear',
-      onComplete: () => {
-        this.tweens.add({
-          targets: label,
-          y: hitLineY + 40,
-          alpha: 0,
-          duration: 240,
-          onComplete: () => label.destroy(),
         });
       },
     });
@@ -1516,10 +1368,6 @@ export class Game extends Scene {
       this.summary?.destroy(true);
       this.summary = null;
     });
-    tearDown('ready-modal', () => {
-      this.readyModal?.destroy(true);
-      this.readyModal = null;
-    });
     tearDown('generate-modal', () => {
       this.generateModal?.destroy();
       this.generateModal = null;
@@ -1535,10 +1383,6 @@ export class Game extends Scene {
     tearDown('back-to-chart-chip', () => {
       for (const g of this.backToChartChip) g.destroy();
       this.backToChartChip = [];
-    });
-    tearDown('page-indicator', () => {
-      this.pageIndicatorText?.destroy();
-      this.pageIndicatorText = null;
     });
 
     // Destroy entities BEFORE tweens.killAll so each owner can cleanly
