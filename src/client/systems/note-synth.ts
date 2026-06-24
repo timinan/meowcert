@@ -61,20 +61,23 @@ const PRESETS: Record<BackingVibe, TapPreset> = {
 const DEFAULT_VIBE: BackingVibe = 'upbeat';
 
 /**
- * Miss buzz — short sawtooth in the buzzy mid-range so it reads as
- * "wrong" on any device. 120 Hz / 0.09 gain (the first attempt) was
- * inaudible on laptop speakers, which roll off hard below ~150 Hz;
- * 220 Hz puts the fundamental in the bass-guitar / kick-pluck range
- * that every speaker reproduces cleanly. Gain bumped to 0.30 so the
- * buzz registers without being abrasive. Sawtooth's harmonic stack
- * (220 / 440 / 660 / 880 …) means there's always something in any
- * speaker's bandwidth.
+ * Miss hum-buzz — low fundamental + low-pass-filtered sawtooth so it
+ * reads as a soft "hmmm-wrong" instead of a sharp buzz. 110 Hz puts
+ * the fundamental in the low-bass range (perceived as low + hummy),
+ * but the sawtooth's harmonic stack (110 / 220 / 330 / 440 …) means
+ * the 220 + 330 Hz harmonics are still in every speaker's bandwidth.
+ * The low-pass at 500 Hz rolls off the bright upper harmonics that
+ * made the 220 Hz raw sawtooth sound shrill — keeps the lower
+ * "hum" body and trims the "buzz" hardness. Gain bumped to 0.45 to
+ * compensate for the filter.
  */
 const MISS_PRESET = {
   waveform: 'sawtooth' as OscillatorType,
-  freqHz: 220,
-  releaseSec: 0.2,
-  peakGain: 0.3,
+  freqHz: 110,
+  filterHz: 500,
+  filterQ: 0.7,
+  releaseSec: 0.22,
+  peakGain: 0.45,
 };
 
 export class NoteSynth {
@@ -122,8 +125,8 @@ export class NoteSynth {
   }
 
   /**
-   * Fire the miss buzz. Single low sawtooth note, instant attack,
-   * short exponential decay. Lane-independent — a miss is a miss.
+   * Fire the miss hum-buzz. Sawtooth → low-pass filter → gain → output.
+   * Instant peak, short exponential decay. Lane-independent.
    */
   playMiss(): void {
     if (this.destroyed || !this.ctx) return;
@@ -134,14 +137,21 @@ export class NoteSynth {
     osc.type = MISS_PRESET.waveform;
     osc.frequency.value = MISS_PRESET.freqHz;
 
+    // Low-pass filter rolls off the upper harmonics so the sound reads
+    // as a low hum instead of a high buzz — the harmonics at 220 / 330
+    // Hz still pass to give the sawtooth its texture, but the bright
+    // 660+ Hz harmonics get trimmed.
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = MISS_PRESET.filterHz;
+    filter.Q.value = MISS_PRESET.filterQ;
+
     const gain = this.ctx.createGain();
-    // Instant peak (no attack ramp — same logic as the pulse, the buzz
-    // should land on the moment of the missed tap, not 10ms after) then
-    // exponential ride down.
     gain.gain.setValueAtTime(MISS_PRESET.peakGain, now);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + MISS_PRESET.releaseSec);
 
-    osc.connect(gain);
+    osc.connect(filter);
+    filter.connect(gain);
     gain.connect(this.ctx.destination);
     osc.start(now);
     osc.stop(now + MISS_PRESET.releaseSec + 0.05);

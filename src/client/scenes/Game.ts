@@ -953,6 +953,10 @@ export class Game extends Scene {
       if (!n.active || n.consumed) continue;
       if (n.y > offScreenY) {
         this.score.registerHit('miss');
+        // Same miss-buzz as a tap-but-missed grade so the player feels
+        // a consistent "you lost that note" signal whether they tapped
+        // wrong or didn't tap at all.
+        this.music?.playMiss();
         this.cats[n.laneId]?.playAngry(Balance.catReactionMs);
         this.showHitFeedback(n.laneId, 'miss');
         this.flashTarget(n.laneId, 'miss');
