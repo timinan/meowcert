@@ -281,22 +281,36 @@ export class Game extends Scene {
       // Pastel the lane (lift toward white) so the raw-color falling ball +
       // hit target read as the darker shape against a lighter wash. Easier
       // to spot than lifting the ball — same hue, just lower saturation.
+      // Lane FILL is now translucent (Tim's rule: see-through cat
+      // color so the meowcert bg + paws + border read on top). Border
+      // is rendered separately below in OPAQUE cat color.
       bar.setTint(liftTowardWhite(color, LANE_BRIGHTNESS_LIFT));
-      bar.setAlpha(0.95);
+      bar.setAlpha(0.45);
       this.laneRects.push(bar as unknown as Phaser.GameObjects.Rectangle);
 
-      // Solid-pink toe-bean overlay. Uses the paws-only texture built
-      // by Preloader.generatePawsOnlyTexture — the bar background is
-      // already transparent in that texture, so a plain pink tint at
-      // full alpha paints just the paw shapes solid pink on top of the
-      // cat-colored bar beneath. No blend mode trickery needed.
+      // Opaque cat-color BORDER around the lane. Drawn as a stroked
+      // rectangle the size of the lane bar so the lane reads as a
+      // framed column in its cat's color — Tim's green outline in the
+      // screenshot. Full opacity (the fill underneath is the
+      // see-through layer; this is the solid outline).
+      const border = this.add
+        .rectangle(cx, laneTopY + laneH / 2, colW, laneH, 0x000000, 0)
+        .setStrokeStyle(3, color, 1);
+      border.setDepth(5);
+
+      // Sakura-pink toe-bean overlay. Uses the paws-only texture from
+      // Preloader.generatePawsOnlyTexture — paws are solid (full alpha),
+      // bar bg is transparent so the cat color underneath reads
+      // through. Pink chosen to match the Sakura cat tint
+      // (0xffc4de, not the prior hot-magenta 0xff4fb0).
       if (this.textures.exists(AssetKeys.Image.RhythmBarPaws)) {
         const paws = this.add.image(cx, laneTopY + laneH / 2, AssetKeys.Image.RhythmBarPaws);
         paws.displayWidth = laneH;
         paws.displayHeight = colW;
         paws.setRotation(-Math.PI / 2);
-        paws.setTint(0xff4fb0);
+        paws.setTint(0xffc4de);
         paws.setAlpha(1);
+        paws.setDepth(4);
       }
 
       // Hit target at the bottom of the lane — the original "fuzzy ball"
