@@ -89,7 +89,11 @@ export class ChartEditor extends Scene {
     super(SceneKeys.ChartEditor);
   }
 
-  init(data: { playerState?: PlayerState | null; initialPage?: number }): void {
+  init(data: {
+    playerState?: PlayerState | null;
+    initialPage?: number;
+    resume?: boolean;
+  }): void {
     this.playerState = data?.playerState ?? null;
     // Chart is not assigned here — it's seeded by SongPicker + Template/
     // Scratch in create(). Until then this.chart is undefined and the
@@ -98,6 +102,7 @@ export class ChartEditor extends Scene {
     this.cellNotes = [];
     this.scrollOffset = 0;
     this.pendingInitialPage = data?.initialPage ?? 0;
+    this.pendingResume = data?.resume === true;
     this.tryBusy = false;
     this.colCenterXs = [];
   }
@@ -106,6 +111,11 @@ export class ChartEditor extends Scene {
    *  in finishSetup once the chart is loaded so the editor opens on the
    *  same page the player was rehearsing. */
   private pendingInitialPage = 0;
+
+  /** True when re-entering from rehearsal — skip song/template pickers and
+   *  load `playerState.chart` directly so the author lands back on the
+   *  chart they were just editing. */
+  private pendingResume = false;
 
   create(): void {
     this.root = this.add.container(0, 0).setDepth(0);
@@ -120,6 +130,15 @@ export class ChartEditor extends Scene {
     this.buildHud();
 
     this.events.once(Scenes.Events.SHUTDOWN, () => this.cleanup());
+
+    // Resume path: re-entering from rehearsal. Skip the pickers and
+    // jump straight to the chart we just sent off (lives on
+    // playerState.chart since onTryTap stamps it before launching Game).
+    if (this.pendingResume && this.playerState?.chart) {
+      const chart = JSON.parse(JSON.stringify(this.playerState.chart)) as Chart;
+      this.finishSetup(chart);
+      return;
+    }
 
     // Editor entry flow: pick a song, then (if needed) pick template or
     // scratch. Once both resolve, finishSetup builds the page nav + grid

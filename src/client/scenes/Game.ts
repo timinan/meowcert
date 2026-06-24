@@ -690,6 +690,7 @@ export class Game extends Scene {
       this.scene.start(SceneKeys.ChartEditor, {
         playerState: this.playerState,
         initialPage: this.currentPlayPage(),
+        resume: true,
       });
     });
     this.backToChartChip = [bg, txt];
@@ -1012,6 +1013,7 @@ export class Game extends Scene {
     this.scene.start(SceneKeys.ChartEditor, {
       playerState: this.playerState,
       initialPage: this.currentPlayPage(),
+      resume: true,
     });
   };
 
@@ -1030,7 +1032,11 @@ export class Game extends Scene {
 
   private onPostFromTestClicked = (): void => {
     console.info('[Game] Post (test mode) clicked. Score:', this.score.get());
-    this.scene.start(SceneKeys.ChartEditor, { playerState: this.playerState });
+    this.scene.start(SceneKeys.ChartEditor, {
+      playerState: this.playerState,
+      initialPage: this.currentPlayPage(),
+      resume: true,
+    });
   };
 
   // -----------------------------------------------------------------------
