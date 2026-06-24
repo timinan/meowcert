@@ -61,7 +61,7 @@ export class DifficultyPickerModal {
     this.container.add(scrim);
 
     const panelW = Math.min(284, width - 24);
-    const panelH = 380;
+    const panelH = 420;
     const panel = this.scene.add
       .rectangle(cx, cy, panelW, panelH, 0x1a0a2e, 1)
       .setStrokeStyle(2, 0xc678ff, 0.8)
@@ -70,25 +70,6 @@ export class DifficultyPickerModal {
       e.stopPropagation(),
     );
     this.container.add(panel);
-
-    // ← BACK chip
-    const backY = cy - panelH / 2 + 22;
-    const backX = cx - panelW / 2 + 28;
-    const backChip = this.scene.add
-      .text(backX, backY, '← BACK', {
-        ...fontBase,
-        fontStyle: 'bold',
-        fontSize: '10px',
-        color: '#c0a0e6',
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
-    backChip.on('pointerdown', () => {
-      const cb = this.onBackRef;
-      this.close();
-      cb?.();
-    });
-    this.container.add(backChip);
 
     const title = this.scene.add
       .text(cx, cy - panelH / 2 + 22, 'DIFFICULTY', {
@@ -147,10 +128,16 @@ export class DifficultyPickerModal {
       this.optionTexts.push(lbl);
     });
 
-    // START button
-    const startY = cy + panelH / 2 - 38;
+    // START + BACK as a stacked pair at the bottom. START is the
+    // primary action, BACK sits below it as the third button (replacing
+    // the corner chip per Tim's feedback).
     const startW = panelW - 60;
-    const startH = 44;
+    const startH = 48;
+    const backH = 40;
+    const gapBelow = 10;
+    const stackBottom = cy + panelH / 2 - 22;
+    const backY = stackBottom - backH / 2;
+    const startY = backY - backH / 2 - gapBelow - startH / 2;
     const startBg = this.scene.add
       .rectangle(cx, startY, startW, startH, 0xffd34d, 1)
       .setInteractive({ useHandCursor: true });
@@ -171,6 +158,27 @@ export class DifficultyPickerModal {
       cb?.(choice);
     });
     this.container.add([startBg, startTxt]);
+
+    const backBg = this.scene.add
+      .rectangle(cx, backY, startW, backH, 0x2c1856, 1)
+      .setStrokeStyle(2, 0xc0a0e6, 0.55)
+      .setInteractive({ useHandCursor: true });
+    const backLbl = this.scene.add
+      .text(cx, backY, '← BACK', {
+        ...fontBase,
+        fontStyle: 'bold',
+        fontSize: '14px',
+        color: '#c0a0e6',
+      })
+      .setOrigin(0.5);
+    backBg.on('pointerover', () => backBg.setFillStyle(0x3d2566, 1));
+    backBg.on('pointerout', () => backBg.setFillStyle(0x2c1856, 1));
+    backBg.on('pointerdown', () => {
+      const cb = this.onBackRef;
+      this.close();
+      cb?.();
+    });
+    this.container.add([backBg, backLbl]);
   }
 
   close(): void {

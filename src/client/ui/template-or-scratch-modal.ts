@@ -40,7 +40,7 @@ export class TemplateOrScratchModal {
     this.container.add(scrim);
 
     const panelW = Math.min(284, width - 24);
-    const panelH = 320;
+    const panelH = 364;
     const panel = this.scene.add
       .rectangle(cx, cy, panelW, panelH, 0x1a0a2e, 1)
       .setStrokeStyle(2, 0xc678ff, 0.8)
@@ -49,25 +49,6 @@ export class TemplateOrScratchModal {
       e.stopPropagation(),
     );
     this.container.add(panel);
-
-    // ← BACK chip
-    const backY = cy - panelH / 2 + 22;
-    const backX = cx - panelW / 2 + 28;
-    const backChip = this.scene.add
-      .text(backX, backY, '← BACK', {
-        ...fontBase,
-        fontStyle: 'bold',
-        fontSize: '10px',
-        color: '#c0a0e6',
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
-    backChip.on('pointerdown', () => {
-      const cb = this.onBackRef;
-      this.close();
-      cb?.();
-    });
-    this.container.add(backChip);
 
     const title = this.scene.add
       .text(cx, cy - panelH / 2 + 22, 'START FROM', {
@@ -90,10 +71,16 @@ export class TemplateOrScratchModal {
       .setOrigin(0.5);
     this.container.add(subtitle);
 
+    // Three stacked buttons: TEMPLATE / SCRATCH / BACK. BACK is the new
+    // third button (was a chip in the corner — looked awkward + small,
+    // see Tim's mockup feedback). All three sit centered with even gaps
+    // so the panel breathes properly.
     const btnW = panelW - 48;
-    const btnH = 88;
-    const gap = 16;
-    const topY = cy - btnH / 2 - gap / 2 + 10;
+    const btnH = 76;
+    const backH = 40;
+    const gap = 12;
+    const totalH = btnH * 2 + backH + gap * 2;
+    const topY = cy + 8 - totalH / 2 + btnH / 2;
 
     this.addOption(cx, topY, btnW, btnH, 'TEMPLATE', 'A generated beat you can tweak', 0xffd34d, () => {
       const cb = this.onPickRef;
@@ -105,6 +92,30 @@ export class TemplateOrScratchModal {
       this.close();
       cb?.('scratch');
     });
+
+    // BACK as the third button, smaller and secondary so it doesn't
+    // compete with TEMPLATE / SCRATCH for the eye.
+    const backY = topY + btnH * 2 + gap * 2 + (backH - btnH) / 2;
+    const backBg = this.scene.add
+      .rectangle(cx, backY, btnW, backH, 0x2c1856, 1)
+      .setStrokeStyle(2, 0xc0a0e6, 0.55)
+      .setInteractive({ useHandCursor: true });
+    const backLbl = this.scene.add
+      .text(cx, backY, '← BACK', {
+        ...fontBase,
+        fontStyle: 'bold',
+        fontSize: '14px',
+        color: '#c0a0e6',
+      })
+      .setOrigin(0.5);
+    backBg.on('pointerover', () => backBg.setFillStyle(0x3d2566, 1));
+    backBg.on('pointerout', () => backBg.setFillStyle(0x2c1856, 1));
+    backBg.on('pointerdown', () => {
+      const cb = this.onBackRef;
+      this.close();
+      cb?.();
+    });
+    this.container.add([backBg, backLbl]);
   }
 
   close(): void {

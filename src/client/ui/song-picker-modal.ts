@@ -187,6 +187,7 @@ export class SongPickerModal {
   private showSongList(vibe: BackingVibe): void {
     if (!this.container) return;
     this.clearStepChildren();
+    const enteringSongList = this.selectedVibe !== vibe;
     this.selectedVibe = vibe;
     this.candidates = Object.values(BACKING_CATALOG).filter((b) => b.vibe === vibe);
     if (this.candidates.length === 0) {
@@ -195,10 +196,26 @@ export class SongPickerModal {
       this.showVibeStep(this.availableVibes());
       return;
     }
-    if (this.selectedAudioKey) {
-      const idx = this.candidates.findIndex((b) => b.id === this.selectedAudioKey);
-      if (idx >= 0) this.page = Math.floor(idx / SONGS_PER_PAGE);
-      else this.selectedAudioKey = null;
+    // Only auto-seek to the selected song's page when the user is just
+    // arriving at this song list (vibe step → song list, or initial open
+    // with a pre-set audioKey). Re-rendering the same list (e.g. after a
+    // pager click or a row tap) MUST preserve `this.page` — otherwise
+    // tapping ▶ would snap back to the selection's page and pagination
+    // appears broken.
+    if (enteringSongList) {
+      if (this.selectedAudioKey) {
+        const idx = this.candidates.findIndex((b) => b.id === this.selectedAudioKey);
+        if (idx >= 0) {
+          this.page = Math.floor(idx / SONGS_PER_PAGE);
+        } else {
+          // Selection doesn't exist in the new vibe's candidates — drop
+          // it and reset to page 0 so the list opens clean.
+          this.selectedAudioKey = null;
+          this.page = 0;
+        }
+      } else {
+        this.page = 0;
+      }
     }
 
     if (this.subtitleText) {

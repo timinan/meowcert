@@ -12,6 +12,29 @@ import { Welcome } from './scenes/Welcome';
 import { VisitShows } from './scenes/VisitShows';
 import { DESIGN_W, DESIGN_H } from './constants/scene-layout';
 
+// Crisp text on hi-DPI screens. Phaser's Text renders to an internal
+// canvas at scale 1 by default; on a retina iPhone that bitmap gets
+// upscaled by ~3× and looks fuzzy. We patch the GameObjectFactory so
+// every `scene.add.text(...)` inherits a 2× resolution unless the caller
+// already specified one. Display size + origin behavior is unchanged
+// (resolution only affects the internal canvas density).
+const DPR = (typeof window !== 'undefined' && window.devicePixelRatio) || 2;
+const TEXT_RESOLUTION = Math.max(2, Math.min(3, DPR));
+const _originalAddText = Phaser.GameObjects.GameObjectFactory.prototype.text;
+Phaser.GameObjects.GameObjectFactory.prototype.text = function patchedText(
+  this: Phaser.GameObjects.GameObjectFactory,
+  x: number,
+  y: number,
+  text: string | string[],
+  style?: Phaser.Types.GameObjects.Text.TextStyle,
+) {
+  const merged: Phaser.Types.GameObjects.Text.TextStyle = {
+    ...(style ?? {}),
+    resolution: style?.resolution ?? TEXT_RESOLUTION,
+  };
+  return _originalAddText.call(this, x, y, text, merged);
+};
+
 //  Find out more information about the Game Config at:
 //  https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
 const config: Phaser.Types.Core.GameConfig = {

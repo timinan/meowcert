@@ -13,9 +13,10 @@ import {
   BACKING_CATALOG,
 } from '@/../shared/state';
 import type { PlayerState, Chart, LaneId } from '@/../shared/state';
-import { generateChart, stepsForDuration } from '@/../shared/chart-generator';
+import { generateChart, stepsForDuration, type GenDifficulty } from '@/../shared/chart-generator';
 import { SongPickerModal, type SongPickerResult } from '@/ui/song-picker-modal';
 import { TemplateOrScratchModal, type StartMode } from '@/ui/template-or-scratch-modal';
+import { DifficultyPickerModal } from '@/ui/difficulty-picker-modal';
 import { Balance } from '@/constants/balance';
 
 /**
@@ -74,6 +75,7 @@ export class ChartEditor extends Scene {
   // the chart at scene entry. Both nullable so cleanup can null-check.
   private songPicker: SongPickerModal | null = null;
   private templateScratchModal: TemplateOrScratchModal | null = null;
+  private difficultyPicker: DifficultyPickerModal | null = null;
 
   constructor() {
     super(SceneKeys.ChartEditor);
@@ -154,40 +156,61 @@ export class ChartEditor extends Scene {
       this.templateScratchModal = new TemplateOrScratchModal(this);
     }
     this.templateScratchModal.open({
-      onPick: (mode) => this.buildChartForSong(song, mode),
+      onPick: (mode) => this.handleStartMode(song, mode),
       onBack: () => this.showSongPickerModal(),
     });
   }
 
-  /** Build the initial chart against the song the player picked. Template
-   *  fills with a procedurally generated 'medium' chart; Scratch leaves
-   *  the grid empty at the length needed to fill one round at this BPM. */
-  private buildChartForSong(song: SongPickerResult, mode: StartMode): void {
+  /** Template path branches into the difficulty picker so the procedurally
+   *  generated chart has the player's intended density. Scratch path goes
+   *  straight to an empty grid. */
+  private handleStartMode(song: SongPickerResult, mode: StartMode): void {
+    if (mode === 'template') {
+      this.showDifficultyPickerModal(song);
+    } else {
+      this.buildScratchChart(song);
+    }
+  }
+
+  private showDifficultyPickerModal(song: SongPickerResult): void {
+    if (!this.difficultyPicker) {
+      this.difficultyPicker = new DifficultyPickerModal(this);
+    }
+    this.difficultyPicker.open({
+      initial: 'medium',
+      onStart: (difficulty: GenDifficulty) => this.buildTemplateChart(song, difficulty),
+      onBack: () => this.showTemplateOrScratchModal(song),
+    });
+  }
+
+  private buildTemplateChart(song: SongPickerResult, difficulty: GenDifficulty): void {
     const username = this.playerState?.username ?? 'anon';
     const title = this.playerState?.chart?.title ?? 'My Beat';
+    const chart = generateChart({
+      authorId: username,
+      title,
+      difficulty,
+      bpm: song.bpm,
+      vibe: song.vibe,
+      targetDurationMs: Balance.maxRoundMs,
+    });
+    chart.audioKey = song.audioKey;
+    this.finishSetup(chart);
+  }
 
-    let chart: Chart;
-    if (mode === 'template') {
-      chart = generateChart({
-        authorId: username,
-        title,
-        difficulty: 'medium',
-        bpm: song.bpm,
-        vibe: song.vibe,
-        targetDurationMs: Balance.maxRoundMs,
-      });
-    } else {
-      // Scratch: pad chart length to one full round at this song's BPM
-      // rounded up to a CHART_PAGE_SIZE so validateChart is happy.
-      const rawSteps = stepsForDuration(song.bpm, Balance.maxRoundMs);
-      const stepCount = Math.max(
-        CHART_PAGE_SIZE,
-        Math.ceil(rawSteps / CHART_PAGE_SIZE) * CHART_PAGE_SIZE,
-      );
-      chart = emptyChart(username, title, stepCount);
-      chart.bpm = song.bpm;
-      chart.vibe = song.vibe;
-    }
+  private buildScratchChart(song: SongPickerResult): void {
+    const username = this.playerState?.username ?? 'anon';
+    const title = this.playerState?.chart?.title ?? 'My Beat';
+    // Scratch: pad chart length to one full round at this song's BPM
+    // rounded up to a CHART_PAGE_SIZE so validateChart is happy.
+    const rawSteps = stepsForDuration(song.bpm, Balance.maxRoundMs);
+    const stepCount = Math.max(
+      CHART_PAGE_SIZE,
+      Math.ceil(rawSteps / CHART_PAGE_SIZE) * CHART_PAGE_SIZE,
+    );
+    const chart = emptyChart(username, title, stepCount);
+    chart.bpm = song.bpm;
+    chart.vibe = song.vibe;
     chart.audioKey = song.audioKey;
     this.finishSetup(chart);
   }
@@ -578,6 +601,8 @@ export class ChartEditor extends Scene {
     this.songPicker = null;
     this.templateScratchModal?.destroy();
     this.templateScratchModal = null;
+    this.difficultyPicker?.destroy();
+    this.difficultyPicker = null;
     this.root.destroy(true);
   }
 }
