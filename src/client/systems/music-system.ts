@@ -70,6 +70,10 @@ export class MusicSystem {
   private _pulseEndsAt = 0;
   get pulseEndsAt(): number { return this._pulseEndsAt; }
   set pulseEndsAt(v: number) { this._pulseEndsAt = v; }
+  /** AudioContext time captured right after backing.play() so we can
+   *  convert game-relative timestamps (ms since round start) into
+   *  AudioContext-relative times for sample-accurate pre-scheduling. */
+  private audioRoundStartTime = 0;
 
   constructor(
     private readonly scene: Scene,
@@ -156,6 +160,11 @@ export class MusicSystem {
       volume: BACKING_VOLUME,
     });
     this.backing.play();
+    // Anchor the AudioContext clock to round start so future
+    // scheduleHitPulseAt(gameTimeMs) calls can translate game-time
+    // into AudioContext-time without drift.
+    const ctxNode = (this.backing as unknown as { volumeNode?: GainNode }).volumeNode;
+    if (ctxNode) this.audioRoundStartTime = ctxNode.context.currentTime;
   }
 
   /**
@@ -193,43 +202,58 @@ export class MusicSystem {
   }
 
   /**
-   * Brief amplification pulse on the backing track for the "oomph" hit
-   * feedback. Web Audio gain automation produces a click-free envelope:
-   * 15 ms ramp up to +25% gain, 30 ms hold, 200 ms exponential decay
-   * back to baseline. Concurrent calls during decay push the decay end
-   * out instead of stacking — rapid taps can't drive the gain past peak.
+   * Pre-schedule a backing-track gain pulse to peak at the moment a
+   * note is supposed to be hit. Called by Game.spawnNote when a note
+   * spawns (typically ~2.4s before its hit time), so the gain change
+   * has plenty of lead time to land on the AudioContext clock with
+   * sample accuracy.
    *
-   * No-op if the backing's underlying GainNode isn't accessible (e.g.
-   * sound hasn't started, or Phaser's internal API changes). Cheap to
-   * call on every hit; safe to ignore failures.
+   * Why pre-schedule instead of reactively pulsing on tap?
+   *
+   *   Reactive pulsing on tap always feels slightly off because of
+   *   audio output buffer latency — even with sample-accurate Web
+   *   Audio scheduling, a reactive call at "now" ends up amplifying
+   *   the song content the player will hear AFTER the buffer delay,
+   *   not the content they were tapping in response to. Net: the
+   *   amplified content is consistently a few ms ahead of what the
+   *   player just heard at tap time, which reads as lag.
+   *
+   *   Pre-scheduling sidesteps the buffer entirely. We know in
+   *   advance when the chart wants each note hit, so we schedule
+   *   the pulse to peak at THAT AudioContext time. By the time the
+   *   audio plays through to the speakers, the pulse is already
+   *   baked into the buffer and lands exactly with the song's beat.
+   *
+   * Tradeoff: the pulse fires whether or not the player actually
+   * hits the note. Feels like the song has natural rhythmic accents
+   * on each beat. If the player taps on time, the accent feels
+   * synced to their tap. If they miss, the accent still happens
+   * (just feels like the song's own dynamics).
    */
-  pulseBacking(): void {
+  scheduleHitPulseAt(gameTimeMs: number): void {
     if (this.destroyed || !this.backing) return;
-    // Phaser's WebAudioSound exposes the per-sound GainNode as
-    // `volumeNode`. Duck-typed access so a non-WebAudio path (HTML5
-    // audio fallback on rare browsers) is just a no-op.
+    if (this.audioRoundStartTime === 0) return;
     const node = (this.backing as unknown as { volumeNode?: GainNode }).volumeNode;
     if (!node) return;
     const ctx = node.context;
     if (ctx.state !== 'running') return;
 
+    const targetTime = this.audioRoundStartTime + gameTimeMs / 1000;
+    // Note's hit time is already in the past — skip (this can happen
+    // if a chart loops and we re-schedule, or after a Skip button).
+    if (targetTime <= ctx.currentTime) return;
+
     const baseline = BACKING_VOLUME;
     const peak = baseline * PULSE_PEAK_MULTIPLIER;
-    const now = ctx.currentTime;
+    const rampStart = Math.max(ctx.currentTime, targetTime - PULSE_ATTACK_SEC);
+    const decayEnd = targetTime + PULSE_DECAY_SEC;
 
-    // Anchor the current gain value, then a brief linear ramp up to
-    // peak (smooths the discontinuity that a bare setValueAtTime
-    // would cause; ramp is short enough to be perceptually instant),
-    // then exponential decay back to baseline. Anchoring the
-    // currentValue means an overlapping pulse picks up smoothly from
-    // wherever the prior decay left off instead of jumping back to
-    // peak instantly.
-    const attackEnd = now + PULSE_ATTACK_SEC;
-    const decayEnd = attackEnd + PULSE_DECAY_SEC;
-    const currentValue = Math.max(node.gain.value, baseline * 0.01);
-    node.gain.cancelScheduledValues(now);
-    node.gain.setValueAtTime(currentValue, now);
-    node.gain.linearRampToValueAtTime(peak, attackEnd);
+    // No cancelScheduledValues here — pre-scheduled pulses need to
+    // coexist, not overwrite each other. The chart's note spacing
+    // (~230ms at 130bpm 16th notes) is wider than our 90ms decay so
+    // overlap is rare in typical play.
+    node.gain.setValueAtTime(baseline, rampStart);
+    node.gain.linearRampToValueAtTime(peak, targetTime);
     node.gain.exponentialRampToValueAtTime(baseline, decayEnd);
     this.pulseEndsAt = decayEnd;
   }

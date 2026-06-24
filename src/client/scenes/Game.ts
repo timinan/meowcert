@@ -167,26 +167,34 @@ export class Game extends Scene {
     const inner = width - L.LANE_GUTTER_PX * 2;
     const colW = (inner - L.LANE_GAP_PX * (L.LANE_COUNT - 1)) / L.LANE_COUNT;
 
+    // Resolve the lane tint trio for the active background: per-bg sampled
+    // colors win, fall back to the global LANE_COLORS default. Sampled
+    // values come from `atlas/bg-lane-colors.json` (extractor output).
+    const tintTrio = this.resolveLaneTints();
+
     for (let i = 0; i < L.LANE_COUNT; i++) {
       const cx = L.laneCenterX(i as 0 | 1 | 2, width);
-      const color = L.LANE_COLORS[i]!;
+      const color = tintTrio[i]!;
 
       // Lane backdrop: the original Phase 1 rhythm bar track rotated -90°
       // (was +90°, which rendered the track upside down — the texture's
       // "open" end pointed up instead of down). Pre-rotation
       // displayWidth/Height are swapped from the visual we want — after
       // rotation the texture's horizontal axis becomes the lane's vertical
-      // axis.
-      const bar = this.add.image(cx, laneTopY + laneH / 2, AssetKeys.Image.RhythmBarBackground);
+      // axis. Alpha 0.55 lets the bg's floor read through (same translucent
+      // treatment ChartEditor uses).
+      const bar = this.add.image(cx, laneTopY + laneH / 2, AssetKeys.Image.RhythmBarBackgroundWhite);
       bar.displayWidth = laneH;
       bar.displayHeight = colW;
       bar.setRotation(-Math.PI / 2);
       bar.setTint(color);
+      bar.setAlpha(0.55);
       this.laneRects.push(bar as unknown as Phaser.GameObjects.Rectangle);
 
       // Hit target at the bottom of the lane — the original "fuzzy ball"
       // target from horizontal rhythm. Notes get consumed when they reach it.
-      const target = this.add.image(cx, hitLineY, AssetKeys.Image.PspspsTarget);
+      // Targets stay opaque (they need to read against the lane).
+      const target = this.add.image(cx, hitLineY, AssetKeys.Image.PspspsTargetWhite);
       target.setDisplaySize(72, 72);
       target.setTint(color);
       this.hitTargets[i] = target;
@@ -194,6 +202,22 @@ export class Game extends Scene {
       // start from the same value instead of compounding off prior inflations.
       this.hitTargetBaseScale[i] = target.scaleX;
     }
+  }
+
+  /** Look up the three sampled lane colors for the active bg from cache.
+   *  Returns the default `LANE_COLORS` trio when the bg has no sampled
+   *  entry or the JSON didn't load — so adding a new bg always renders
+   *  with sane colors even before extract:assets runs again. */
+  private resolveLaneTints(): readonly [number, number, number] {
+    const sampled = this.cache.json.get(AssetKeys.Json.BgLaneColors) as
+      | Record<string, [string, string, string]>
+      | undefined;
+    const activeBg = this.playerState?.activeBackground ?? 'stage';
+    const trio = sampled?.[activeBg];
+    if (!trio || trio.length !== 3) {
+      return L.LANE_COLORS;
+    }
+    return trio.map((hex) => parseInt(hex.replace('#', ''), 16)) as unknown as readonly [number, number, number];
   }
 
   /**
@@ -851,6 +875,13 @@ export class Game extends Scene {
     const endY = this.scale.height + 80;
     const totalFallMs = ((endY - startY) / (hitY - startY)) * Balance.noteFallMs;
     note.configure(laneId, x, startY, endY, totalFallMs, hitAtMs);
+    // Pre-schedule the backing-track amplification pulse to peak at
+    // this note's expected hit time. Web Audio's scheduler bakes the
+    // pulse into the audio buffer so it lands exactly with the song's
+    // beat — eliminates the output-buffer latency that made reactive
+    // pulses feel off. Fires whether or not the player hits the note;
+    // misses just feel like the song's own rhythmic accents.
+    this.music?.scheduleHitPulseAt(hitAtMs);
   }
 
   /** Hot path: scan pre-allocated pool for an inactive note. Allocates only
@@ -896,11 +927,12 @@ export class Game extends Scene {
 
     // Fire audio feedback before grading-side effects so the sound
     // lands as close to the tap moment as possible.
-    //   non-miss: per-lane tap sample / synth + backing-amp pulse
+    //   non-miss: per-lane tap sample / synth — backing-amp pulse is
+    //             pre-scheduled at note spawn time so it lands on the
+    //             beat regardless of when this tap fires
     //   miss:     low buzz tone — noticeable but doesn't ruin the song
     if (grade !== 'miss') {
       this.music?.playTapForLane(laneId);
-      this.music?.pulseBacking();
     } else {
       this.music?.playMiss();
     }
