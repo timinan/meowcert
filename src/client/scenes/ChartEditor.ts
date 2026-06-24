@@ -56,6 +56,13 @@ export class ChartEditor extends Scene {
   private cellPanels: GameObjects.Rectangle[][] = []; // [localStep][lane]
   private cellNotes: GameObjects.Container[][] = [];  // [localStep][lane]
 
+  // Page-break labels — refresh per page so the author sees the actual
+  // top-page + bottom-page numbers as they navigate.
+  private pageBreakTopLine!: GameObjects.Rectangle;
+  private pageBreakMidLine!: GameObjects.Rectangle;
+  private pageBreakTopLabel!: GameObjects.Text;
+  private pageBreakMidLabel!: GameObjects.Text;
+
   // Page nav (sits right above the bottom controls strip). ADD PAGE +
   // TEMPLATE buttons were removed when chart length became fixed at song
   // pick time — the page nav is just ▲ / PAGE / ▼ now.
@@ -411,16 +418,48 @@ export class ChartEditor extends Scene {
       }
     }
 
-    // Page-break line — horizontal yellow divider between the top page
-    // and the bottom page (rows 7 and 8 in the 16-row view). Same line
-    // treatment the rehearse mode uses for page boundaries; here it's
-    // static and sits permanently in the middle of the grid so the
-    // author can read "this is the seam between pages."
-    const pageBreakY = this.gridTop + CHART_PAGE_SIZE * this.cellH;
-    const pageBreakLine = this.add
-      .rectangle(this.scale.width / 2, pageBreakY, this.scale.width - 12, 2, 0xffd34d, 0.85)
+    // Page-break lines — matches the rehearse mode: yellow horizontal
+    // dividers with the page number centered on the line. One sits at
+    // the TOP of the grid (marks the start of the page currently in
+    // view), one in the MIDDLE (between rows 7 and 8 — marks the start
+    // of the next page). Labels refresh per page via refreshPage.
+    const topY = this.gridTop;
+    const midY = this.gridTop + CHART_PAGE_SIZE * this.cellH;
+    const w = this.scale.width;
+    this.pageBreakTopLine = this.add
+      .rectangle(w / 2, topY, w - 12, 2, 0xffd34d, 0.85)
       .setDepth(45);
-    this.root.add(pageBreakLine);
+    this.pageBreakMidLine = this.add
+      .rectangle(w / 2, midY, w - 12, 2, 0xffd34d, 0.85)
+      .setDepth(45);
+    this.pageBreakTopLabel = this.add
+      .text(w / 2, topY, '', {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontStyle: 'bold',
+        fontSize: '11px',
+        color: '#1a0a2e',
+        backgroundColor: '#ffd34d',
+        padding: { x: 6, y: 1 },
+      })
+      .setOrigin(0.5)
+      .setDepth(46);
+    this.pageBreakMidLabel = this.add
+      .text(w / 2, midY, '', {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontStyle: 'bold',
+        fontSize: '11px',
+        color: '#1a0a2e',
+        backgroundColor: '#ffd34d',
+        padding: { x: 6, y: 1 },
+      })
+      .setOrigin(0.5)
+      .setDepth(46);
+    this.root.add([
+      this.pageBreakTopLine,
+      this.pageBreakMidLine,
+      this.pageBreakTopLabel,
+      this.pageBreakMidLabel,
+    ]);
 
     this.refreshPage();
   }
@@ -549,6 +588,25 @@ export class ChartEditor extends Scene {
         note.setScale(1);
         const panel = this.cellPanels[localStep]![lane]!;
         panel.setAlpha(beyondChart ? 0.18 : 1);
+      }
+    }
+    // Page break labels — top label = the page sitting at the top of
+    // the visible view; mid label = the page after that. Hide mid label
+    // when its page is past the chart's end.
+    const totalPages = Math.max(1, Math.ceil(this.chart.stepCount / CHART_PAGE_SIZE));
+    const topPage = Math.floor(this.scrollOffset / CHART_PAGE_SIZE) + 1;
+    const midPage = topPage + 1;
+    if (this.pageBreakTopLabel) {
+      this.pageBreakTopLabel.setText(`PAGE ${topPage}`);
+    }
+    if (this.pageBreakMidLabel) {
+      if (midPage <= totalPages) {
+        this.pageBreakMidLabel.setText(`PAGE ${midPage}`);
+        this.pageBreakMidLabel.setVisible(true);
+        this.pageBreakMidLine?.setVisible(true);
+      } else {
+        this.pageBreakMidLabel.setVisible(false);
+        this.pageBreakMidLine?.setVisible(false);
       }
     }
     this.refreshPageLabel();
