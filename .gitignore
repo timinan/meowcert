@@ -3,3 +3,7 @@ node_modules
 dist
 .env
 assets-raw/
+
+# Python caches from scripts/audio/
+__pycache__/
+*.pyc
