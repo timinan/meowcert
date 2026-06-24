@@ -330,10 +330,10 @@ export class TopHud {
       const labelColor = isCurrent ? '#ffd34d' : '#ffffff';
       const descColor = isCurrent ? '#fff0aa' : '#c0a0e6';
       // Use the "●" prefix instead of suffix so the active-state marker
-      // never lands beyond the wrap width and forces "MEOWCERT" onto a
+      // never lands beyond the wrap width and forces "SHOW" onto a
       // truncated second line (Tim caught "PUT ON A" alone in the
       // drawer). Single-line label, no wordWrap — the font is tuned so
-      // even the longest label ("PUT ON A MEOWCERT") fits in the slot.
+      // even the longest label ("PUT ON A SHOW") fits in the slot.
       const labelText = isCurrent ? `● ${item.label}` : item.label;
       const label = this.scene.add
         .text(76, y + 14, labelText, {

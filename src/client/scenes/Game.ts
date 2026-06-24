@@ -113,8 +113,8 @@ export class Game extends Scene {
   /** Pass/fail blurb shown only in test mode when accuracy is below
    *  Balance.passAccuracyPct. Empty + invisible otherwise. */
   private summaryGateText!: Phaser.GameObjects.Text;
-  /** Summary title — swapped between 'MEOWCERT COMPLETE!' and
-   *  'MEOWCERT FAILED' based on the rehearsal pass gate. */
+  /** Summary title — swapped between 'SHOW COMPLETE!' and
+   *  'SHOW FAILED' based on the rehearsal pass gate. */
   private summaryTitleText!: Phaser.GameObjects.Text;
 
   // Page boundary tracking — cached chart timing so update() can spawn
@@ -282,7 +282,7 @@ export class Game extends Scene {
       // Pastel the lane (lift toward white) so the raw-color falling ball +
       // hit target read as the darker shape against a lighter wash. Easier
       // to spot than lifting the ball — same hue, just lower saturation.
-      // Lane fill kept a touch translucent so the meowcert bg ghosts
+      // Lane fill kept a touch translucent so the show bg ghosts
       // through behind the playfield, but bumped from 0.45 → 0.78 —
       // 0.45 was washing the cat color out completely.
       bar.setTint(liftTowardWhite(color, LANE_BRIGHTNESS_LIFT));
@@ -452,7 +452,7 @@ export class Game extends Scene {
 
     // Title — defaults to the success copy; showSummary() overrides for
     // the test-mode fail case.
-    this.summaryTitleText = this.add.text(cx, cy - 112, 'MEOWCERT COMPLETE!', {
+    this.summaryTitleText = this.add.text(cx, cy - 112, 'SHOW COMPLETE!', {
       ...fontBase,
       fontStyle: 'bold',
       fontSize: '13px',
@@ -558,11 +558,11 @@ export class Game extends Scene {
       this.testMode ? this.onBackToEditorClicked : this.onSkipClicked,
     );
 
-    // Right button: "Post Comment" in normal rehearse, "PUT ON A MEOWCERT"
+    // Right button: "Post Comment" in normal rehearse, "PUT ON A SHOW"
     // in test mode. In test mode the button is hidden entirely when the
     // author rehearsed below Balance.passAccuracyPct — they get auto-
     // routed back to the editor via the left button instead.
-    const rightLabel = this.testMode ? 'PUT ON A MEOWCERT' : 'Post Comment';
+    const rightLabel = this.testMode ? 'PUT ON A SHOW' : 'Post Comment';
     const rightBg = this.add.rectangle(
       cx + btnW / 2 + btnGap / 2, btnY, btnW, btnH, 0xffd34d, 1,
     ).setInteractive({ useHandCursor: true });
@@ -628,7 +628,7 @@ export class Game extends Scene {
           onTap: () => this.scene.start(SceneKeys.Game, { playerState: this.playerState }),
         },
         {
-          label: 'PUT ON A MEOWCERT',
+          label: 'PUT ON A SHOW',
           description: 'Cook up your next hit',
           icon: '🎼',
           key: SceneKeys.ChartEditor,
@@ -642,7 +642,7 @@ export class Game extends Scene {
           onTap: () => this.scene.start(SceneKeys.Purchase, { playerState: this.playerState }),
         },
         {
-          label: 'CATCH A MEOWCERT',
+          label: 'CATCH A SHOW',
           description: 'Front row for fellow artists',
           icon: '🎪',
           key: SceneKeys.VisitShows,
@@ -913,7 +913,7 @@ export class Game extends Scene {
     // letting it ride keeps the room feeling alive.
     // Branch on pass/fail BEFORE celebration kicks in. Cats either
     // start a happy cycle (pass) or a hissing droop (fail) so the
-    // emotional read matches the meowcert outcome. Stagger by 200ms
+    // emotional read matches the show outcome. Stagger by 200ms
     // per cat so the reaction feels like a crowd, not a chorus.
     const finalAccuracyPct = this.score.getAccuracy();
     const failed = finalAccuracyPct < Balance.passAccuracyPct;
@@ -928,7 +928,7 @@ export class Game extends Scene {
     // calmly instead of pulsing like a fresh combo. The Text was
     // already alpha-0 — flip it to 1 once we've set the content.
     this.tweens.killTweensOf(this.comboText);
-    this.comboText.setText('💕 thank you for coming to our meowcert 💕');
+    this.comboText.setText('💕 thank you for coming to our show 💕');
     this.comboText.setStyle({
       fontFamily: 'Pixeloid Sans, sans-serif',
       fontStyle: 'bold',
@@ -952,28 +952,28 @@ export class Game extends Scene {
     this.summaryMissesText.setText(String(this.score.getMisses()));
 
     // Pass / fail gate. Only test mode (editor rehearsal) enforces it.
-    // Below the threshold: hide PUT ON A MEOWCERT entirely so the
+    // Below the threshold: hide PUT ON A SHOW entirely so the
     // author can only route back to the editor. Tim's rule: don't let
     // a failed rehearsal post — fix the chart and rehearse again.
     // Pass/fail logic applies to ALL rehearsals (test mode, drawer
     // rehearse, future visit-shows). Tim's rule: mad cats on every
     // failed performance — encourages players to author levels they
-    // and others can actually play. Only the PUT ON A MEOWCERT button
+    // and others can actually play. Only the PUT ON A SHOW button
     // is gated to test mode (post flow doesn't exist outside it yet).
     const passed = accuracyPct >= Balance.passAccuracyPct;
     if (passed) {
-      this.summaryTitleText.setText('MEOWCERT COMPLETE!');
+      this.summaryTitleText.setText('SHOW COMPLETE!');
       this.summaryTitleText.setColor('#ffd34d');
       this.summaryGateText.setText(
-        this.testMode ? 'Nice — your meowcert is ready to post.' : '',
+        this.testMode ? 'Nice — your show is ready to post.' : '',
       );
       this.summaryGateText.setColor('#a4ffb4');
       this.summaryRightBg.setVisible(true);
       this.summaryRightText.setVisible(true);
-      this.comboText.setText('💕 thank you for coming to our meowcert 💕');
+      this.comboText.setText('💕 thank you for coming to our show 💕');
       this.comboText.setColor('#ff9ed4');
     } else {
-      this.summaryTitleText.setText('MEOWCERT FAILED');
+      this.summaryTitleText.setText('SHOW FAILED');
       this.summaryTitleText.setColor('#ff8b8b');
       this.summaryGateText.setText(
         this.testMode
@@ -981,7 +981,7 @@ export class Game extends Scene {
           : 'Better luck next time — practice this one and try again!',
       );
       this.summaryGateText.setColor('#ff8b8b');
-      // PUT ON A MEOWCERT only exists in test mode; hide it on test-mode
+      // PUT ON A SHOW only exists in test mode; hide it on test-mode
       // fails to enforce the "fix your chart" rule. Non-test rehearse
       // keeps the right button visible (Post Comment, future post flow).
       this.summaryRightBg.setVisible(!this.testMode);

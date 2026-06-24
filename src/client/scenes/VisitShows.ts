@@ -47,7 +47,7 @@ export class VisitShows extends Scene {
           onTap: () => this.scene.start(SceneKeys.Game, { playerState: this.playerState }),
         },
         {
-          label: 'PUT ON A MEOWCERT',
+          label: 'PUT ON A SHOW',
           description: 'Cook up your next hit',
           icon: '🎼',
           key: SceneKeys.ChartEditor,
@@ -61,7 +61,7 @@ export class VisitShows extends Scene {
           onTap: () => this.scene.start(SceneKeys.Purchase, { playerState: this.playerState }),
         },
         {
-          label: 'CATCH A MEOWCERT',
+          label: 'CATCH A SHOW',
           description: 'Front row for fellow artists',
           icon: '🎪',
           key: SceneKeys.VisitShows,
@@ -101,7 +101,7 @@ export class VisitShows extends Scene {
       .text(
         cx,
         cy + 28,
-        'Soon you\'ll catch other cats\' meowcerts and jump straight into their reddit post.',
+        'Soon you\'ll catch other cats\' shows and jump straight into their reddit post.',
         {
           ...fontBase,
           fontSize: '11px',
