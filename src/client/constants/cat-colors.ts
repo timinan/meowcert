@@ -32,6 +32,49 @@ export const CAT_COLOR_BY_BREED: Record<string, number> = {
 
 const SEAT_ORDER: SeatId[] = ['seat-left', 'seat-center', 'seat-right'];
 
+/** Pump a base cat color toward the most-saturated form of its hue so
+ *  the lane border reads as a vivid frame rather than a pastel outline.
+ *  Game.drawLanes uses this for the opaque border specifically — the
+ *  bar fill keeps the softer original. */
+export function vividBorderColor(rgb: number): number {
+  const r = ((rgb >> 16) & 0xff) / 255;
+  const g = ((rgb >> 8) & 0xff) / 255;
+  const b = (rgb & 0xff) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const v = max;
+  const s = max === 0 ? 0 : (max - min) / max;
+  // Boost saturation to ~0.85 minimum and pin value to 1.0 so the
+  // border pops on the dark playfield bg. Hue is preserved.
+  const newS = Math.max(s, 0.85);
+  const newV = 1;
+  let h: number;
+  if (max === min) h = 0;
+  else if (max === r) h = ((g - b) / (max - min)) % 6;
+  else if (max === g) h = (b - r) / (max - min) + 2;
+  else h = (r - g) / (max - min) + 4;
+  h *= 60;
+  if (h < 0) h += 360;
+  const c = newV * newS;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = newV - c;
+  let rp = 0, gp = 0, bp = 0;
+  if (h < 60)       { rp = c; gp = x; bp = 0; }
+  else if (h < 120) { rp = x; gp = c; bp = 0; }
+  else if (h < 180) { rp = 0; gp = c; bp = x; }
+  else if (h < 240) { rp = 0; gp = x; bp = c; }
+  else if (h < 300) { rp = x; gp = 0; bp = c; }
+  else              { rp = c; gp = 0; bp = x; }
+  const ri = Math.round((rp + m) * 255);
+  const gi = Math.round((gp + m) * 255);
+  const bi = Math.round((bp + m) * 255);
+  // Near-grey inputs (Snow White) saturate to a faint cool blue —
+  // that's not what we want for "vivid white border". Detect the
+  // grey case and return solid white instead.
+  if (v - min < 0.05) return 0xffffff;
+  return (ri << 16) | (gi << 8) | bi;
+}
+
 /**
  * Shared resolver: pick the lane tint trio from the player's seated cats.
  *

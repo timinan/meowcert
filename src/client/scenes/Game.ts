@@ -13,7 +13,7 @@ import { AssetKeys } from '@/constants/assets';
 import { Balance } from '@/constants/balance';
 import { fetchState, loadChart } from '@/services/state-client';
 import { CAT_CATALOG, emptyChart, CHART_PAGE_SIZE } from '@/../shared/state';
-import { resolveLaneTintsFromSeatedCats } from '@/constants/cat-colors';
+import { resolveLaneTintsFromSeatedCats, vividBorderColor } from '@/constants/cat-colors';
 import type { PlayerState, LaneId, Chart, SeatId } from '@/../shared/state';
 import type { CatModel } from '@/types/game';
 import { generateChart, type GenDifficulty } from '@/../shared/chart-generator';
@@ -289,13 +289,14 @@ export class Game extends Scene {
       bar.setAlpha(0.78);
       this.laneRects.push(bar as unknown as Phaser.GameObjects.Rectangle);
 
-      // Opaque cat-color BORDER around the lane. Depth 5 so it sits
-      // ABOVE the pink-paw overlay (depth 2) — without this, the paws
-      // layer painted over the border at the bar's edges and made the
-      // border look pink instead of the cat color.
+      // Opaque, VIVID cat-color border around the lane. Border uses
+      // vividBorderColor() to pump the saturation up so the pastel cat
+      // hues read as a confident frame instead of a faint outline.
+      // Stroke width 5 (was 3) so the frame is visually prominent.
+      // Depth 5 so it sits ABOVE the pink-paw overlay (depth 2).
       this.add
         .rectangle(cx, laneTopY + laneH / 2, colW, laneH, 0x000000, 0)
-        .setStrokeStyle(3, color, 1)
+        .setStrokeStyle(5, vividBorderColor(color), 1)
         .setDepth(5);
 
       // Sakura-pink toe-bean overlay. Uses the paws-only texture from
