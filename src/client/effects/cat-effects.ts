@@ -384,19 +384,18 @@ function makeParticles(opts: ParticleOpts): CatEffect['apply'] {
  *  radius 80 so the halo expands a full ball-width past the rim. */
 function makeGlowBurst(color: number): CatEffect['burst'] {
   return (scene, target, scale = 1) => {
-    // Aura now blooms as a RING outside the fuzzball — the previous
-    // filled circles covered the hit target itself, which muddied the
-    // sprite on every successful hit. Bumped peak alpha slightly so
-    // the ring still reads loud without filling the fuzzball.
+    // Aura ring sits just outside the fuzzball. Per Tim: a touch
+    // QUIETER than before — alphas + ring thicknesses pulled back so
+    // the aura whispers while the particle bursts on the other effects
+    // shout.
     const g = scene.add.graphics();
     g.setPosition(target.x, target.y);
     g.setDepth(target.depth + 1);
-    const fuzzballR = 38 * scale;          // sits just outside the ~72 px target
+    const fuzzballR = 38 * scale;
     const layers: Array<{ r: number; thickness: number; a: number }> = [
-      { r: fuzzballR + 4,  thickness: 8, a: 0.75 },
-      { r: fuzzballR + 14, thickness: 6, a: 0.6 },
-      { r: fuzzballR + 26, thickness: 4, a: 0.42 },
-      { r: fuzzballR + 38, thickness: 2, a: 0.28 },
+      { r: fuzzballR + 4,  thickness: 5, a: 0.5 },
+      { r: fuzzballR + 12, thickness: 3, a: 0.34 },
+      { r: fuzzballR + 22, thickness: 2, a: 0.22 },
     ];
     for (const l of layers) {
       g.lineStyle(l.thickness, color, l.a);
@@ -404,10 +403,10 @@ function makeGlowBurst(color: number): CatEffect['burst'] {
     }
     scene.tweens.add({
       targets: g,
-      scaleX: 1.9,
-      scaleY: 1.9,
+      scaleX: 1.5,
+      scaleY: 1.5,
       alpha: 0,
-      duration: 700,
+      duration: 500,
       ease: 'Quad.easeOut',
       onComplete: () => g.destroy(),
     });
@@ -417,29 +416,49 @@ function makeGlowBurst(color: number): CatEffect['burst'] {
 /** Radial particle burst — emit `count` emoji from the target's center,
  *  each flying outward along an angle slice with a small jitter, fading
  *  to zero alpha as it travels. Particle size scales with the effect's
- *  `apply` size so the visual weight stays consistent across effects. */
-function makeParticleBurst(emoji: string, size: number, count = 8): CatEffect['burst'] {
+ *  `apply` size so the visual weight stays consistent across effects.
+ *
+ *  Per Tim: bump count + distance + size so sparkles / hearts / etc
+ *  feel like a celebratory explosion (was reading too polite). Particles
+ *  start slightly larger and hold size for the first 30% of life before
+ *  fading. */
+function makeParticleBurst(emoji: string, size: number, count = 12): CatEffect['burst'] {
   return (scene, target, scale = 1) => {
-    const baseDist = 48 * scale;
-    const lifeMs = 600;
-    const px = size * scale;
+    const baseDist = 72 * scale;
+    const lifeMs = 720;
+    const px = Math.round(size * scale * 1.35);
     for (let i = 0; i < count; i++) {
       const slice = (Math.PI * 2) / count;
-      const angle = i * slice + (Math.random() - 0.5) * slice * 0.6;
-      const dist = baseDist * (0.75 + Math.random() * 0.5);
+      const angle = i * slice + (Math.random() - 0.5) * slice * 0.7;
+      const dist = baseDist * (0.85 + Math.random() * 0.55);
       const dx = Math.cos(angle) * dist;
       const dy = Math.sin(angle) * dist;
       const p = scene.add
         .text(target.x, target.y, emoji, { fontSize: `${px}px` })
         .setOrigin(0.5)
-        .setDepth(target.depth + 1);
+        .setDepth(target.depth + 1)
+        .setScale(0.6);
+      // Pop in fast, then drift outward + fade. Holds peak alpha for
+      // the first half of life so the burst reads loud, then fades.
+      scene.tweens.add({
+        targets: p,
+        scale: 1,
+        duration: 140,
+        ease: 'Back.easeOut',
+      });
       scene.tweens.add({
         targets: p,
         x: target.x + dx,
         y: target.y + dy,
-        alpha: 0,
         duration: lifeMs,
         ease: 'Quad.easeOut',
+      });
+      scene.tweens.add({
+        targets: p,
+        alpha: 0,
+        delay: lifeMs * 0.45,
+        duration: lifeMs * 0.55,
+        ease: 'Linear',
         onComplete: () => p.destroy(),
       });
     }
