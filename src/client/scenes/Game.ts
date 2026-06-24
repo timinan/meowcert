@@ -1,4 +1,4 @@
-import { Scene, Scenes } from 'phaser';
+import { Scene, Scenes, BlendModes } from 'phaser';
 import { SceneKeys } from '@/constants/scenes';
 import { Cat } from '@/entities/cat';
 import { Note } from '@/entities/note';
@@ -279,8 +279,24 @@ export class Game extends Scene {
       // hit target read as the darker shape against a lighter wash. Easier
       // to spot than lifting the ball — same hue, just lower saturation.
       bar.setTint(liftTowardWhite(color, LANE_BRIGHTNESS_LIFT));
-      bar.setAlpha(0.55);
+      // Alpha bumped 0.55 → 0.82 so the lane wash + paw-print texture
+      // hold their presence on the bg — at 0.55 the cat color blew out
+      // to whitish nothing. Per Tim: lanes a bit more opaque overall.
+      bar.setAlpha(0.82);
       this.laneRects.push(bar as unknown as Phaser.GameObjects.Rectangle);
+
+      // Pink paw overlay — second copy of the same texture tinted pink
+      // and laid on top in MULTIPLY blend so the paw shapes (darker
+      // pixels in the texture) drag toward pink while the bar's white
+      // areas stay roughly neutral. Gives the playfield its "toe beans
+      // are pink" treatment without modifying the source asset.
+      const paws = this.add.image(cx, laneTopY + laneH / 2, AssetKeys.Image.RhythmBarBackgroundWhite);
+      paws.displayWidth = laneH;
+      paws.displayHeight = colW;
+      paws.setRotation(-Math.PI / 2);
+      paws.setTint(0xff9ed4);
+      paws.setAlpha(0.45);
+      paws.setBlendMode(BlendModes.MULTIPLY);
 
       // Hit target at the bottom of the lane — the original "fuzzy ball"
       // target from horizontal rhythm. Notes get consumed when they reach it.
@@ -627,6 +643,7 @@ export class Game extends Scene {
   private buildHud(): void {
     this.hud = new TopHud(this, {
       showStats: true,
+      showCoins: false,
       currentKey: SceneKeys.Game,
       items: [
         {
@@ -1129,10 +1146,12 @@ export class Game extends Scene {
       .text(cx, laneTopY, `PAGE ${pageIdx + 1}`, {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
-        fontSize: '11px',
+        fontSize: '15px',
         color: '#1a0a2e',
         backgroundColor: '#ffd34d',
-        padding: { x: 6, y: 1 },
+        padding: { x: 10, y: 3 },
+        stroke: '#1a0a2e',
+        strokeThickness: 2,
       })
       .setOrigin(0.5)
       .setDepth(49);

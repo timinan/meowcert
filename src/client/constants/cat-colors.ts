@@ -8,18 +8,22 @@
  * occupied lane's color so the playfield never has a stale default tint
  * next to a colored neighbour.
  */
+// Brightest fur tone per breed — eyes / ears / noses excluded. Tim's
+// rule: pick the dominant FUR color, then nudge it a touch brighter
+// than realism so the lane sings under the cat instead of muddying.
+// Slightly punched-up vs the earlier picks.
 export const CAT_COLOR_BY_BREED: Record<string, number> = {
-  rainbow:  0xc678ff,  // lavender — rainbow cats hue-cycle, so use a neutral resting tone
-  cat1:     0xfff0dc,  // Mochi — soft cream
-  cat2:     0xe3b07a,  // Biscuit — toasted tan
-  cat3:     0x8c8c8c,  // Pebble — pebble grey
-  cat4:     0xd8d4ca,  // Marble — pale marble cream
-  cat5:     0xff9933,  // Saffron — saffron orange
-  cat6:     0x4a3266,  // Inkwell — deep ink purple
-  cat7:     0xff8ed4,  // Pinky — bright pink
-  cat8:     0x3a3a4a,  // Inky — dark slate (pure black washes flat under the lane tint)
-  cat9:     0xdce4f0,  // Snow White — cool soft white
-  cat10:    0x4dcf6b,  // Jade — jade green (matches the equipped green aura)
-  cat11:    0xa050ff,  // Purps — vibrant purple
-  cat12:    0xffb1d6,  // Sakura — sakura blossom pink
+  rainbow:  0xe6a5ff,  // bumped lavender — rainbow cats hue-cycle, neutral resting tone
+  cat1:     0xfff7e8,  // Mochi — pearly cream
+  cat2:     0xf5c690,  // Biscuit — bright toasted tan
+  cat3:     0xc4c4c4,  // Pebble — lifted cool grey
+  cat4:     0xeae3d0,  // Marble — bright marble cream
+  cat5:     0xffb04d,  // Saffron — sun-bright orange
+  cat6:     0x8f6cc7,  // Inkwell — vivid mid-purple (was muddy)
+  cat7:     0xffa7e0,  // Pinky — vivid pink
+  cat8:     0x6c6c84,  // Inky — lifted slate (pure black washes flat)
+  cat9:     0xeef3fb,  // Snow White — clean bright cool white
+  cat10:    0x6cf088,  // Jade — pop jade green (matches green aura)
+  cat11:    0xb968ff,  // Purps — punchy purple
+  cat12:    0xffc4de,  // Sakura — bright blossom pink
 };

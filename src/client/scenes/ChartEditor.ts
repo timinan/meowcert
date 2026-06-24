@@ -402,15 +402,13 @@ export class ChartEditor extends Scene {
 
         const noteSize = Math.min(this.cellW - 10, this.cellH - 4, 64);
         const noteContainer = this.add.container(cx, cy);
-        // Same white-base ball + lifted tint as the in-game falling note —
-        // see `Note.configure` + `liftTowardWhite`. Keeps the editor's
-        // preview color-accurate against the live Game scene.
+        // Just the fuzzball — the PS letters overlay was reading muddy
+        // at the halved cell height in the 2-page view (Tim: "don't
+        // render the ps, just have the fuzzball").
         const ball = this.add.image(0, 0, AssetKeys.Image.PspspsElementBallWhite);
         ball.setDisplaySize(noteSize, noteSize);
         ball.setTint(liftTowardWhite(this.laneTints[lane]!, BALL_BRIGHTNESS_LIFT));
-        const letters = this.add.image(0, 0, AssetKeys.Image.PspspsElementLetters);
-        letters.setDisplaySize(noteSize, noteSize);
-        noteContainer.add([ball, letters]);
+        noteContainer.add(ball);
         noteContainer.setDepth(40);
         noteContainer.setVisible(false);
         this.cellNotes[localStep]![lane] = noteContainer;
@@ -432,26 +430,22 @@ export class ChartEditor extends Scene {
     this.pageBreakMidLine = this.add
       .rectangle(w / 2, midY, w - 12, 2, 0xffd34d, 0.85)
       .setDepth(45);
+    const pageChipStyle = {
+      fontFamily: 'Pixeloid Sans, sans-serif',
+      fontStyle: 'bold',
+      fontSize: '15px',
+      color: '#1a0a2e',
+      backgroundColor: '#ffd34d',
+      padding: { x: 10, y: 3 },
+      stroke: '#1a0a2e',
+      strokeThickness: 2,
+    } as const;
     this.pageBreakTopLabel = this.add
-      .text(w / 2, topY, '', {
-        fontFamily: 'Pixeloid Sans, sans-serif',
-        fontStyle: 'bold',
-        fontSize: '11px',
-        color: '#1a0a2e',
-        backgroundColor: '#ffd34d',
-        padding: { x: 6, y: 1 },
-      })
+      .text(w / 2, topY, '', pageChipStyle)
       .setOrigin(0.5)
       .setDepth(46);
     this.pageBreakMidLabel = this.add
-      .text(w / 2, midY, '', {
-        fontFamily: 'Pixeloid Sans, sans-serif',
-        fontStyle: 'bold',
-        fontSize: '11px',
-        color: '#1a0a2e',
-        backgroundColor: '#ffd34d',
-        padding: { x: 6, y: 1 },
-      })
+      .text(w / 2, midY, '', pageChipStyle)
       .setOrigin(0.5)
       .setDepth(46);
     this.root.add([

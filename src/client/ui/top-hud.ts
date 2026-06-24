@@ -16,8 +16,12 @@ interface TopHudOptions {
    *  hamburger button entirely (useful for scenes where the drawer would
    *  just point at sibling navigation that's already obvious). */
   items?: DrawerItem[];
-  /** Show score / coins / best on the left? Defaults to true. */
+  /** Show score / coins / hits on the left? Defaults to true. */
   showStats?: boolean;
+  /** Show the coins slot inside the stats row. Defaults to true — set
+   *  false in scenes where coins are a distraction (Tim's rule:
+   *  Game/Rehearse hides coins, only Merch + Set Stage show them). */
+  showCoins?: boolean;
   /** Scene key for the current scene — used to mark the matching
    *  drawer entry as the active page. */
   currentKey?: string;
@@ -81,20 +85,25 @@ export class TopHud {
         })
         .setOrigin(0, 0.5);
 
-      this.coinsText = scene.add
-        .text(112, TopHud.HEIGHT / 2, '🪙 0', {
-          fontFamily: 'Pixeloid Sans, sans-serif',
-          fontStyle: 'bold',
-          fontSize: '13px',
-          color: '#ffd34d',
-        })
-        .setOrigin(0, 0.5);
+      const showCoins = options.showCoins !== false;
+      if (showCoins) {
+        this.coinsText = scene.add
+          .text(112, TopHud.HEIGHT / 2, '🪙 0', {
+            fontFamily: 'Pixeloid Sans, sans-serif',
+            fontStyle: 'bold',
+            fontSize: '13px',
+            color: '#ffd34d',
+          })
+          .setOrigin(0, 0.5);
+      }
 
       // Slot 3: hits / total / percentage (replaced "best score"). Two
       // compact lines stacked tight so the strip still fits inside
-      // 320 px with the hamburger on the right.
+      // 320 px with the hamburger on the right. Shifts left when coins
+      // are hidden so it doesn't sit awkwardly alone in the middle.
+      const hitsX = showCoins ? 196 : 112;
       this.bestText = scene.add
-        .text(196, TopHud.HEIGHT / 2, '0/0\n0%', {
+        .text(hitsX, TopHud.HEIGHT / 2, '0/0\n0%', {
           fontFamily: 'Pixeloid Sans, sans-serif',
           fontStyle: 'bold',
           fontSize: '9px',
@@ -104,7 +113,9 @@ export class TopHud {
         })
         .setOrigin(0, 0.5);
 
-      this.container.add([this.scoreText, this.coinsText, this.bestText]);
+      const slotChildren = [this.scoreText, this.bestText];
+      if (this.coinsText) slotChildren.splice(1, 0, this.coinsText);
+      this.container.add(slotChildren);
     }
 
     if (this.items.length > 0) {
@@ -129,7 +140,7 @@ export class TopHud {
   /** Push score / coins / best updates. Call from the scene's update loop. */
   setStats(score: number, coins: number, hits: number, judged: number): void {
     this.scoreText?.setText(`🎵 ${score.toLocaleString()}`);
-    this.coinsText?.setText(`🪙 ${coins}`);
+    if (this.coinsText) this.coinsText.setText(`🪙 ${coins}`);
     const pct = judged > 0 ? Math.round((hits / judged) * 100) : 0;
     this.bestText?.setText(`${hits}/${judged}\n${pct}%`);
   }
@@ -307,7 +318,10 @@ export class TopHud {
         .text(76, y + 14, isCurrent ? `${item.label}  ●` : item.label, {
           fontFamily: 'Pixeloid Sans, sans-serif',
           fontStyle: 'bold',
-          fontSize: '14px',
+          // 12 px keeps the longest label ("PUT ON A MEOWCERT") well
+          // inside the labelWrap budget — 14 was clipping with the
+          // current-scene "●" suffix appended.
+          fontSize: '12px',
           color: labelColor,
           wordWrap: { width: labelWrap },
           maxLines: 1,
