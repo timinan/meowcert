@@ -12,7 +12,7 @@ import {
   CHART_PAGE_SIZE,
   BACKING_CATALOG,
 } from '@/../shared/state';
-import type { PlayerState, Chart, LaneId } from '@/../shared/state';
+import type { PlayerState, Chart, LaneId, Hold } from '@/../shared/state';
 import { generateChart, stepsForDuration, type GenDifficulty } from '@/../shared/chart-generator';
 import { SongPickerModal, type SongPickerResult } from '@/ui/song-picker-modal';
 import { TemplateOrScratchModal, type StartMode } from '@/ui/template-or-scratch-modal';
@@ -56,6 +56,19 @@ export class ChartEditor extends Scene {
   // Cells
   private cellPanels: GameObjects.Rectangle[][] = []; // [localStep][lane]
   private cellNotes: GameObjects.Container[][] = [];  // [localStep][lane]
+
+  /** Per-page hold visuals — destroyed and rebuilt on every refreshHolds.
+   *  Mixed types (tail rectangles + head images) so the array is typed
+   *  as the base GameObject. */
+  private holdGraphics: GameObjects.GameObject[] = [];
+
+  // Drag state for hold authoring. pointerdown on a cell seeds these;
+  // pointerover on cells in the same lane extends the range; scene-level
+  // pointerup commits as either a tap (no drag) or a hold (drag to a
+  // different cell in same lane).
+  private dragStartLocal: number | null = null;
+  private dragStartLane: LaneId | null = null;
+  private dragCurrentLocal: number | null = null;
 
   // Page-break labels — refresh per page so the author sees the actual
   // top-page + bottom-page numbers as they navigate.
@@ -130,6 +143,7 @@ export class ChartEditor extends Scene {
     this.buildHud();
 
     this.events.once(Scenes.Events.SHUTDOWN, () => this.cleanup());
+    this.input.on('pointerup', this.onScenePointerUp, this);
 
     // Resume path: re-entering from rehearsal. Skip the pickers and
     // jump straight to the chart we just sent off (lives on
@@ -436,7 +450,8 @@ export class ChartEditor extends Scene {
           .setInteractive({ useHandCursor: true });
         const ls = localStep;
         const ln = lane;
-        panel.on('pointerdown', () => this.toggleCell(ls, ln as LaneId));
+        panel.on('pointerdown', () => this.onCellPointerDown(ls, ln as LaneId));
+        panel.on('pointerover', () => this.onCellPointerOver(ls, ln as LaneId));
         this.cellPanels[localStep]![lane] = panel;
         this.root.add(panel);
 
@@ -608,6 +623,146 @@ export class ChartEditor extends Scene {
     }
   }
 
+  // ─── Hold authoring ────────────────────────────────────────────────────
+
+  private onCellPointerDown(localStep: number, lane: LaneId): void {
+    const modelStep = this.scrollOffset + localStep;
+    if (modelStep >= this.chart.stepCount) return;
+    // Tap inside an existing hold removes it whole — easier than a
+    // dedicated delete mode. Same-lane requirement keeps cross-lane
+    // taps from accidentally clearing holds in neighboring lanes.
+    const existing = this.findHoldAtCell(modelStep, lane);
+    if (existing) {
+      this.removeHold(existing);
+      this.refreshPage();
+      this.resetDrag();
+      return;
+    }
+    this.dragStartLocal = localStep;
+    this.dragStartLane = lane;
+    this.dragCurrentLocal = localStep;
+  }
+
+  private onCellPointerOver(localStep: number, lane: LaneId): void {
+    if (this.dragStartLocal === null || this.dragStartLane === null) return;
+    // Cross-lane drags are ignored — the hold is locked to the lane the
+    // author started in. Keeps the interaction predictable when the
+    // finger wanders sideways.
+    if (lane !== this.dragStartLane) return;
+    const modelStep = this.scrollOffset + localStep;
+    if (modelStep >= this.chart.stepCount) return;
+    this.dragCurrentLocal = localStep;
+  }
+
+  private onScenePointerUp = (): void => {
+    if (this.dragStartLocal === null || this.dragStartLane === null) return;
+    const lane = this.dragStartLane;
+    const start = this.dragStartLocal;
+    const current = this.dragCurrentLocal ?? start;
+    this.resetDrag();
+    if (start === current) {
+      this.toggleCell(start, lane);
+      return;
+    }
+    const aLocal = Math.min(start, current);
+    const bLocal = Math.max(start, current);
+    this.commitHold(this.scrollOffset + aLocal, this.scrollOffset + bLocal, lane);
+  };
+
+  private resetDrag(): void {
+    this.dragStartLocal = null;
+    this.dragStartLane = null;
+    this.dragCurrentLocal = null;
+  }
+
+  private findHoldAtCell(modelStep: number, lane: LaneId): Hold | null {
+    if (!this.chart.holds) return null;
+    for (const h of this.chart.holds) {
+      if (h.lane !== lane) continue;
+      if (modelStep >= h.startStep && modelStep <= h.endStep) return h;
+    }
+    return null;
+  }
+
+  private removeHold(hold: Hold): void {
+    if (!this.chart.holds) return;
+    const idx = this.chart.holds.indexOf(hold);
+    if (idx >= 0) this.chart.holds.splice(idx, 1);
+  }
+
+  private commitHold(startStep: number, endStep: number, lane: LaneId): void {
+    // Same-lane overlap → silently refuse. The drag completes but no
+    // hold is committed. Cross-lane is fine (different array entries).
+    if (this.chart.holds?.some(
+      (h) => h.lane === lane && !(endStep < h.startStep || startStep > h.endStep),
+    )) {
+      return;
+    }
+    // Strip any conflicting tap notes inside the hold's range so the
+    // schema invariant (taps + holds are disjoint per cell) holds.
+    for (let s = startStep; s <= endStep; s++) {
+      const step = this.chart.steps[s];
+      if (!step) continue;
+      const idx = step.lanes.indexOf(lane);
+      if (idx >= 0) step.lanes.splice(idx, 1);
+    }
+    if (!this.chart.holds) this.chart.holds = [];
+    this.chart.holds.push({ lane, startStep, endStep });
+    this.refreshPage();
+  }
+
+  private refreshHolds(): void {
+    for (const g of this.holdGraphics) g.destroy();
+    this.holdGraphics = [];
+    if (!this.chart.holds || this.chart.holds.length === 0) return;
+
+    const visibleStart = this.scrollOffset;
+    const visibleEnd = this.scrollOffset + EDITOR_VISIBLE_ROWS - 1;
+
+    for (const hold of this.chart.holds) {
+      if (hold.endStep < visibleStart || hold.startStep > visibleEnd) continue;
+
+      const showStart = Math.max(hold.startStep, visibleStart);
+      const showEnd = Math.min(hold.endStep, visibleEnd);
+      const localStart = showStart - visibleStart;
+      const localEnd = showEnd - visibleStart;
+
+      const cx = this.colCenterXs[hold.lane]!;
+      const yTop = this.gridTop + localStart * this.cellH + 2;
+      const yBottom = this.gridTop + (localEnd + 1) * this.cellH - 2;
+      const yCenter = (yTop + yBottom) / 2;
+      const tailW = this.cellW - 14;
+      const tailH = yBottom - yTop;
+
+      // Tail — solid lane-tint rectangle with the same dark stroke the
+      // grid cells use, so the hotdog reads as a contiguous shape over
+      // the lane wash.
+      const tail = this.add.rectangle(
+        cx, yCenter, tailW, tailH, this.laneTints[hold.lane]!, 0.85,
+      );
+      tail.setStrokeStyle(1, 0x1a0a2e, 0.7);
+      tail.setDepth(38);
+      this.root.add(tail);
+      this.holdGraphics.push(tail);
+
+      // Head fuzzball at the hold's startStep — the cell the author
+      // tapped down on. Sits on TOP of the tail so it reads as the
+      // "tap here first" marker. Skipped if startStep is above the
+      // visible window (the tail still draws to indicate continuity).
+      if (hold.startStep >= visibleStart) {
+        const headLocal = hold.startStep - visibleStart;
+        const headY = this.gridTop + headLocal * this.cellH + this.cellH / 2;
+        const headSize = Math.min(this.cellW - 4, this.cellH + 2, 56);
+        const head = this.add.image(cx, headY, AssetKeys.Image.PspspsTargetWhite);
+        head.setDisplaySize(headSize, headSize);
+        head.setTint(darkenTowardBlack(this.laneTints[hold.lane]!, 0.18));
+        head.setDepth(40);
+        this.root.add(head);
+        this.holdGraphics.push(head);
+      }
+    }
+  }
+
   private refreshPage(): void {
     for (let localStep = 0; localStep < EDITOR_VISIBLE_ROWS; localStep++) {
       const modelStep = this.scrollOffset + localStep;
@@ -644,6 +799,7 @@ export class ChartEditor extends Scene {
         this.pageBreakMidLine?.setVisible(false);
       }
     }
+    this.refreshHolds();
     this.refreshPageLabel();
   }
 
@@ -674,6 +830,7 @@ export class ChartEditor extends Scene {
 
   private onClearTap(): void {
     for (const step of this.chart.steps) step.lanes = [];
+    if (this.chart.holds) this.chart.holds = [];
     this.refreshPage();
   }
 

@@ -288,6 +288,15 @@ export interface ChartStep {
   lanes: LaneId[];
 }
 
+/** A hold note: tap-and-hold from startStep through endStep (both inclusive).
+ *  Lives parallel to ChartStep.lanes — a hold's startStep cell does NOT also
+ *  appear in steps[startStep].lanes (taps and holds are disjoint per cell). */
+export interface Hold {
+  lane: LaneId;
+  startStep: number;
+  endStep: number;
+}
+
 export interface Chart {
   authorId: string;
   title: string;
@@ -305,6 +314,9 @@ export interface Chart {
    *  the bpm+vibe bucket using the legacy chart-hash fallback. */
   audioKey?: string;
   steps: ChartStep[];
+  /** Hold notes. Optional — pre-hold charts omit it; editor + game treat
+   *  undefined as `[]`. Validator enforces no same-lane overlap. */
+  holds?: Hold[];
   updatedAt: number;
 }
 
@@ -328,6 +340,7 @@ export function emptyChart(
     stepCount,
     bpm: 120,
     steps: Array.from({ length: stepCount }, () => ({ lanes: [] })),
+    holds: [],
     updatedAt: Date.now(),
   };
 }
@@ -341,6 +354,23 @@ export function validateChart(c: Chart): { ok: true } | { ok: false; reason: str
   for (const s of c.steps) {
     for (const l of s.lanes) {
       if (l !== 0 && l !== 1 && l !== 2) return { ok: false, reason: `bad lane ${l}` };
+    }
+  }
+  if (c.holds) {
+    const perLane: Hold[][] = [[], [], []];
+    for (const h of c.holds) {
+      if (h.lane !== 0 && h.lane !== 1 && h.lane !== 2) return { ok: false, reason: `bad hold lane ${h.lane}` };
+      if (h.startStep < 0 || h.endStep >= c.stepCount) return { ok: false, reason: 'hold step out of range' };
+      if (h.endStep <= h.startStep) return { ok: false, reason: 'hold endStep must be > startStep' };
+      if (c.steps[h.startStep]!.lanes.includes(h.lane)) {
+        return { ok: false, reason: 'hold startStep cell also has a tap on the same lane' };
+      }
+      for (const other of perLane[h.lane]!) {
+        if (!(h.endStep < other.startStep || h.startStep > other.endStep)) {
+          return { ok: false, reason: 'overlapping holds in the same lane' };
+        }
+      }
+      perLane[h.lane]!.push(h);
     }
   }
   return { ok: true };
