@@ -25,9 +25,11 @@ const THUMB_ROWS = 2;
 const MAX_TRAY = THUMB_COLS * THUMB_ROWS; // 8
 /** Reserved height for the always-visible pagination footer in CATS / BACKGROUNDS trays. */
 const PAGE_FOOTER_H = 36;
-/** Visible gap between the last thumb row and the pagination footer so
- *  cells don't visually butt right up against the page-nav strip. */
-const GRID_BOTTOM_MARGIN = 8;
+/** Equal vertical whitespace used both inside the grid (top padding,
+ *  between rows) and as the bottom gap before the pagination footer.
+ *  Bumping all three to the same number makes the tray read as evenly
+ *  distributed instead of "top tight, bottom airy". */
+const TRAY_VPAD = 12;
 
 type ActiveTab = 'CATS' | 'BACKGROUNDS';
 
@@ -592,16 +594,17 @@ export class Decorate extends Scene {
     const panelH = height - panelTop;
     const tabH = 38;
     const trayH = panelH - tabH;
-    // Reserve the bottom strip for the always-visible pagination footer so
-    // the thumbnail grid never overlaps with it. Extra GRID_BOTTOM_MARGIN
-    // gives the bottom row visible breathing room above the page nav.
-    const gridH = trayH - PAGE_FOOTER_H - GRID_BOTTOM_MARGIN;
+    // Reserve the bottom strip for the always-visible pagination footer
+    // so the thumbnail grid never overlaps with it. TRAY_VPAD doubles as
+    // top padding, inter-row gap, AND bottom gap before the footer so
+    // the spacing reads as evenly distributed.
+    const gridH = trayH - PAGE_FOOTER_H - TRAY_VPAD;
 
-    const padding = 10;
     const gapX = 6;
-    const gapY = 6;
-    const thumbW = (width - padding * 2 - gapX * (THUMB_COLS - 1)) / THUMB_COLS;
-    const thumbH = (gridH - padding * 2 - gapY * (THUMB_ROWS - 1)) / THUMB_ROWS;
+    const thumbW = (width - TRAY_VPAD * 2 - gapX * (THUMB_COLS - 1)) / THUMB_COLS;
+    const thumbH = (gridH - TRAY_VPAD * 2 - TRAY_VPAD * (THUMB_ROWS - 1)) / THUMB_ROWS;
+    const padding = TRAY_VPAD;
+    const gapY = TRAY_VPAD;
 
     // ownedCats is now OwnedCat[]. Iterate instances directly.
     const ownedCats = this.playerState?.ownedCats ?? [];
@@ -842,15 +845,15 @@ export class Decorate extends Scene {
     const panelH = height - panelTop;
     const tabH = 38;
     const trayH = panelH - tabH;
-    // Same footer reserve + bottom-margin as the CATS tray so the
+    // Same footer reserve + even-padding as the CATS tray so the
     // pagination strip lines up flush across tabs.
-    const gridH = trayH - PAGE_FOOTER_H - GRID_BOTTOM_MARGIN;
+    const gridH = trayH - PAGE_FOOTER_H - TRAY_VPAD;
 
-    const padding = 10;
     const gapX = 6;
-    const gapY = 6;
-    const thumbW = (width - padding * 2 - gapX * (THUMB_COLS - 1)) / THUMB_COLS;
-    const thumbH = (gridH - padding * 2 - gapY * (THUMB_ROWS - 1)) / THUMB_ROWS;
+    const thumbW = (width - TRAY_VPAD * 2 - gapX * (THUMB_COLS - 1)) / THUMB_COLS;
+    const thumbH = (gridH - TRAY_VPAD * 2 - TRAY_VPAD * (THUMB_ROWS - 1)) / THUMB_ROWS;
+    const padding = TRAY_VPAD;
+    const gapY = TRAY_VPAD;
 
     const ownedBgs = this.playerState?.ownedBackgrounds ?? (['stage'] as BackgroundId[]);
     const activeBg = this.playerState?.activeBackground ?? ('stage' as BackgroundId);
