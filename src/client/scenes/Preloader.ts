@@ -160,18 +160,23 @@ export class Preloader extends Scene {
       ctx.drawImage(srcImage, 0, 0);
       const img = ctx.getImageData(0, 0, w, h);
       const data = img.data;
-      // Paw pixels in the source texture are a medium-dark brown
-      // (~130–170 brightness). Threshold 100 missed them entirely;
-      // threshold 200 swept up the bar's edge gradient too. 165 lands
-      // in the sweet spot — catches real paws, leaves the bar body +
-      // edges transparent.
-      const PAW_THRESHOLD = 165;
+      // SATURATION-based extraction (not brightness).
+      // Paws are saturated brown — they have one strong color
+      // channel and one weak one. The bar body is near-white (R≈G≈B
+      // high), the bar's edge gradient is near-grey (R≈G≈B low). All
+      // the false-positive cases that brightness-thresholding kept
+      // sweeping in are unsaturated; ONLY the paws are colored. So
+      // check colorfulness instead of darkness and the right pixels
+      // pop out regardless of how dark or light they are.
+      const SATURATION_THRESHOLD = 0.15;
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i]!;
         const g = data[i + 1]!;
         const b = data[i + 2]!;
-        const brightness = (r + g + b) / 3;
-        if (brightness < PAW_THRESHOLD) {
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        const saturation = max === 0 ? 0 : (max - min) / max;
+        if (saturation > SATURATION_THRESHOLD) {
           // Paw pixel — flatten to white so the Phaser tint comes
           // through clean as a solid color. Alpha is held at the
           // source value so faint paw edges stay anti-aliased.
@@ -179,8 +184,8 @@ export class Preloader extends Scene {
           data[i + 1] = 255;
           data[i + 2] = 255;
         } else {
-          // Bar pixel — fully transparent so the cat-color layer
-          // beneath shows through unchanged.
+          // Bar body / edge / frame — all unsaturated. Transparent so
+          // the cat-color layer beneath shows through.
           data[i + 3] = 0;
         }
       }
