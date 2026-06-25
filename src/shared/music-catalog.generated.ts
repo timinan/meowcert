@@ -39,4 +39,8 @@ export const BACKING_CATALOG: Record<string, BackingTrack> = {
   "the-big-cheese": { id: "the-big-cheese", displayName: "The Big Cheese", speedLabel: "fast", vibe: "upbeat", bpm: 130, audioKey: "backing-the-big-cheese", loopDurationMs: 62000 },
   "the-last-train-to-nowhere": { id: "the-last-train-to-nowhere", displayName: "The Last Train to Nowhere", speedLabel: "fast", vibe: "upbeat", bpm: 130, audioKey: "backing-the-last-train-to-nowhere", loopDurationMs: 62000 },
   "the-quiet-between-notes": { id: "the-quiet-between-notes", displayName: "The Quiet Between Notes", speedLabel: "fast", vibe: "upbeat", bpm: 130, audioKey: "backing-the-quiet-between-notes", loopDurationMs: 62000 },
+  "blink-182-all-the-small-things-official-": { id: "blink-182-all-the-small-things-official-", displayName: "blink-182 - All The Small Things (Official Music Video)", speedLabel: "fast", vibe: "upbeat", bpm: 130, audioKey: "backing-blink-182-all-the-small-things-official-", loopDurationMs: 62000 },
+  "outkast-hey-ya-lyrics": { id: "outkast-hey-ya-lyrics", displayName: "OutKast - Hey Ya! (Lyrics)", speedLabel: "fast", vibe: "upbeat", bpm: 130, audioKey: "backing-outkast-hey-ya-lyrics", loopDurationMs: 62000 },
+  "outkast-hey-ya-lyrics-2": { id: "outkast-hey-ya-lyrics-2", displayName: "OutKast - Hey Ya! (Lyrics)", speedLabel: "fast", vibe: "upbeat", bpm: 130, audioKey: "backing-outkast-hey-ya-lyrics-2", loopDurationMs: 62000 },
+  "moti-headphones-official-visualizer": { id: "moti-headphones-official-visualizer", displayName: "MOTi - Headphones (Official Visualizer)", speedLabel: "fast", vibe: "upbeat", bpm: 130, audioKey: "backing-moti-headphones-official-visualizer", loopDurationMs: 62000 },
 };

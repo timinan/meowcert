@@ -288,5 +288,37 @@
     "vibe": "upbeat",
     "bpm": 130,
     "loopDurationMs": 62000
+  },
+  "the-big-cheese": {
+    "id": "the-big-cheese",
+    "displayName": "The Big Cheese",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 62000
+  },
+  "the-last-train-to-nowhere": {
+    "id": "the-last-train-to-nowhere",
+    "displayName": "The Last Train to Nowhere",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 62000
+  },
+  "the-quiet-between-notes": {
+    "id": "the-quiet-between-notes",
+    "displayName": "The Quiet Between Notes",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 62000
+  },
+  "blink-182-all-the-small-things-official-": {
+    "id": "blink-182-all-the-small-things-official-",
+    "displayName": "blink-182 - All The Small Things (Official Music Video)",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 62000
   }
 }
