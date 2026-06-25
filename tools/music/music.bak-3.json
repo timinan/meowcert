@@ -320,5 +320,37 @@
     "vibe": "upbeat",
     "bpm": 130,
     "loopDurationMs": 62000
+  },
+  "outkast-hey-ya-lyrics": {
+    "id": "outkast-hey-ya-lyrics",
+    "displayName": "OutKast - Hey Ya! (Lyrics)",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 62000
+  },
+  "outkast-hey-ya-lyrics-2": {
+    "id": "outkast-hey-ya-lyrics-2",
+    "displayName": "OutKast - Hey Ya! (Lyrics)",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 62000
+  },
+  "moti-headphones-official-visualizer": {
+    "id": "moti-headphones-official-visualizer",
+    "displayName": "MOTi - Headphones (Official Visualizer)",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 62000
+  },
+  "disclosure-you-me-flume-remix-westend-lo": {
+    "id": "disclosure-you-me-flume-remix-westend-lo",
+    "displayName": "Disclosure - You & Me (Flume Remix) [Westend & Local Singles Edit]",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 62000
   }
 }

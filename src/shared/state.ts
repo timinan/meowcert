@@ -280,6 +280,11 @@ export interface BackingTrack {
   /** One full loop length in ms — informational, used by future tooling
    *  that wants to schedule visual cues against bar boundaries. */
   loopDurationMs: number;
+  /** Auto-detected (or Tim-overridden) start time in the SOURCE mp3 the
+   *  clip was sliced from. Recorded so the calibrator's waveform editor
+   *  can default its selection brush to the current clip's bounds. Not
+   *  used by the game runtime. */
+  clipStartS?: number;
 }
 
 /**

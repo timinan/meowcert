@@ -48,7 +48,7 @@ const TOOLS = {
     label: 'Music Calibrator',
     href: '/tools/music/calibrator.html',
     savePath: path.join(TOOL_DIR, 'music', 'music.json'),
-    description: 'Tempo, vibe, BPM per backing track. Drop an MP3 to add a new song; ffmpeg auto-trims to 32s + downmixes to 96kbps mono.',
+    description: 'Tempo, vibe, BPM, genre + mood per backing track. Drop an MP3 to add a new song; ffmpeg auto-detects the hyped 65 s chorus section + downmixes to 96kbps mono. Waveform editor lets you override the auto-pick.',
   },
   prompts: {
     label: 'Prompt Generator',
@@ -259,6 +259,11 @@ const BG_UPLOAD_DIR = path.join(PROJECT_ROOT, 'public', 'assets', 'themes');
 const MUSIC_UPLOAD_DIR = path.join(PROJECT_ROOT, 'public', 'assets', 'audio', 'backings');
 const TAPS_DIR = path.join(PROJECT_ROOT, 'public', 'assets', 'audio', 'taps');
 const MUSIC_JSON = path.join(TOOL_DIR, 'music', 'music.json');
+// Preserved raw uploads — the calibrator's section editor needs the
+// FULL source to recompute the waveform + let the user pick any
+// 65-second window. Kept separate from MUSIC_UPLOAD_DIR so the
+// production-served backings stay slim.
+const MUSIC_SOURCES_DIR = path.join(TOOL_DIR, 'music', 'sources');
 const COSMETIC_RAW_DIR = path.join(PROJECT_ROOT, 'assets-raw', 'cosmetic');
 const CAT_RAW_DIR = path.join(PROJECT_ROOT, 'assets-raw');
 
@@ -793,49 +798,36 @@ async function handleMusicUpload(req, res, slug) {
         return;
       }
       await fs.mkdir(MUSIC_UPLOAD_DIR, { recursive: true });
-      // Write raw upload to a temp file, then run ffmpeg into the final
-      // path so a half-finished encode never leaves a corrupt mp3 in
-      // the catalog dir.
-      tmpPath = path.join(MUSIC_UPLOAD_DIR, `.${slug}.upload.mp3`);
+      await fs.mkdir(MUSIC_SOURCES_DIR, { recursive: true });
+      // Source preserved in tools/music/sources/<slug>.src so the
+      // calibrator's waveform editor can re-clip from the original
+      // bytes. Final clip lives in the production backings dir.
+      const srcPath = path.join(MUSIC_SOURCES_DIR, `${slug}.src`);
       const outPath = path.join(MUSIC_UPLOAD_DIR, `${slug}.mp3`);
-      await fs.writeFile(tmpPath, buf);
+      // tmpPath kept for backwards-compat with the finally cleanup
+      // block, but we no longer write to it.
+      tmpPath = null;
+      await fs.writeFile(srcPath, buf);
 
-      // Pipeline (also mirrored in scripts/audio/reprocess-backings.py):
-      //   silenceremove → strip leading silence / soft intro
-      //   atrim 0..62  → keep exactly 62 s
-      //   afade in 0.35 → ease in so loop seam reads as a breath
-      //   afade out 1.5 → ease out the tail before the cut
-      const fadeIn = 0.35;
-      const fadeOut = 1.5;
-      const clipS = 62;
-      const fadeOutStart = (clipS - fadeOut).toFixed(3);
-      const af = [
-        'silenceremove=start_periods=1:start_duration=0.1:start_threshold=-28dB',
-        `atrim=0:${clipS}`,
-        `afade=t=in:st=0:d=${fadeIn.toFixed(3)}`,
-        `afade=t=out:st=${fadeOutStart}:d=${fadeOut.toFixed(3)}`,
-      ].join(',');
-      await new Promise((resolve, reject) => {
-        const ff = spawn(
-          'ffmpeg',
-          [
-            '-hide_banner', '-loglevel', 'error', '-y',
-            '-i', tmpPath,
-            '-af', af,
-            '-ac', '1',
-            '-ar', '44100',
-            '-b:a', '96k',
-            outPath,
-          ],
-          { stdio: ['ignore', 'pipe', 'pipe'] },
-        );
-        let stderr = '';
-        ff.stderr.on('data', (b) => { stderr += b.toString(); });
-        ff.on('close', (code) => {
-          if (code === 0) resolve();
-          else reject(new Error(`ffmpeg exit ${code}: ${stderr.trim()}`));
-        });
-      });
+      // Section auto-detect: probe the source, compute per-100ms RMS
+      // bins, score every 65-second window, pick the highest. Falls
+      // back to startS=0 for sources shorter than CLIP_DURATION_S.
+      let bestStart = 0;
+      try {
+        const duration = await probeDurationSeconds(srcPath);
+        if (duration >= CLIP_DURATION_S) {
+          const bins = await extractRmsBins(srcPath);
+          const result = findBestSectionStart(bins, duration);
+          bestStart = result.bestStart;
+        }
+      } catch (e) {
+        console.warn(`[upload-music:${slug}] section-detect failed, using start=0:`, e.message);
+      }
+
+      // Clip 65 s starting at the auto-detected best section. Tim can
+      // override later via the calibrator's waveform editor →
+      // /music-reclip/<slug>.
+      await reclipFromSource(srcPath, outPath, bestStart, CLIP_DURATION_S);
 
       // Read existing music.json (if any), add the new entry, write back.
       let raw = {};
@@ -850,7 +842,8 @@ async function handleMusicUpload(req, res, slug) {
         speedLabel,
         vibe,
         bpm,
-        loopDurationMs: 62000,
+        loopDurationMs: CLIP_DURATION_S * 1000,
+        clipStartS: bestStart,
       };
       await rotateBackups(MUSIC_JSON);
       await fs.writeFile(MUSIC_JSON, JSON.stringify(raw, null, 2) + '\n');
@@ -884,6 +877,165 @@ async function handleMusicUpload(req, res, slug) {
     } finally {
       if (tmpPath) await fs.unlink(tmpPath).catch(() => {});
     }
+  });
+}
+
+// ── Music section detection + reclipping ────────────────────────────
+//
+// Tim's rule (2026-06-25): instead of taking the first 62 s after silence
+// removal, the calibrator should hunt for the song's most-hyped chorus —
+// a quieter "calm" section feeding into a big energy jump — and clip
+// 65 s around it. Loop is far less embarrassing when it lands on the
+// chorus instead of the intro.
+//
+// Pipeline: probe duration → extract per-100 ms RMS (dB) via ffmpeg's
+// astats filter → score every 65 s window by (main_avg + jump bonus) →
+// return the highest-scoring start time. The waveform editor in the
+// calibrator displays the same RMS bins so Tim can override visually.
+
+const CLIP_DURATION_S = 65;
+const WAVEFORM_BIN_MS = 100;
+const ANALYZE_INTRO_S = 8; // first N seconds of the window are the "calm"
+
+function probeDurationSeconds(srcPath) {
+  return new Promise((resolve, reject) => {
+    const ff = spawn(
+      'ffprobe',
+      ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=nokey=1:noprint_wrappers=1', srcPath],
+      { stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    let stdout = '';
+    let stderr = '';
+    ff.stdout.on('data', (b) => { stdout += b.toString(); });
+    ff.stderr.on('data', (b) => { stderr += b.toString(); });
+    ff.on('close', (code) => {
+      if (code !== 0) return reject(new Error(`ffprobe exit ${code}: ${stderr.trim()}`));
+      const d = parseFloat(stdout.trim());
+      if (!Number.isFinite(d) || d <= 0) return reject(new Error(`ffprobe bad duration: "${stdout}"`));
+      resolve(d);
+    });
+  });
+}
+
+/**
+ * Run ffmpeg's astats filter against a source mp3 and return an array
+ * of RMS dB values, one per WAVEFORM_BIN_MS bin. Used both for the
+ * client's waveform display and the section-finder heuristic.
+ *
+ * Silent / very-quiet bins land at -inf dB; we clamp to -60 dB so the
+ * client renderer doesn't choke on infinities.
+ */
+function extractRmsBins(srcPath) {
+  return new Promise((resolve, reject) => {
+    // metadata=1 emits per-frame; reset=0.1 resets the running stats
+    // every 100ms; length=0.1 sets the analysis window to match. Pipe
+    // ametadata to stdout via `file=-` so we don't need a temp file.
+    const af = `astats=metadata=1:reset=${(WAVEFORM_BIN_MS / 1000).toFixed(3)}:length=${(WAVEFORM_BIN_MS / 1000).toFixed(3)},ametadata=mode=print:key=lavfi.astats.Overall.RMS_level:file=-`;
+    const ff = spawn(
+      'ffmpeg',
+      ['-hide_banner', '-loglevel', 'error', '-i', srcPath, '-af', af, '-f', 'null', '-'],
+      { stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    let stdout = '';
+    let stderr = '';
+    ff.stdout.on('data', (b) => { stdout += b.toString(); });
+    ff.stderr.on('data', (b) => { stderr += b.toString(); });
+    ff.on('close', (code) => {
+      if (code !== 0) return reject(new Error(`ffmpeg astats exit ${code}: ${stderr.trim()}`));
+      // Output shape (per frame):
+      //   frame:0    pts:0       pts_time:0
+      //   lavfi.astats.Overall.RMS_level=-23.456
+      const bins = [];
+      for (const line of stdout.split('\n')) {
+        const m = line.match(/^lavfi\.astats\.Overall\.RMS_level=(-?[\d.]+|-inf|nan)$/);
+        if (!m) continue;
+        const raw = m[1];
+        let v = raw === '-inf' || raw === 'nan' ? -60 : parseFloat(raw);
+        if (!Number.isFinite(v)) v = -60;
+        bins.push(Math.max(-60, v));
+      }
+      resolve(bins);
+    });
+  });
+}
+
+/**
+ * Score every CLIP_DURATION_S window in the RMS bin array and return
+ * the start time (seconds) of the highest-scoring one.
+ *
+ * Score = main_avg + 1.0 × (main_avg − pre_avg)
+ *   - main_avg = average RMS over the bulk of the window (post-intro)
+ *   - pre_avg  = average RMS over the first ANALYZE_INTRO_S of the window
+ *   - main_avg term keeps the result anchored to LOUD sections so we
+ *     don't pick "loudest sub-region of a quiet stretch"
+ *   - (main − pre) jump bonus rewards windows that start quiet and
+ *     ramp into a chorus.
+ *
+ * Returns { bestStart, score } in seconds. Always returns 0 if the
+ * source is shorter than the window.
+ */
+function findBestSectionStart(bins, durationS) {
+  const binsPerSec = 1000 / WAVEFORM_BIN_MS;
+  const windowBins = Math.floor(CLIP_DURATION_S * binsPerSec);
+  const introBins = Math.floor(ANALYZE_INTRO_S * binsPerSec);
+  if (durationS < CLIP_DURATION_S || bins.length <= windowBins) {
+    return { bestStart: 0, score: 0 };
+  }
+  let bestStart = 0;
+  let bestScore = -Infinity;
+  for (let start = 0; start + windowBins < bins.length; start += Math.floor(binsPerSec)) {
+    // Step by 1 second to keep this O(N) for ~6-minute songs.
+    let preSum = 0;
+    let mainSum = 0;
+    for (let k = 0; k < introBins; k++) preSum += bins[start + k];
+    for (let k = introBins; k < windowBins; k++) mainSum += bins[start + k];
+    const preAvg = preSum / introBins;
+    const mainAvg = mainSum / (windowBins - introBins);
+    const score = mainAvg + 1.0 * (mainAvg - preAvg);
+    if (score > bestScore) {
+      bestScore = score;
+      bestStart = start / binsPerSec;
+    }
+  }
+  return { bestStart, score: bestScore };
+}
+
+/**
+ * Re-encode a clip from a source mp3 — same fade-in/out + 96kbps mono
+ * pipeline as the original upload handler. Used by both the initial
+ * upload path (with bestStart from findBestSectionStart) and the
+ * calibrator's manual override (`/music-reclip/<slug>`).
+ */
+function reclipFromSource(srcPath, outPath, startS, durS) {
+  return new Promise((resolve, reject) => {
+    const fadeIn = 0.35;
+    const fadeOut = 1.5;
+    const fadeOutStart = (durS - fadeOut).toFixed(3);
+    const af = [
+      `atrim=${startS.toFixed(3)}:${(startS + durS).toFixed(3)}`,
+      `asetpts=PTS-STARTPTS`,
+      `afade=t=in:st=0:d=${fadeIn.toFixed(3)}`,
+      `afade=t=out:st=${fadeOutStart}:d=${fadeOut.toFixed(3)}`,
+    ].join(',');
+    const ff = spawn(
+      'ffmpeg',
+      [
+        '-hide_banner', '-loglevel', 'error', '-y',
+        '-i', srcPath,
+        '-af', af,
+        '-ac', '1',
+        '-ar', '44100',
+        '-b:a', '96k',
+        outPath,
+      ],
+      { stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    let stderr = '';
+    ff.stderr.on('data', (b) => { stderr += b.toString(); });
+    ff.on('close', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`ffmpeg reclip exit ${code}: ${stderr.trim()}`));
+    });
   });
 }
 
@@ -1004,6 +1156,111 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // --- GET /music-source/<slug> --------------------------------------
+    // Returns the preserved raw source mp3 so the calibrator's waveform
+    // editor can play any sub-region for preview. Falls back to the
+    // already-clipped backing if no source exists (pre-2026-06-25
+    // uploads — Tim re-uploads to get the full editor experience).
+    if (req.method === 'GET' && req.url?.startsWith('/music-source/')) {
+      const slug = req.url.replace(/^\/music-source\//, '').split('?')[0];
+      try {
+        let p = path.join(MUSIC_SOURCES_DIR, `${slug}.src`);
+        try { await fs.access(p); } catch {
+          p = path.join(MUSIC_UPLOAD_DIR, `${slug}.mp3`);
+        }
+        const buf = await fs.readFile(p);
+        res.writeHead(200, { 'content-type': 'audio/mpeg', 'cache-control': NO_CACHE });
+        res.end(buf);
+      } catch (e) {
+        res.writeHead(404, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: e.message }));
+      }
+      return;
+    }
+
+    // --- GET /music-analyze/<slug> -------------------------------------
+    // Returns waveform bins + auto-detected best start for the editor UI.
+    // Uses the preserved source if available; falls back to the clipped
+    // backing (in which case the waveform shows the existing clip only).
+    if (req.method === 'GET' && req.url?.startsWith('/music-analyze/')) {
+      const slug = req.url.replace(/^\/music-analyze\//, '').split('?')[0];
+      try {
+        let p = path.join(MUSIC_SOURCES_DIR, `${slug}.src`);
+        let hasSource = true;
+        try { await fs.access(p); } catch {
+          p = path.join(MUSIC_UPLOAD_DIR, `${slug}.mp3`);
+          hasSource = false;
+        }
+        const duration = await probeDurationSeconds(p);
+        const bins = await extractRmsBins(p);
+        const { bestStart } = findBestSectionStart(bins, duration);
+        res.writeHead(200, { 'content-type': 'application/json', 'cache-control': NO_CACHE });
+        res.end(JSON.stringify({
+          ok: true,
+          duration,
+          bins,
+          binMs: WAVEFORM_BIN_MS,
+          bestStart,
+          clipDuration: CLIP_DURATION_S,
+          hasSource,
+        }));
+      } catch (e) {
+        res.writeHead(500, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: e.message }));
+      }
+      return;
+    }
+
+    // --- POST /music-reclip/<slug>?startS=N&durS=M --------------------
+    // Manual override from the waveform editor. Re-runs the fade-in/out
+    // + 96kbps mono pipeline against the preserved source with Tim's
+    // chosen window.
+    if (req.method === 'POST' && req.url?.startsWith('/music-reclip/')) {
+      const slug = req.url.replace(/^\/music-reclip\//, '').split('?')[0];
+      try {
+        const q = new URL(req.url, 'http://localhost').searchParams;
+        const startS = Math.max(0, parseFloat(q.get('startS') || '0'));
+        const durS = parseFloat(q.get('durS') || String(CLIP_DURATION_S));
+        if (!Number.isFinite(durS) || durS < 5 || durS > 180) {
+          throw new Error(`bad durS: ${durS}`);
+        }
+        const srcPath = path.join(MUSIC_SOURCES_DIR, `${slug}.src`);
+        try { await fs.access(srcPath); } catch {
+          throw new Error(`no source preserved for ${slug} — re-upload the original mp3 to use the editor`);
+        }
+        const outPath = path.join(MUSIC_UPLOAD_DIR, `${slug}.mp3`);
+        await reclipFromSource(srcPath, outPath, startS, durS);
+        // Update catalog entry with new clipStartS + loopDurationMs.
+        try {
+          const raw = JSON.parse(await fs.readFile(MUSIC_JSON, 'utf8'));
+          if (raw[slug]) {
+            raw[slug].clipStartS = startS;
+            raw[slug].loopDurationMs = Math.round(durS * 1000);
+            await rotateBackups(MUSIC_JSON);
+            await fs.writeFile(MUSIC_JSON, JSON.stringify(raw, null, 2) + '\n');
+          }
+        } catch (e) {
+          console.warn(`[reclip:${slug}] catalog update failed:`, e.message);
+        }
+        // Re-extract tap samples from the new clip — they're sliced from
+        // the song so they need to match the new section.
+        try {
+          await extractTapsForSong(outPath, TAPS_DIR, slug);
+        } catch (tapsErr) {
+          console.warn(`[reclip:${slug}] tap-extract failed:`, tapsErr.message);
+        }
+        const bytes = (await fs.stat(outPath)).size;
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, startS, durS, bytes }));
+        console.log(`[reclip:${slug}] startS=${startS.toFixed(2)} durS=${durS.toFixed(2)} → ${bytes}B`);
+        scheduleCatalogSync();
+      } catch (e) {
+        res.writeHead(500, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: e.message }));
+      }
+      return;
+    }
+
     // --- DELETE /music/<slug> ------------------------------------------
     if (req.method === 'DELETE' && req.url?.startsWith('/music/')) {
       const slug = req.url.replace(/^\/music\//, '').split('?')[0];
@@ -1016,6 +1273,8 @@ const server = http.createServer(async (req, res) => {
           await fs.writeFile(MUSIC_JSON, JSON.stringify(raw, null, 2) + '\n');
         }
         await fs.unlink(path.join(MUSIC_UPLOAD_DIR, `${slug}.mp3`)).catch(() => {});
+        // Preserved source goes with the song too.
+        await fs.unlink(path.join(MUSIC_SOURCES_DIR, `${slug}.src`)).catch(() => {});
         // Tap samples follow the song. No-op-safely if they were never
         // extracted (older songs or extract failures).
         for (let lane = 0; lane < 3; lane++) {

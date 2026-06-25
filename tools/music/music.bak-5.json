@@ -304,5 +304,37 @@
     "vibe": "upbeat",
     "bpm": 130,
     "loopDurationMs": 62000
+  },
+  "the-quiet-between-notes": {
+    "id": "the-quiet-between-notes",
+    "displayName": "The Quiet Between Notes",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 62000
+  },
+  "blink-182-all-the-small-things-official-": {
+    "id": "blink-182-all-the-small-things-official-",
+    "displayName": "blink-182 - All The Small Things (Official Music Video)",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 62000
+  },
+  "outkast-hey-ya-lyrics": {
+    "id": "outkast-hey-ya-lyrics",
+    "displayName": "OutKast - Hey Ya! (Lyrics)",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 62000
+  },
+  "outkast-hey-ya-lyrics-2": {
+    "id": "outkast-hey-ya-lyrics-2",
+    "displayName": "OutKast - Hey Ya! (Lyrics)",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 62000
   }
 }

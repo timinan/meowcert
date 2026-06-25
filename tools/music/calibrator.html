@@ -142,6 +142,34 @@
 
   <div class="toast" id="toast"></div>
 
+  <!-- Waveform clip editor — opened by the ✂️ button on each row. -->
+  <div id="clip-editor-scrim" style="display:none; position:fixed; inset:0; background:rgba(8,4,20,0.85); z-index:1000; align-items:center; justify-content:center;">
+    <div id="clip-editor-panel" style="background:#1a0a2e; border:2px solid #ffd34d; border-radius:8px; padding:18px 20px; max-width:760px; width:90%;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+        <h2 id="clip-editor-title" style="margin:0; color:#ffd34d; font-size:16px;">Edit clip</h2>
+        <button id="clip-editor-close" type="button" style="background:#ff5050; color:#fff; border:none; border-radius:50%; width:24px; height:24px; cursor:pointer;">✕</button>
+      </div>
+      <div id="clip-editor-status" style="font-size:11px; color:#c0a0e6; margin-bottom:8px;">loading…</div>
+      <canvas id="clip-editor-canvas" width="720" height="180" style="display:block; width:100%; background:#0b041a; border:1px solid #c0a0e6; border-radius:4px; cursor:crosshair;"></canvas>
+      <div style="display:flex; gap:12px; align-items:center; margin-top:10px; font-size:11px; color:#fff;">
+        <span>Start: <b id="clip-editor-start">0.00</b>s</span>
+        <span>Duration: <b id="clip-editor-dur">65.00</b>s</span>
+        <span>End: <b id="clip-editor-end">65.00</b>s</span>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:14px; align-items:center;">
+        <button id="clip-editor-play" type="button" class="preview-btn">▶ play selection</button>
+        <button id="clip-editor-auto" type="button" class="preview-btn">🪄 auto-detect</button>
+        <span style="flex:1;"></span>
+        <button id="clip-editor-cancel" type="button" class="preview-btn">cancel</button>
+        <button id="clip-editor-apply" type="button" class="pick" style="font-weight:bold;">apply</button>
+      </div>
+      <p style="font-size:10px; color:#c0a0e6; margin-top:10px;">
+        drag the yellow selection band to move · drag the right edge to resize · click empty space to drop selection there
+      </p>
+    </div>
+  </div>
+  <audio id="clip-editor-audio" preload="auto"></audio>
+
 <script src="/tools-nav.js"></script>
 <script>
 const SPEED_CYCLE = ['slow', 'medium', 'fast', 'faster'];
@@ -359,13 +387,20 @@ function render() {
     tr.appendChild(sizeCell);
     fetchSize(id).then((b) => { sizePill.textContent = fmtBytes(b); });
 
-    // Preview button
+    // Preview + Edit-clip buttons share one cell
     const previewCell = document.createElement('td');
     const previewBtn = document.createElement('button');
     previewBtn.className = 'preview-btn';
     previewBtn.textContent = '▶ play';
     previewBtn.addEventListener('click', () => togglePreview(id, previewBtn));
     previewCell.appendChild(previewBtn);
+    const editClipBtn = document.createElement('button');
+    editClipBtn.className = 'preview-btn';
+    editClipBtn.style.marginLeft = '6px';
+    editClipBtn.textContent = '✂️';
+    editClipBtn.title = 'Edit clip section (waveform)';
+    editClipBtn.addEventListener('click', () => openClipEditor(id));
+    previewCell.appendChild(editClipBtn);
     tr.appendChild(previewCell);
 
     // Delete button

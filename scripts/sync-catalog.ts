@@ -228,6 +228,9 @@ interface MusicJsonEntry {
   mood?: string;
   bpm: number;
   loopDurationMs?: number;
+  /** Auto-detected (or Tim-overridden) start time of the clip inside
+   *  the source mp3. Optional — old entries pre-section-finder lack it. */
+  clipStartS?: number;
 }
 
 async function genMusic(): Promise<number> {
@@ -244,8 +247,9 @@ async function genMusic(): Promise<number> {
     const loopDur = typeof v.loopDurationMs === 'number' ? v.loopDurationMs : 30_000;
     const genrePart = v.genre ? `, genre: ${JSON.stringify(v.genre)}` : '';
     const moodPart = v.mood ? `, mood: ${JSON.stringify(v.mood)}` : '';
+    const clipStartPart = typeof v.clipStartS === 'number' ? `, clipStartS: ${v.clipStartS}` : '';
     catalogLines.push(
-      `  ${JSON.stringify(id)}: { id: ${JSON.stringify(id)}, displayName: ${JSON.stringify(v.displayName ?? id)}, speedLabel: ${JSON.stringify(v.speedLabel)}, vibe: ${JSON.stringify(v.vibe)}${genrePart}${moodPart}, bpm: ${v.bpm}, audioKey: ${JSON.stringify('backing-' + id)}, loopDurationMs: ${loopDur} },`,
+      `  ${JSON.stringify(id)}: { id: ${JSON.stringify(id)}, displayName: ${JSON.stringify(v.displayName ?? id)}, speedLabel: ${JSON.stringify(v.speedLabel)}, vibe: ${JSON.stringify(v.vibe)}${genrePart}${moodPart}, bpm: ${v.bpm}, audioKey: ${JSON.stringify('backing-' + id)}, loopDurationMs: ${loopDur}${clipStartPart} },`,
     );
   }
   const lines: string[] = [
