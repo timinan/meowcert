@@ -58,11 +58,6 @@ export class Note extends GameObjects.Container {
 
   private ball: GameObjects.Image;
   private letters: GameObjects.Image;
-  /** Shrinking ring that telegraphs the timing window — circles the
-   *  ball with a large radius at spawn, scales down to ball-radius
-   *  at hit moment, then auto-hides. Cheap: single Arc per note,
-   *  scale tween (geometry not recomputed). */
-  private approachRing: GameObjects.Arc;
   /** Stretchy Image using PspspsTubeWhite for hold tails (vertical
    *  capsule, stretched to tail height). Clipped to the lane band via
    *  a GeometryMask applied from Game on spawn. */
@@ -109,18 +104,8 @@ export class Note extends GameObjects.Container {
       stroke: '#1a0a2e',
       strokeThickness: 3,
     }).setOrigin(0.5).setVisible(false);
-    // Approach ring — Phaser Arc with stroke only, no fill. Initial
-    // radius 38 (~1.4× ball radius 27), scaled toward 0.71 (= 27/38)
-    // over the fall time so it closes onto the ball at hit moment.
-    // Mid-ground between "too tight to notice shrink" (32) and "too
-    // big / distracting" (45) — visible shrink without overwhelming.
-    this.approachRing = scene.add.arc(0, 0, 38, 0, 360, false);
-    this.approachRing.setStrokeStyle(2, 0xffffff, 0.55);
-    this.approachRing.setFillStyle(0xffffff, 0);
-    this.approachRing.setVisible(false);
-    // Order: tail + slideTube behind, ball + letters in front, ring
-    // around the ball, arrow on top.
-    this.add([this.tail, this.slideTube, this.ball, this.letters, this.approachRing, this.slideArrow]);
+    // Order: tail + slideTube behind, ball + letters in front, arrow on top.
+    this.add([this.tail, this.slideTube, this.ball, this.letters, this.slideArrow]);
     // Render above cat-effect particles (cat sprite depth 0 → particles
     // depth +2). Without this, a cat with sparkles / fire / hearts equipped
     // visually obscures every falling note in its lane and the player
@@ -152,11 +137,6 @@ export class Note extends GameObjects.Container {
      *  sourceTint + targetTint paint a lane-to-lane gradient along the
      *  tube via per-vertex setTint. */
     slide?: { deltaX: number; sourceTint: number; targetTint: number },
-    /** Optional approach-ring duration (ms from spawn to hit-line
-     *  crossing). When provided, the approach ring becomes visible and
-     *  tweens from full radius to ball radius over this duration —
-     *  visual countdown to the hit moment. Omit for no ring. */
-    headFallMs?: number,
   ): void {
     // Kill any in-flight tween from the pool's previous use FIRST. If we
     // set position before killing, a still-running fall tween from the
@@ -248,33 +228,6 @@ export class Note extends GameObjects.Container {
     this.ball.setPosition(0, 0);
     this.letters.setPosition(0, 0);
 
-    // Approach ring — telegraphs the timing window. Hidden if no
-    // duration provided (preserves existing behavior for any pool
-    // entry not configured with a duration).
-    this.scene.tweens.killTweensOf(this.approachRing);
-    if (headFallMs && headFallMs > 0) {
-      this.approachRing.setPosition(0, 0);
-      this.approachRing.setScale(1);
-      this.approachRing.setStrokeStyle(
-        2, tintColor ?? LANE_COLORS[laneId], 0.55,
-      );
-      this.approachRing.setVisible(true);
-      // 0.71 = ball radius (27) / initial ring radius (38) — at the
-      // hit moment the ring is exactly the ball size. Linear ease so
-      // the visual rate matches the note's linear fall.
-      this.scene.tweens.add({
-        targets: this.approachRing,
-        scale: 0.71,
-        duration: headFallMs,
-        ease: 'Linear',
-        onComplete: () => {
-          this.approachRing.setVisible(false);
-        },
-      });
-    } else {
-      this.approachRing.setVisible(false);
-    }
-
     this.scene.tweens.add({
       targets: this,
       y: endY,
@@ -292,12 +245,10 @@ export class Note extends GameObjects.Container {
 
   recycle(): void {
     this.scene.tweens.killTweensOf(this);
-    this.scene.tweens.killTweensOf(this.approachRing);
     this.setActive(false).setVisible(false);
     this.tail.setVisible(false);
     this.slideTube.setVisible(false);
     this.slideArrow.setVisible(false);
-    this.approachRing.setVisible(false);
     this.isHold = false;
     this.holdActive = false;
     this.holdEndAtMs = 0;
