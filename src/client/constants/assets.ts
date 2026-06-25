@@ -32,9 +32,14 @@ export const AssetKeys = {
     PspspsElementBallWhite: 'pspsps-element-ball-white',
     PspspsElementLetters: 'pspsps-element-letters',
     /** Vertical fuzzy capsule — hand-authored to match the fuzzball's
-     *  edge treatment. Used by Note for hold tails (narrow) and slide
-     *  trails (wider). White-base for tint. */
+     *  edge treatment. White-base for tint. Used directly for slide
+     *  arrows + as the source for the generated tail-body tile. */
     PspspsTubeWhite: 'pspsps-tube-white',
+    /** Tile-able body section cut from PspspsTubeWhite's middle band
+     *  (parallel-sided, no rounded caps, uniform vertically). Used as
+     *  a TileSprite for hold tails + slide tubes so long stretches
+     *  TILE the texture instead of stretching it (no taper distortion). */
+    TailBody: 'tail-body',
     // Background textures load via Preloader.ts iteration over
     // BACKGROUND_CATALOG — keys live on the catalog entries themselves
     // (`entry.backdropKey`), no per-bg AssetKey needed.

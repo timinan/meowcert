@@ -58,13 +58,15 @@ export class Note extends GameObjects.Container {
 
   private ball: GameObjects.Image;
   private letters: GameObjects.Image;
-  /** Stretchy Image using PspspsTubeWhite for hold tails (vertical
-   *  capsule, stretched to tail height). Clipped to the lane band via
-   *  a GeometryMask applied from Game on spawn. */
-  private tail: GameObjects.Image;
-  /** Horizontal sideways tube for slide notes — stays anchored in
+  /** TileSprite using the generated tail-body tile (middle band of
+   *  PspspsTubeWhite, parallel-sided). Tiles vertically instead of
+   *  stretching, so long-hold tails stay consistent without taper
+   *  distortion. */
+  private tail: GameObjects.TileSprite;
+  /** Horizontal sideways tube for slide notes — also a TileSprite of
+   *  the same tail-body texture, rotated 90°. Stays anchored in
    *  container space while the head ball moves toward target lane. */
-  private slideTube: GameObjects.Image;
+  private slideTube: GameObjects.TileSprite;
   /** Direction chevron at the target end of the slide tube. */
   private slideArrow: GameObjects.Text;
   /** Cached tail height so pickRandomVisibleTailWorldPos can locate
@@ -78,13 +80,14 @@ export class Note extends GameObjects.Container {
     // (0.5, 1) anchors it at bottom-center so it grows UPWARD from the
     // ball's center when we resize via setDisplaySize. Hidden by default;
     // hold configure flips it on and sets the actual tail length.
-    this.tail = scene.add.image(0, 0, AssetKeys.Image.PspspsTubeWhite);
+    this.tail = scene.add.tileSprite(0, 0, TAIL_WIDTH, 0, AssetKeys.Image.TailBody);
     this.tail.setOrigin(0.5, 1);
     this.tail.setVisible(false);
-    // Slide tube — same fuzzy capsule rotated 90° so its rounded ends
-    // sit LEFT + RIGHT, extending sideways from source to target lane.
-    // Stays anchored in container space while head ball moves on drag.
-    this.slideTube = scene.add.image(0, 0, AssetKeys.Image.PspspsTubeWhite);
+    // Slide tube — same body tile rotated 90° so the texture's
+    // parallel sides sit on top + bottom, extending sideways from
+    // source to target lane. Stays anchored in container space while
+    // head ball moves on drag.
+    this.slideTube = scene.add.tileSprite(0, 0, SLIDE_TUBE_THICKNESS, 0, AssetKeys.Image.TailBody);
     this.slideTube.setVisible(false);
     // 54px — matches the 50% bump applied to the lane hit targets (48 → 72)
     // so the falling notes read at the same visual weight as the target.
@@ -169,7 +172,9 @@ export class Note extends GameObjects.Container {
       this.isHold = true;
       this.holdEndAtMs = hold.releaseAtMs;
       this.currentTailHeight = hold.tailHeightPx;
-      this.tail.setDisplaySize(TAIL_WIDTH, hold.tailHeightPx);
+      // TileSprite tiles its texture across the rect — vertical
+      // dimension grows by repeating the body tile, no stretch.
+      this.tail.setSize(TAIL_WIDTH, hold.tailHeightPx);
       this.tail.setTint(
         liftTowardWhite(tintColor ?? LANE_COLORS[laneId], BALL_BRIGHTNESS_LIFT),
       );
@@ -187,14 +192,13 @@ export class Note extends GameObjects.Container {
       this.slideDeltaX = slide.deltaX;
       this.slideActive = false;
       this.slidePointerId = -1;
-      // Tube image is naturally vertical (taller than wide). Set the
-      // PRE-rotation displaySize so the post-90°-rotation screen size
-      // is `abs(deltaX)` wide × SLIDE_TUBE_THICKNESS tall, then center
-      // it between the source (x=0) and target (x=deltaX) in container
-      // coords. setSlideHeadX updates size + position during drag so
-      // the "already slid" portion behind the ball erases.
+      // TileSprite — tiles the body texture along its long axis instead
+      // of stretching. Pre-rotation size: SLIDE_TUBE_THICKNESS wide ×
+      // tubeLen tall. After 90° CW rotation on screen: tubeLen wide ×
+      // SLIDE_TUBE_THICKNESS tall, centered between source (x=0) and
+      // target (x=deltaX) in container coords.
       const tubeLen = Math.abs(slide.deltaX);
-      this.slideTube.setDisplaySize(SLIDE_TUBE_THICKNESS, tubeLen);
+      this.slideTube.setSize(SLIDE_TUBE_THICKNESS, tubeLen);
       this.slideTube.setRotation(Math.PI / 2);
       this.slideTube.setPosition(slide.deltaX / 2, 0);
       // Per-vertex tint paints a lane-to-lane gradient. Image's TOP
@@ -268,12 +272,13 @@ export class Note extends GameObjects.Container {
   setSlideHeadX(localX: number): void {
     this.ball.x = localX;
     this.letters.x = localX;
-    // Remaining tube spans [localX, deltaX]. Recenter + resize so the
-    // tube only renders the not-yet-covered portion.
+    // Remaining tube spans [localX, deltaX]. Recenter + resize the
+    // TileSprite (setSize tiles, no stretch) so the visible tube only
+    // covers the not-yet-covered portion.
     const remainingLen = Math.abs(this.slideDeltaX - localX);
     const center = (localX + this.slideDeltaX) / 2;
     this.slideTube.setPosition(center, 0);
-    this.slideTube.setDisplaySize(SLIDE_TUBE_THICKNESS, remainingLen);
+    this.slideTube.setSize(SLIDE_TUBE_THICKNESS, remainingLen);
   }
 
   /** Current head ball local-x (= 0 at source, deltaX at target). */
@@ -332,8 +337,8 @@ export class Note extends GameObjects.Container {
 
     // Hold tail — bottom anchored at container.y (local 0); top
     // extends UP by currentTailHeight. Clip the visible portion to
-    // [laneTopY, container.y] in world space, reshape the Image to
-    // match. Hide if no part is in the lane band yet.
+    // [laneTopY, container.y] in world space and resize the TileSprite
+    // to match. TileSprite tiles the body texture, no stretch.
     if (this.currentTailHeight > 0) {
       const tailBottomWorld = Math.min(this.y, disappearY);
       const tailTopWorld = Math.max(this.y - this.currentTailHeight, laneTopY);
@@ -342,9 +347,7 @@ export class Note extends GameObjects.Container {
         this.tail.setVisible(false);
       } else {
         this.tail.setVisible(true);
-        this.tail.setDisplaySize(TAIL_WIDTH, visibleHeight);
-        // Origin (0.5, 1) means tail.y positions the BOTTOM edge in
-        // container-local coords. Convert tailBottomWorld back to local.
+        this.tail.setSize(TAIL_WIDTH, visibleHeight);
         this.tail.y = tailBottomWorld - this.y;
       }
     }

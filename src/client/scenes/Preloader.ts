@@ -108,11 +108,10 @@ export class Preloader extends Scene {
     // bar as a solid-pink layer.
     this.generatePawsOnlyTexture();
 
-    // Hold-note tail uses PspspsTubeWhite directly. Tried generating
-    // a parallel-sided stretch texture (commit 3c8307b) to fix long-
-    // hold tapering, but the result looked worse than the native
-    // capsule. Reverted; revisit later if long-hold distortion needs
-    // a proper fix.
+    // Tile-able body section from PspspsTubeWhite's middle band — used
+    // by Note's TileSprite tail + slide tube so long stretches REPEAT
+    // the texture instead of stretching it (no taper distortion).
+    this.generateTailBodyTile();
 
     // Register all cat animations globally so every downstream scene
     // (Game, Decorate, DressingRoom, Purchase) can play them without each
@@ -155,6 +154,37 @@ export class Preloader extends Scene {
    *  Registered under 'rhythm-bar-paws'. Safe to no-op (try/catch) on
    *  any failure — the lane still falls back to the existing texture
    *  with no pink overlay, just no toe-bean color call-out. */
+  /** Generate a tile-able body section from the middle band of
+   *  PspspsTubeWhite. The middle 25 % is uniform top-to-bottom (the
+   *  flat parallel-sided section between the rounded caps), so tiling
+   *  it vertically gives a seamless continuous tube — no taper, no
+   *  visible seams. 44 × 32 size keeps the tile small for cheap GPU
+   *  uploads while still capturing the fuzzy left/right edges cleanly. */
+  private generateTailBodyTile(): void {
+    const KEY = 'tail-body';
+    const TARGET_W = 44;
+    const TARGET_H = 32;
+    const BAND_FRACTION = 0.25;
+    if (this.textures.exists(KEY)) return;
+    try {
+      const source = this.textures.get(AssetKeys.Image.PspspsTubeWhite);
+      const srcImage = source.getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+      const srcW = srcImage.width;
+      const srcH = srcImage.height;
+      if (!srcW || !srcH) return;
+      const bandH = Math.max(1, Math.floor(srcH * BAND_FRACTION));
+      const bandY = Math.floor((srcH - bandH) / 2);
+      const canvas = this.textures.createCanvas(KEY, TARGET_W, TARGET_H);
+      if (!canvas) return;
+      const ctx = canvas.getContext();
+      ctx.clearRect(0, 0, TARGET_W, TARGET_H);
+      ctx.drawImage(srcImage, 0, bandY, srcW, bandH, 0, 0, TARGET_W, TARGET_H);
+      canvas.refresh();
+    } catch (err) {
+      console.warn('[Preloader] tail-body texture build failed:', err);
+    }
+  }
+
   private generatePawsOnlyTexture(): void {
     const KEY = 'rhythm-bar-paws';
     if (this.textures.exists(KEY)) return;
