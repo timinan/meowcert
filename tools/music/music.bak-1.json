@@ -645,7 +645,7 @@
     "vibe": "illegal",
     "bpm": 130,
     "loopDurationMs": 65000,
-    "clipStartS": 52,
+    "clipStartS": 15.095,
     "addedAt": 1782420111307,
     "genre": "lo-fi",
     "mood": "chill"
@@ -670,16 +670,6 @@
     "clipStartS": 0,
     "addedAt": 1782420231633
   },
-  "taylor-swift-love-story-lyrics-2": {
-    "id": "taylor-swift-love-story-lyrics-2",
-    "displayName": "Taylor Swift - Love Story (Lyrics)",
-    "speedLabel": "fast",
-    "vibe": "upbeat",
-    "bpm": 130,
-    "loopDurationMs": 65000,
-    "clipStartS": 828,
-    "addedAt": 1782420511224
-  },
   "ditto": {
     "id": "ditto",
     "displayName": "Ditto",
@@ -687,7 +677,19 @@
     "vibe": "upbeat",
     "bpm": 130,
     "loopDurationMs": 65000,
-    "clipStartS": 0,
+    "clipStartS": 6.558,
     "addedAt": 1782420512920
+  },
+  "blink-182-i-miss-you-lyrics": {
+    "id": "blink-182-i-miss-you-lyrics",
+    "displayName": "blink-182 - I Miss You (Lyrics)",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 65000,
+    "clipStartS": 113.61,
+    "addedAt": 1782421519766,
+    "genre": "lo-fi",
+    "mood": "chill"
   }
 }
