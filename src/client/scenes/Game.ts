@@ -1635,6 +1635,7 @@ export class Game extends Scene {
     const endY = this.scale.height + 80;
     const totalFallMs = ((endY - startY) / (hitY - startY)) * Balance.noteFallMs;
     note.configure(laneId, x, startY, endY, totalFallMs, hitAtMs, this.laneTints[laneId]);
+    note.startBallPulse(this.playMsPerStep);
   }
 
   /** Spawn a hold note — head ball + tail of stacked fuzzballs extending
@@ -1666,6 +1667,7 @@ export class Game extends Scene {
       laneId, x, startY, endY, totalFallMs, hitAtMs, this.laneTints[laneId],
       { tailHeightPx, tailWidthPx, releaseAtMs },
     );
+    note.startBallPulse(this.playMsPerStep);
     if (this.holdLaneMask) note.applyTailMask(this.holdLaneMask);
   }
 
@@ -1693,6 +1695,7 @@ export class Game extends Scene {
         targetTint: this.laneTints[targetLane],
       },
     );
+    note.startBallPulse(this.playMsPerStep);
   }
 
   /** Build the lane-band GeometryMask used to clip hold tails. The
