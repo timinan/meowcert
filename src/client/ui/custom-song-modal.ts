@@ -211,8 +211,7 @@ export class CustomSongModal {
 
     const pickY = panelY + 130;
     const pickBg = this.scene.add
-      .rectangle(cx, pickY, panelW - 48, 56, 0xffd34d, 1)
-      .setInteractive({ useHandCursor: true });
+      .rectangle(cx, pickY, panelW - 48, 56, 0xffd34d, 1);
     const pickTxt = this.scene.add
       .text(cx, pickY, '🎵  CHOOSE AUDIO FILE', {
         fontFamily: 'Pixeloid Sans, sans-serif',
@@ -223,7 +222,6 @@ export class CustomSongModal {
         wordWrap: { width: panelW - 64 },
       })
       .setOrigin(0.5);
-    pickBg.on('pointerdown', () => fileInput.click());
 
     const hint = this.scene.add
       .text(cx, pickY + 50, 'mp3 · wav · m4a — under ~30 MB', {
@@ -236,16 +234,42 @@ export class CustomSongModal {
     this.container.add([pickBg, pickTxt, hint]);
     this.stepChildren.push(pickBg, pickTxt, hint);
 
-    // Hidden HTML file input — triggered by the Phaser button click.
-    // Kept offscreen so the native picker is the only visible affordance.
+    // File input sits AS the button — not hidden offscreen. iOS Safari +
+    // Reddit mobile webview both refuse file-picker opens triggered via
+    // `.click()` from inside a synthetic Phaser pointer event (counts as
+    // not-a-user-gesture). The fix is to overlay an invisible <input
+    // type=file> directly on top of the Phaser button so the player's
+    // tap lands on the input itself — which IS a real user gesture and
+    // opens the native picker reliably on all platforms. The Phaser
+    // rectangle stays as the visible button; the input sits invisibly
+    // above it sized + positioned to match.
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.accept = 'audio/*';
     fileInput.style.position = 'absolute';
-    fileInput.style.left = '-9999px';
-    fileInput.style.top = '-9999px';
+    fileInput.style.zIndex = '9999';
+    fileInput.style.opacity = '0';
+    fileInput.style.cursor = 'pointer';
     document.body.appendChild(fileInput);
     this.htmlElements.push(fileInput);
+
+    const positionInput = (): void => {
+      const canvas = this.scene.game.canvas;
+      const rect = canvas.getBoundingClientRect();
+      const sx = rect.width / this.scene.scale.width;
+      const sy = rect.height / this.scene.scale.height;
+      const btnLeft = cx - (panelW - 48) / 2;
+      const btnTop = pickY - 28;
+      fileInput.style.left = `${rect.left + btnLeft * sx}px`;
+      fileInput.style.top = `${rect.top + btnTop * sy}px`;
+      fileInput.style.width = `${(panelW - 48) * sx}px`;
+      fileInput.style.height = `${56 * sy}px`;
+    };
+    positionInput();
+    const resizeHandler = (): void => positionInput();
+    window.addEventListener('resize', resizeHandler);
+    window.addEventListener('scroll', resizeHandler, true);
+
     fileInput.addEventListener('change', () => {
       const file = fileInput.files?.[0];
       if (!file) return;

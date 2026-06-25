@@ -373,13 +373,15 @@ export class Note extends GameObjects.Container {
 
   /** Switch the tail's tint — both body TileSprite + end cap Image so
    *  they stay color-matched. Game calls this on hold engage to flip
-   *  from the lane color to the mint "success" tint. Head fuzzball
-   *  flips too so the catch point reads as "you got this" the moment
-   *  the player taps — matches the great/perfect grade flash color. */
+   *  from the lane color to the mint "success" tint. The head fuzzball
+   *  hides on engage rather than tinting along with the tail — Tim's
+   *  rule: a "caught" head ball still drawn at the catch line looked
+   *  off (read as a stale tap target). Tail color alone carries the
+   *  "you're doing this right" signal. */
   setHoldTint(color: number): void {
     this.tail.setTint(color);
     this.tailCap.setTint(color);
-    this.ball.setTint(color);
+    this.ball.setVisible(false);
   }
 
   /** Overwrite the slide tube's gradient with a solid color (no per-

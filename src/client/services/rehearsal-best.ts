@@ -4,17 +4,35 @@ import type { GenDifficulty } from '@/../shared/chart-generator';
  * Local-only personal-best store for rehearsal — replaces the social
  * leaderboard inside the single-player practice loop. Stored under one
  * localStorage key as a JSON map of `"${audioKey}:${difficulty}"` →
- * highest score the player has hit on that exact chart.
+ * per-stat best values the player has hit on that exact chart.
+ *
+ * Per-stat semantics:
+ *   - score, accuracy, maxCombo, hits → higher is better
+ *   - misses                          → lower is better
+ *
+ * Each stat is tracked independently so the player gets credit for a
+ * higher max-combo even if their overall score wasn't a record.
  *
  * Why localStorage: rehearsal is intentionally a private "practice room"
- * — zero rewards, zero social signal, just a number you're trying to
+ * — zero rewards, zero social signal, just numbers you're trying to
  * beat. Persisting it server-side would invite cross-device sync work
  * for a feature that has no shared surface.
  */
 
 const STORAGE_KEY = 'meowcert:rehearsal-best';
 
-type BestMap = Record<string, number>;
+export interface BestStats {
+  score: number;
+  /** 0–100, integer percent. */
+  accuracy: number;
+  maxCombo: number;
+  hits: number;
+  misses: number;
+}
+
+export type StatKey = keyof BestStats;
+
+type BestMap = Record<string, BestStats>;
 
 function readMap(): BestMap {
   try {
@@ -41,26 +59,42 @@ function keyFor(audioKey: string, difficulty: GenDifficulty): string {
   return `${audioKey}:${difficulty}`;
 }
 
-/** Highest score the player has hit on this chart. Returns 0 if never
- *  played (caller treats 0 as "no best yet" — fine because a real run
- *  always scores > 0 if any notes were hit). */
-export function getBest(audioKey: string, difficulty: GenDifficulty): number {
+/** Per-stat best for this chart, or null if never played. */
+export function getBest(audioKey: string, difficulty: GenDifficulty): BestStats | null {
   const map = readMap();
-  return map[keyFor(audioKey, difficulty)] ?? 0;
+  return map[keyFor(audioKey, difficulty)] ?? null;
 }
 
-/** Write `score` if it beats the stored best. Returns true when a new
- *  best was recorded so the caller can flash a "NEW BEST!" badge. */
-export function setBestIfHigher(
+/** Record this run and update any stats it beat. Returns the set of
+ *  stat keys that were newly bested, so the UI can highlight per-cell
+ *  improvements. A run with zero new bests still gets recorded (so
+ *  partial bests like "you beat max-combo but not score" register). */
+export function recordRun(
   audioKey: string,
   difficulty: GenDifficulty,
-  score: number,
-): boolean {
+  run: BestStats,
+): Set<StatKey> {
   const map = readMap();
   const k = keyFor(audioKey, difficulty);
-  const prev = map[k] ?? 0;
-  if (score <= prev) return false;
-  map[k] = score;
+  const prev = map[k];
+  const newBests = new Set<StatKey>();
+  if (!prev) {
+    // First run on this chart — every stat is a new best by definition.
+    map[k] = { ...run };
+    for (const key of ['score', 'accuracy', 'maxCombo', 'hits', 'misses'] as StatKey[]) {
+      newBests.add(key);
+    }
+    writeMap(map);
+    return newBests;
+  }
+  const next: BestStats = { ...prev };
+  if (run.score > prev.score) { next.score = run.score; newBests.add('score'); }
+  if (run.accuracy > prev.accuracy) { next.accuracy = run.accuracy; newBests.add('accuracy'); }
+  if (run.maxCombo > prev.maxCombo) { next.maxCombo = run.maxCombo; newBests.add('maxCombo'); }
+  if (run.hits > prev.hits) { next.hits = run.hits; newBests.add('hits'); }
+  // Misses: LOWER is better. A tie isn't a new best.
+  if (run.misses < prev.misses) { next.misses = run.misses; newBests.add('misses'); }
+  map[k] = next;
   writeMap(map);
-  return true;
+  return newBests;
 }

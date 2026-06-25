@@ -24,7 +24,7 @@ import { SettingsModal } from '@/ui/settings-modal';
 import { CommentComposeModal } from '@/ui/comment-compose-modal';
 import { CAT_EFFECT_BY_ID, isEffectCosmeticId } from '@/effects/cat-effects';
 import { submitPlay } from '@/services/social-client';
-import { getBest, setBestIfHigher } from '@/services/rehearsal-best';
+import { getBest, recordRun, type BestStats, type StatKey } from '@/services/rehearsal-best';
 import {
   classifyScore,
   rewardWithComment,
@@ -138,11 +138,23 @@ export class Game extends Scene {
   /** Pass/fail blurb shown only in test mode when accuracy is below
    *  Balance.passAccuracyPct. Empty + invisible otherwise. */
   private summaryGateText!: Phaser.GameObjects.Text;
-  /** Personal-best line for rehearsal — shows the player's best score on
-   *  this exact chart (audioKey + difficulty), with a NEW BEST flag when
-   *  the just-finished run beat it. Hidden outside test mode and on any
-   *  chart that lacks both audioKey + difficulty (scratch charts). */
-  private summaryBestText!: Phaser.GameObjects.Text;
+  /** Per-stat personal-best row — sits below the current stats row with
+   *  a thin divider between. Mirrors the 4-col layout (accuracy / max
+   *  combo / hits / misses) in smaller text. Score's best lives as a
+   *  small caption under the big FINAL SCORE number. Each cell flips to
+   *  mint when the just-finished run beat the stored value for that
+   *  stat. Hidden on charts without (audioKey + difficulty). */
+  private summaryBestDivider!: Phaser.GameObjects.Rectangle;
+  private summaryBestLabel!: Phaser.GameObjects.Text;
+  private summaryBestScoreText!: Phaser.GameObjects.Text;
+  private summaryBestAccuracyText!: Phaser.GameObjects.Text;
+  private summaryBestComboText!: Phaser.GameObjects.Text;
+  private summaryBestHitsText!: Phaser.GameObjects.Text;
+  private summaryBestMissesText!: Phaser.GameObjects.Text;
+  /** Set by Play Again so create() skips the SongPicker and jumps
+   *  straight back into the same chart instead of re-prompting. Uses
+   *  the existing playChart pipeline once the scene boots. */
+  private pendingReplayChart: Chart | null = null;
   /** Summary title — swapped between 'SHOW COMPLETE!' and
    *  'SHOW FAILED' based on the rehearsal pass gate. */
   private summaryTitleText!: Phaser.GameObjects.Text;
@@ -159,9 +171,15 @@ export class Game extends Scene {
     super(SceneKeys.Game);
   }
 
-  init(data: { playerState?: PlayerState | null; testMode?: boolean; startStep?: number }): void {
+  init(data: {
+    playerState?: PlayerState | null;
+    testMode?: boolean;
+    startStep?: number;
+    replayChart?: Chart | null;
+  }): void {
     this.playerState = data?.playerState ?? null;
     this.testMode = data?.testMode === true;
+    this.pendingReplayChart = data?.replayChart ?? null;
     // Editor passes its current scrollOffset here so rehearsal starts
     // at the author's working page (chart + music both seek). Defaults
     // to 0 = start at the top.
@@ -230,6 +248,12 @@ export class Game extends Scene {
       // no Ready modal. We wire the chart + music + kick beginRound the
       // moment the scene boots.
       await this.initChartPlayer();
+      void this.beginRound();
+    } else if (this.pendingReplayChart) {
+      // Play Again: skip the SongPicker and re-attach the same chart
+      // the player just finished. Music + chart-player rebuild fresh
+      // off the same chart object; the round kicks immediately.
+      this.attachChartAndMusic(this.pendingReplayChart);
       void this.beginRound();
     } else {
       // Fresh Rehearse entry: two-step picker. SongPicker (vibe → song
@@ -576,8 +600,9 @@ export class Game extends Scene {
     const btnH = 38;
     const btnGap = 12;
 
-    // Left button: "Skip" (replay) in normal mode, "← Editor" in test mode.
-    const leftLabel = this.testMode ? '← Editor' : 'Encore';
+    // Left button: "← Editor" in test mode (route back to ChartEditor),
+    // "Play Again" in rehearsal (replay this exact chart).
+    const leftLabel = this.testMode ? '← Editor' : 'Play Again';
     const leftBg = this.add.rectangle(
       cx - btnW / 2 - btnGap / 2, btnY, btnW, btnH, 0x2c1856, 1,
     ).setInteractive({ useHandCursor: true });
@@ -595,14 +620,17 @@ export class Game extends Scene {
     leftBg.on('pointerout', () => leftBg.setFillStyle(0x2c1856, 1));
     leftBg.on(
       'pointerdown',
-      this.testMode ? this.onBackToEditorClicked : this.onSkipClicked,
+      this.testMode ? this.onBackToEditorClicked : this.onPlayAgainClicked,
     );
 
-    // Right button: "Post Comment" in normal rehearse, "PUT ON A SHOW"
-    // in test mode. In test mode the button is hidden entirely when the
-    // author rehearsed below Balance.passAccuracyPct — they get auto-
-    // routed back to the editor via the left button instead.
-    const rightLabel = this.testMode ? 'PUT ON A SHOW' : 'Post Comment';
+    // Right button: "PUT ON A SHOW" in test mode (post the chart),
+    // "Change Song" in rehearsal (back to the SongPicker). The Post
+    // Comment / social-loop path is gone from rehearsal entirely —
+    // rehearsal is single-player practice, social play lives elsewhere.
+    // In test mode the right button hides entirely when the author
+    // rehearsed below Balance.passAccuracyPct — they get auto-routed
+    // back to the editor via the left button instead.
+    const rightLabel = this.testMode ? 'PUT ON A SHOW' : 'Change Song';
     const rightBg = this.add.rectangle(
       cx + btnW / 2 + btnGap / 2, btnY, btnW, btnH, 0xffd34d, 1,
     ).setInteractive({ useHandCursor: true });
@@ -610,7 +638,7 @@ export class Game extends Scene {
       cx + btnW / 2 + btnGap / 2, btnY, rightLabel, {
         ...fontBase,
         fontStyle: 'bold',
-        fontSize: this.testMode ? '11px' : '11px',
+        fontSize: '11px',
         color: '#1a0a2e',
         align: 'center',
         wordWrap: { width: btnW - 12 },
@@ -621,25 +649,67 @@ export class Game extends Scene {
     rightBg.on('pointerout', () => rightBg.setFillStyle(0xffd34d, 1));
     rightBg.on('pointerdown', () => {
       if (this.testMode) this.onPostFromTestClicked();
-      else this.onPostCommentClicked();
+      else this.onChangeSongClicked();
     });
     this.summaryRightBg = rightBg;
     this.summaryRightText = rightText;
 
-    // Personal-best line for rehearsal — sits just below the stats row.
-    // showSummary fills + toggles visibility based on testMode + whether
-    // the chart has an audioKey + difficulty (i.e. is keyable for best).
-    this.summaryBestText = this.add
-      .text(cx, statsY + 38, '', {
+    // Per-stat personal-best row. Layout, top-to-bottom:
+    //   1. Small "best <score>" caption under the big FINAL SCORE
+    //      number — tracks the score stat separately from the other
+    //      four (which mirror the existing 4-col stats row).
+    //   2. Thin yellow divider just below the big stat values.
+    //   3. "BEST" label on the left + four small values for accuracy /
+    //      max combo / hits / misses, sitting in the same column X
+    //      positions as the big values above.
+    // Per-cell coloring (showSummary fills these): default yellow,
+    // mint when the just-finished run beat the stored best for that
+    // stat. Hidden when the chart has no audioKey + difficulty.
+    this.summaryBestScoreText = this.add
+      .text(cx, cy - 32, '', {
         ...fontBase,
-        fontStyle: 'bold',
-        fontSize: '11px',
-        color: '#ffd34d',
+        fontSize: '10px',
+        color: '#c0a0e6',
         align: 'center',
       })
       .setOrigin(0.5, 0)
       .setVisible(false);
-    container.add(this.summaryBestText);
+    container.add(this.summaryBestScoreText);
+
+    const bestDividerY = statsY + 34;
+    this.summaryBestDivider = this.add
+      .rectangle(cx, bestDividerY, panelW - 32, 1, 0xc0a0e6, 0.35)
+      .setVisible(false);
+    container.add(this.summaryBestDivider);
+
+    const bestRowY = bestDividerY + 10;
+    this.summaryBestLabel = this.add
+      .text(cx - panelW / 2 + margin, bestRowY, 'BEST', {
+        ...fontBase,
+        fontStyle: 'bold',
+        fontSize: '9px',
+        color: '#c0a0e6',
+      })
+      .setOrigin(0, 0.5)
+      .setVisible(false);
+    container.add(this.summaryBestLabel);
+
+    const bestFont = {
+      ...fontBase,
+      fontStyle: 'bold',
+      fontSize: '11px',
+      color: '#ffd34d',
+    };
+    this.summaryBestAccuracyText = this.add.text(statXs[0]!, bestRowY, '', bestFont).setOrigin(0.5).setVisible(false);
+    this.summaryBestComboText = this.add.text(statXs[1]!, bestRowY, '', bestFont).setOrigin(0.5).setVisible(false);
+    this.summaryBestHitsText = this.add.text(statXs[2]!, bestRowY, '', bestFont).setOrigin(0.5).setVisible(false);
+    this.summaryBestMissesText = this.add.text(statXs[3]!, bestRowY, '', bestFont).setOrigin(0.5).setVisible(false);
+    container.add([
+      this.summaryBestAccuracyText,
+      this.summaryBestComboText,
+      this.summaryBestHitsText,
+      this.summaryBestMissesText,
+    ]);
 
     // Pass/fail message that sits between the stats row and the buttons.
     // Anchored to the BOTTOM of its bounding box so the text grows
@@ -1392,30 +1462,87 @@ export class Game extends Scene {
     this.summary.setVisible(true);
   }
 
-  /** Rehearsal-only: show the player's personal best on this exact chart
-   *  (keyed on audioKey + difficulty), and write a new best if the run
-   *  beat it. Hidden outside test mode and on charts without both pieces
-   *  (scratch charts can't be best-tracked since they may have been
-   *  edited between attempts). */
+  /** Per-stat personal-best row. Visible in all rehearsal modes (test
+   *  mode + drawer rehearse) as long as the chart has both audioKey +
+   *  difficulty — scratch charts have no difficulty so they skip
+   *  best-tracking (would be misleading since they're authored ad-hoc).
+   *  Only passing runs get recorded as bests; failing runs still display
+   *  the previously stored row for reference. */
   private updateBestScoreLine(passed: boolean): void {
-    const c = this.playerState?.chart;
-    const audioKey = c?.audioKey;
-    const difficulty = c?.difficulty;
-    if (!this.testMode || !audioKey || !difficulty) {
-      this.summaryBestText.setVisible(false);
+    const chart = this.playChart;
+    const audioKey = chart?.audioKey;
+    const difficulty = chart?.difficulty;
+    const allBestObjs = [
+      this.summaryBestScoreText,
+      this.summaryBestDivider,
+      this.summaryBestLabel,
+      this.summaryBestAccuracyText,
+      this.summaryBestComboText,
+      this.summaryBestHitsText,
+      this.summaryBestMissesText,
+    ];
+    if (!audioKey || !difficulty) {
+      for (const o of allBestObjs) o.setVisible(false);
       return;
     }
-    const score = this.score.get();
-    const prevBest = getBest(audioKey, difficulty);
-    const isNew = passed && score > prevBest && setBestIfHigher(audioKey, difficulty, score);
-    const shownBest = Math.max(score, prevBest);
-    const label = isNew
-      ? `⭐ NEW BEST: ${shownBest.toLocaleString()}`
-      : `BEST: ${shownBest.toLocaleString()}`;
-    this.summaryBestText.setText(label);
-    this.summaryBestText.setColor(isNew ? '#4dffb4' : '#ffd34d');
-    this.summaryBestText.setVisible(true);
+    const run: BestStats = {
+      score: this.score.get(),
+      accuracy: Math.round(this.score.getAccuracy()),
+      maxCombo: this.score.getMaxCombo(),
+      hits: this.score.getLanded(),
+      misses: this.score.getMisses(),
+    };
+    const prev = getBest(audioKey, difficulty);
+    // Only passing runs count toward the stored best (failed runs are
+    // junk-time — we don't want a "best misses" of 87 because the
+    // player rage-quit the first try). Failing runs still see the
+    // previously stored row so they know what they're chasing.
+    const newBests: Set<StatKey> = passed
+      ? recordRun(audioKey, difficulty, run)
+      : new Set<StatKey>();
+    // After recordRun, the stored value reflects the new best where the
+    // run beat it. For display we want what's stored now (with current
+    // run merged) — or the pre-run stored value if we didn't record.
+    const stored = passed ? getBest(audioKey, difficulty) : prev;
+    if (!stored) {
+      // Shouldn't happen — first-pass recordRun creates the row — but
+      // defensive guard in case the failing-first-run case lands here.
+      for (const o of allBestObjs) o.setVisible(false);
+      return;
+    }
+    const colorFor = (key: StatKey): string => (newBests.has(key) ? '#4dffb4' : '#ffd34d');
+
+    this.summaryBestScoreText.setText(
+      newBests.has('score')
+        ? `⭐ best ${stored.score.toLocaleString()}`
+        : `best ${stored.score.toLocaleString()}`,
+    );
+    this.summaryBestScoreText.setColor(colorFor('score'));
+
+    this.summaryBestAccuracyText.setText(`${stored.accuracy}%`).setColor(colorFor('accuracy'));
+    this.summaryBestComboText.setText(`x${stored.maxCombo}`).setColor(colorFor('maxCombo'));
+    this.summaryBestHitsText.setText(String(stored.hits)).setColor(colorFor('hits'));
+    this.summaryBestMissesText.setText(String(stored.misses)).setColor(colorFor('misses'));
+
+    for (const o of allBestObjs) o.setVisible(true);
   }
+
+  /** Replay the chart the player just finished. Stashes it as the
+   *  scene's replayChart so create() skips the SongPicker on reboot
+   *  and jumps straight into the same chart. */
+  private onPlayAgainClicked = (): void => {
+    this.scene.restart({
+      playerState: this.playerState,
+      replayChart: this.playChart,
+    });
+  };
+
+  /** Bounce back through the SongPicker by restarting without a
+   *  replayChart — Game.create's non-testMode path will showSongPicker
+   *  again. The previously played chart is dropped. */
+  private onChangeSongClicked = (): void => {
+    this.scene.restart({ playerState: this.playerState });
+  };
 
   // Skip = "play again" for now. Decorate has its own nav via the hamburger.
   // Both buttons restart the scene with the same playerState so the player
