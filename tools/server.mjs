@@ -16,6 +16,14 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { extractTapsForSong } from '../scripts/lib/extract-taps-for-song.mjs';
+import {
+  probeDurationSeconds,
+  extractRmsBins,
+  findBestSectionStart,
+  reclipFromSource,
+  CLIP_DURATION_S,
+  WAVEFORM_BIN_MS,
+} from '../scripts/lib/music-section.mjs';
 
 const TOOL_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(TOOL_DIR, '..');
@@ -877,165 +885,6 @@ async function handleMusicUpload(req, res, slug) {
     } finally {
       if (tmpPath) await fs.unlink(tmpPath).catch(() => {});
     }
-  });
-}
-
-// ── Music section detection + reclipping ────────────────────────────
-//
-// Tim's rule (2026-06-25): instead of taking the first 62 s after silence
-// removal, the calibrator should hunt for the song's most-hyped chorus —
-// a quieter "calm" section feeding into a big energy jump — and clip
-// 65 s around it. Loop is far less embarrassing when it lands on the
-// chorus instead of the intro.
-//
-// Pipeline: probe duration → extract per-100 ms RMS (dB) via ffmpeg's
-// astats filter → score every 65 s window by (main_avg + jump bonus) →
-// return the highest-scoring start time. The waveform editor in the
-// calibrator displays the same RMS bins so Tim can override visually.
-
-const CLIP_DURATION_S = 65;
-const WAVEFORM_BIN_MS = 100;
-const ANALYZE_INTRO_S = 8; // first N seconds of the window are the "calm"
-
-function probeDurationSeconds(srcPath) {
-  return new Promise((resolve, reject) => {
-    const ff = spawn(
-      'ffprobe',
-      ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=nokey=1:noprint_wrappers=1', srcPath],
-      { stdio: ['ignore', 'pipe', 'pipe'] },
-    );
-    let stdout = '';
-    let stderr = '';
-    ff.stdout.on('data', (b) => { stdout += b.toString(); });
-    ff.stderr.on('data', (b) => { stderr += b.toString(); });
-    ff.on('close', (code) => {
-      if (code !== 0) return reject(new Error(`ffprobe exit ${code}: ${stderr.trim()}`));
-      const d = parseFloat(stdout.trim());
-      if (!Number.isFinite(d) || d <= 0) return reject(new Error(`ffprobe bad duration: "${stdout}"`));
-      resolve(d);
-    });
-  });
-}
-
-/**
- * Run ffmpeg's astats filter against a source mp3 and return an array
- * of RMS dB values, one per WAVEFORM_BIN_MS bin. Used both for the
- * client's waveform display and the section-finder heuristic.
- *
- * Silent / very-quiet bins land at -inf dB; we clamp to -60 dB so the
- * client renderer doesn't choke on infinities.
- */
-function extractRmsBins(srcPath) {
-  return new Promise((resolve, reject) => {
-    // metadata=1 emits per-frame; reset=0.1 resets the running stats
-    // every 100ms; length=0.1 sets the analysis window to match. Pipe
-    // ametadata to stdout via `file=-` so we don't need a temp file.
-    const af = `astats=metadata=1:reset=${(WAVEFORM_BIN_MS / 1000).toFixed(3)}:length=${(WAVEFORM_BIN_MS / 1000).toFixed(3)},ametadata=mode=print:key=lavfi.astats.Overall.RMS_level:file=-`;
-    const ff = spawn(
-      'ffmpeg',
-      ['-hide_banner', '-loglevel', 'error', '-i', srcPath, '-af', af, '-f', 'null', '-'],
-      { stdio: ['ignore', 'pipe', 'pipe'] },
-    );
-    let stdout = '';
-    let stderr = '';
-    ff.stdout.on('data', (b) => { stdout += b.toString(); });
-    ff.stderr.on('data', (b) => { stderr += b.toString(); });
-    ff.on('close', (code) => {
-      if (code !== 0) return reject(new Error(`ffmpeg astats exit ${code}: ${stderr.trim()}`));
-      // Output shape (per frame):
-      //   frame:0    pts:0       pts_time:0
-      //   lavfi.astats.Overall.RMS_level=-23.456
-      const bins = [];
-      for (const line of stdout.split('\n')) {
-        const m = line.match(/^lavfi\.astats\.Overall\.RMS_level=(-?[\d.]+|-inf|nan)$/);
-        if (!m) continue;
-        const raw = m[1];
-        let v = raw === '-inf' || raw === 'nan' ? -60 : parseFloat(raw);
-        if (!Number.isFinite(v)) v = -60;
-        bins.push(Math.max(-60, v));
-      }
-      resolve(bins);
-    });
-  });
-}
-
-/**
- * Score every CLIP_DURATION_S window in the RMS bin array and return
- * the start time (seconds) of the highest-scoring one.
- *
- * Score = main_avg + 1.0 × (main_avg − pre_avg)
- *   - main_avg = average RMS over the bulk of the window (post-intro)
- *   - pre_avg  = average RMS over the first ANALYZE_INTRO_S of the window
- *   - main_avg term keeps the result anchored to LOUD sections so we
- *     don't pick "loudest sub-region of a quiet stretch"
- *   - (main − pre) jump bonus rewards windows that start quiet and
- *     ramp into a chorus.
- *
- * Returns { bestStart, score } in seconds. Always returns 0 if the
- * source is shorter than the window.
- */
-function findBestSectionStart(bins, durationS) {
-  const binsPerSec = 1000 / WAVEFORM_BIN_MS;
-  const windowBins = Math.floor(CLIP_DURATION_S * binsPerSec);
-  const introBins = Math.floor(ANALYZE_INTRO_S * binsPerSec);
-  if (durationS < CLIP_DURATION_S || bins.length <= windowBins) {
-    return { bestStart: 0, score: 0 };
-  }
-  let bestStart = 0;
-  let bestScore = -Infinity;
-  for (let start = 0; start + windowBins < bins.length; start += Math.floor(binsPerSec)) {
-    // Step by 1 second to keep this O(N) for ~6-minute songs.
-    let preSum = 0;
-    let mainSum = 0;
-    for (let k = 0; k < introBins; k++) preSum += bins[start + k];
-    for (let k = introBins; k < windowBins; k++) mainSum += bins[start + k];
-    const preAvg = preSum / introBins;
-    const mainAvg = mainSum / (windowBins - introBins);
-    const score = mainAvg + 1.0 * (mainAvg - preAvg);
-    if (score > bestScore) {
-      bestScore = score;
-      bestStart = start / binsPerSec;
-    }
-  }
-  return { bestStart, score: bestScore };
-}
-
-/**
- * Re-encode a clip from a source mp3 — same fade-in/out + 96kbps mono
- * pipeline as the original upload handler. Used by both the initial
- * upload path (with bestStart from findBestSectionStart) and the
- * calibrator's manual override (`/music-reclip/<slug>`).
- */
-function reclipFromSource(srcPath, outPath, startS, durS) {
-  return new Promise((resolve, reject) => {
-    const fadeIn = 0.35;
-    const fadeOut = 1.5;
-    const fadeOutStart = (durS - fadeOut).toFixed(3);
-    const af = [
-      `atrim=${startS.toFixed(3)}:${(startS + durS).toFixed(3)}`,
-      `asetpts=PTS-STARTPTS`,
-      `afade=t=in:st=0:d=${fadeIn.toFixed(3)}`,
-      `afade=t=out:st=${fadeOutStart}:d=${fadeOut.toFixed(3)}`,
-    ].join(',');
-    const ff = spawn(
-      'ffmpeg',
-      [
-        '-hide_banner', '-loglevel', 'error', '-y',
-        '-i', srcPath,
-        '-af', af,
-        '-ac', '1',
-        '-ar', '44100',
-        '-b:a', '96k',
-        outPath,
-      ],
-      { stdio: ['ignore', 'pipe', 'pipe'] },
-    );
-    let stderr = '';
-    ff.stderr.on('data', (b) => { stderr += b.toString(); });
-    ff.on('close', (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`ffmpeg reclip exit ${code}: ${stderr.trim()}`));
-    });
   });
 }
 
