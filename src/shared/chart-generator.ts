@@ -211,6 +211,10 @@ export function generateChart(args: {
   //     practically impossible on mobile
   //   - source can't be inside a hold on the same lane
   const slides: Slide[] = [];
+  // Track the previous slide's direction (sign of target - source) so
+  // `slideAlternationBias` can bias the next slide toward the opposite
+  // direction — produces back-and-forth runs instead of wandering.
+  let prevSlideDir: -1 | 0 | 1 = 0;
   if (profile.slideChance > 0) {
     for (let i = 0; i < stepCount; i++) {
       const step = steps[i]!;
@@ -232,11 +236,25 @@ export function generateChart(args: {
       if (holds.some((h) => h.lane === lane && i >= h.startStep && i <= h.endStep)) continue;
       // Target lane: from lane 1 (middle) always adjacent (random 0/2).
       // From an outer lane, slide2LaneChance picks the opposite outer
-      // lane (2-lane jump) over the middle (1-lane).
+      // lane (2-lane jump) over the middle (1-lane). On insane (with
+      // slideAlternationBias > 0), also bias the random middle-vs-
+      // opposite roll toward the OPPOSITE direction of the previous
+      // slide so consecutive slides feel like back-and-forth runs.
       let target: LaneId;
       if (lane === 1) {
-        target = rng() < 0.5 ? 0 : 2;
+        // Middle source: alternation bias picks the opposite of where
+        // the previous slide went; otherwise random 0 vs 2.
+        const bias = profile.slideAlternationBias ?? 0;
+        if (prevSlideDir !== 0 && rng() < bias) {
+          target = prevSlideDir > 0 ? 0 : 2; // mirror previous direction
+        } else {
+          target = rng() < 0.5 ? 0 : 2;
+        }
       } else {
+        // Outer-lane source — direction is fixed by source (0→ right,
+        // 2→ left), so alternation can only express itself via the
+        // SOURCE selection upstream (which we don't control here).
+        // Just pick adjacent vs opposite-outer per slide2LaneChance.
         const opposite: LaneId = lane === 0 ? 2 : 0;
         target = rng() < profile.slide2LaneChance ? opposite : 1;
       }
@@ -256,6 +274,9 @@ export function generateChart(args: {
         if (midIdx >= 0) step.lanes.splice(midIdx, 1);
       }
       slides.push({ startStep: i, sourceLane: lane, targetLane: target });
+      // Update direction tracker so the next slide's alternation bias
+      // has a sign to compare against. -1 = leftward, +1 = rightward.
+      prevSlideDir = target > lane ? 1 : -1;
     }
   }
 
