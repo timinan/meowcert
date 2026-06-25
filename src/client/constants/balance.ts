@@ -89,6 +89,14 @@ export const Balance = {
    *  pulse re-fire while a hold is active. ~220ms reads as a steady
    *  chug without strobing. */
   holdEffectIntervalMs: 220,
+  /** Hold notes: tint applied to the tail balls while the hold is
+   *  active (same mint as the 'great' grade flash so success reads
+   *  consistently across taps and held notes). */
+  holdActiveTint: 0x4dffb4,
+  /** Hold notes: max ± horizontal jitter (px) applied per frame to
+   *  visible tail balls while held — gives the column a subtle
+   *  vibration cue that the player is in the hold. */
+  holdJitterPx: 2.5,
   catReactionMs: 500,
   // Rehearsal pass gate. Author must hit at least this accuracy on their
   // own chart (in editor → REHEARSE / testMode) before they're allowed to

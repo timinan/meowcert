@@ -209,6 +209,7 @@ export class Game extends Scene {
     if (this.pendingStart || this.roundOver) return;
     this.player.advance(delta);
     this.tickHolds();
+    this.updateHoldVisuals();
     this.checkMisses();
     this.tickPageTracking();
     // Wall-clock is the sole end signal. `initChartPlayer` already loops
@@ -1379,9 +1380,12 @@ export class Game extends Scene {
         // Hold engaged. Don't consume — tickHolds + releaseHoldIfAny
         // own the lifecycle from here. Per-step bonus accumulates while
         // the player keeps the lane pressed. holdLastEffectMs seeds the
-        // recurring lane-effect cadence (see tickHolds).
+        // recurring lane-effect cadence (see tickHolds). Tail color
+        // flips to the mint "success" tint so the column visibly
+        // signals "you're doing it right, keep holding".
         note!.holdActive = true;
         note!.holdLastEffectMs = this.time.now - this.startTimeMs;
+        note!.setHoldTint(Balance.holdActiveTint);
       } else {
         note!.consumed = true;
         note!.recycle();
@@ -1455,6 +1459,24 @@ export class Game extends Scene {
   // -----------------------------------------------------------------------
   // Private — hold tracking
   // -----------------------------------------------------------------------
+
+  /** Per-frame visibility + jitter pass for ALL alive hold notes
+   *  (engaged or not). Clips the tail to the lane band so nothing
+   *  bleeds into the cat-stage area, hides the head once it's past
+   *  the disappear line, and applies the vibration cue to engaged
+   *  hold tails. Cheap — short iteration over the pool. */
+  private updateHoldVisuals(): void {
+    if (this.roundOver) return;
+    const scaleY = this.scale.height / L.DESIGN_H;
+    const laneTopY = L.LANE_TOP_Y * scaleY;
+    const targetY = L.HIT_LINE_Y * scaleY;
+    const disappearY = targetY + 30;
+    for (let i = 0; i < this.notes.length; i++) {
+      const n = this.notes[i]!;
+      if (!n.active || !n.isHold) continue;
+      n.updateHoldVisuals(laneTopY, targetY, disappearY, Balance.holdJitterPx);
+    }
+  }
 
   /** Per-frame check for active holds whose trailing edge has reached
    *  the target. Auto-ends those with full credit. Also re-fires the

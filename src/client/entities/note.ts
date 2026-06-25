@@ -92,6 +92,12 @@ export class Note extends GameObjects.Container {
     this.setActive(true).setVisible(true);
     this.setAlpha(1);
     this.setScale(1);
+    // Reset ball + letters visibility — updateHoldVisuals may have
+    // hidden them on a previous pool use (head fades when past the
+    // disappear line). Without this, a recycled note would spawn
+    // invisible.
+    this.ball.setVisible(true);
+    this.letters.setVisible(true);
     // Lift the ball tint toward white so the falling note pops against
     // the alpha-0.55 lane underneath (lane + ball were previously the
     // exact same hue and blended on busy bgs).
@@ -146,5 +152,47 @@ export class Note extends GameObjects.Container {
     this.holdActive = false;
     this.holdEndAtMs = 0;
     this.holdLastEffectMs = 0;
+  }
+
+  /** Retint every tail ball — called by Game on hold engage to flip
+   *  the column to the mint "active hold" color. Head ball is left
+   *  alone (it disappears past the target soon anyway). */
+  setHoldTint(color: number): void {
+    for (const tb of this.tailBalls) tb.setTint(color);
+  }
+
+  /** Per-frame visibility + vibration update for active and falling
+   *  hold notes. Clips rendering to the lane band so nothing leaks
+   *  into the cat-stage area above; hides the head once it's past
+   *  the disappear line so the note ends at the same Y a tap note
+   *  would; jitters visible tail balls while the hold is engaged. */
+  updateHoldVisuals(laneTopY: number, targetY: number, disappearY: number, jitterPx: number): void {
+    const headPast = this.y > disappearY;
+    this.ball.setVisible(!headPast);
+    this.letters.setVisible(!headPast);
+    for (const tb of this.tailBalls) {
+      const worldY = this.y + tb.y;
+      // Above the lane top → hide (Tim's rule: tail appears from the
+      // lane top, not above it into the cat-stage strip).
+      if (worldY < laneTopY) {
+        tb.setVisible(false);
+        continue;
+      }
+      if (this.holdActive) {
+        // Engaged: only show within [laneTop, target]. Below target =
+        // already "drained through" the catching position.
+        if (worldY > targetY) {
+          tb.setVisible(false);
+        } else {
+          tb.setVisible(true);
+          tb.x = (Math.random() - 0.5) * 2 * jitterPx;
+        }
+      } else {
+        // Not engaged yet — show normally (no jitter, no target-clip)
+        // so the falling hold reads as one continuous note approaching.
+        tb.setVisible(true);
+        tb.x = 0;
+      }
+    }
   }
 }
