@@ -53,11 +53,15 @@ export class Preloader extends Scene {
     this.load.image(AssetKeys.Image.PspspsElementBall, 'images/PSElement_ball.png');
     this.load.image(AssetKeys.Image.PspspsElementBallWhite, 'images/PSElement_ball-white.png');
     this.load.image(AssetKeys.Image.PspspsElementLetters, 'images/PSElement_letters.png');
-    // Backgrounds loaded straight from the catalog so adding a new bg via
-    // the themes calibrator (which writes themes.json → regens the catalog)
-    // gets picked up automatically. No per-bg AssetKeys entry needed.
-    for (const bg of Object.values(BACKGROUND_CATALOG)) {
-      this.load.image(bg.backdropKey, `themes/${bg.id}-bg.png`);
+    // Eager-load ONLY the default 'stage' bg. The other ~13 theme PNGs
+    // are ~3 MB each (~85 MB total) and the player only ever sees ONE
+    // at a time; lazy-load the rest via BackgroundManager.setBackground
+    // when they actually pick one. Saves a huge chunk of cold-load
+    // time at the cost of a brief solid-color flash if the player's
+    // active bg isn't 'stage' yet — bg pops in once fetched.
+    const defaultBg = BACKGROUND_CATALOG['stage'];
+    if (defaultBg) {
+      this.load.image(defaultBg.backdropKey, `themes/${defaultBg.id}-bg.png`);
     }
 
     // Per-frame translation offsets for each cat animation. Cat.ts reads
