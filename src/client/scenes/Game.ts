@@ -1222,16 +1222,27 @@ export class Game extends Scene {
    *  freshly generated chart directly. */
   private attachChartAndMusic(playChart: Chart): void {
     // Loop the chart enough passes to fill the round, but STOP spawning
-    // early enough that the last note (incl. fall time + worst-case hold
-    // duration) has finished by the round-end wall-clock. Without this
-    // cutoff, notes still on screen get yanked when the summary fires.
-    // ~2000 ms covers a 6-step hold at 120 bpm; noteFallMs covers the
-    // fall time. Clamp at 1 pass minimum so very short charts still
-    // play at least once.
+    // early enough that the LAST possible note (tap, hold, or slide) has
+    // fully resolved before the round-end wall-clock fires. Otherwise
+    // the summary screen yanks notes that were still on-screen mid-fall.
+    //
+    // Buffer = noteFallMs (fall time) + maxHoldMs (from the actual chart,
+    // not a guess — author-emitted holds can be much longer than the
+    // generator's max) + 1500 ms wind-down so the last tap/hold ends
+    // with visible breathing room before the summary takes over.
     const onePassMs = (60000 / (playChart.bpm * 2)) * playChart.stepCount;
+    const msPerStep = 60000 / (playChart.bpm * 2);
+    let maxHoldMs = 0;
+    if (playChart.holds) {
+      for (const h of playChart.holds) {
+        const dur = (h.endStep - h.startStep) * msPerStep;
+        if (dur > maxHoldMs) maxHoldMs = dur;
+      }
+    }
+    const windDownMs = 1500;
     const spawnCutoffMs = Math.max(
       onePassMs,
-      Balance.maxRoundMs - Balance.noteFallMs - 2000,
+      Balance.maxRoundMs - Balance.noteFallMs - maxHoldMs - windDownMs,
     );
     const loopCount = Math.max(1, Math.floor(spawnCutoffMs / onePassMs));
 
