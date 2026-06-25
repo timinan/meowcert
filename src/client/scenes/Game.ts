@@ -789,6 +789,7 @@ export class Game extends Scene {
     // Reset to the captured base scale BEFORE tweening so a killed mid-yoyo
     // can't leave the target permanently inflated.
     target.setScale(base);
+    target.setAlpha(1);
     this.tweens.add({
       targets: target,
       scaleX: base * 1.25,
@@ -799,6 +800,11 @@ export class Game extends Scene {
       onComplete: () => {
         target.setTint(baseTint);
         target.setScale(base);
+        target.setAlpha(1);
+        // Restart the BPM pulse — flashTarget had to killTweensOf(target)
+        // to claim the tween channel, which also nuked the pulse. Without
+        // this restart the target stays static after the first hit/miss.
+        this.startTargetPulse(laneId);
       },
     });
   }
@@ -1485,25 +1491,36 @@ export class Game extends Scene {
         ease: 'Sine.inOut',
       });
     }
-    // Counter-phase target scale + brightness flicker. Scale tightened
-    // way down from ±8% → ±4% per Tim ("just a tiny bit"). Alpha 0.85↔1.0
-    // pumped in lock-step so the target dims as it shrinks and brightens
-    // as it expands — gives the catching fuzz-ball a heartbeat that
-    // visually echoes the lane breath without overpowering it.
+    // Per-target pulse — grow-and-back-to-base (no shrinking below base,
+    // Tim's note: the bi-directional ±4% felt too busy). Scale peaks at
+    // half the hit-flash expansion (hit flash = base*1.25, so pulse peaks
+    // at base*1.125), alpha 0.85→1.0 in lock-step. Extracted into
+    // startTargetPulse so flashTarget can restart it after each hit/miss
+    // (which had to kill the pulse to take over the tween channel).
     for (let i = 0; i < this.hitTargets.length; i++) {
-      const target = this.hitTargets[i]!;
-      const base = this.hitTargetBaseScale[i]!;
-      this.tweens.add({
-        targets: target,
-        scaleX: { from: base * 0.96, to: base * 1.04 },
-        scaleY: { from: base * 0.96, to: base * 1.04 },
-        alpha: { from: 0.85, to: 1.0 },
-        duration: this.playMsPerStep * 2,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.inOut',
-      });
+      this.startTargetPulse(i as LaneId);
     }
+  }
+
+  /** Restart the catch-fuzz-ball's BPM-locked pulse. Grow scale base →
+   *  base*1.125 + brightness 0.85 → 1.0 (yoyo, period = msPerStep × 2,
+   *  Sine.inOut). Called by startLanePulse on round start and by
+   *  flashTarget on each hit/miss completion so the pulse keeps going. */
+  private startTargetPulse(laneId: LaneId): void {
+    if (this.playMsPerStep <= 0) return;
+    const target = this.hitTargets[laneId];
+    const base = this.hitTargetBaseScale[laneId];
+    if (!target || base === undefined) return;
+    this.tweens.add({
+      targets: target,
+      scaleX: { from: base, to: base * 1.125 },
+      scaleY: { from: base, to: base * 1.125 },
+      alpha: { from: 0.85, to: 1.0 },
+      duration: this.playMsPerStep * 2,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.inOut',
+    });
   }
 
   /** Spawn a page-boundary line that falls top → hit line over the
