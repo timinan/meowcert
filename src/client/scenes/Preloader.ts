@@ -107,12 +107,11 @@ export class Preloader extends Scene {
     // bar as a solid-pink layer.
     this.generatePawsOnlyTexture();
 
-    // Hold-note tail stripe — a narrow 1-row slice of the fuzzy ball's
-    // widest horizontal row. Tiled vertically (TileSprite) it forms a
-    // narrow pillar with the same fuzzy left/right edges the ball has,
-    // so the tail reads as part of the same visual family rather than
-    // a flat painted bar.
-    this.generateTailStripeTexture();
+    // Hold-note tail cylinder — middle 30 % horizontal band of the
+    // fuzzy ball, stretched vertically by the Note renderer. Inherits
+    // the ball's fuzzy left/right edges; near-parallel sides at any
+    // tail length (band is the flattest part of the circle).
+    this.generateTailCylinderTexture();
 
     // Register all cat animations globally so every downstream scene
     // (Game, Decorate, DressingRoom, Purchase) can play them without each
@@ -155,15 +154,18 @@ export class Preloader extends Scene {
    *  Registered under 'rhythm-bar-paws'. Safe to no-op (try/catch) on
    *  any failure — the lane still falls back to the existing texture
    *  with no pink overlay, just no toe-bean color call-out. */
-  /** Build a narrow 1-pixel-tall stripe from the fuzzy ball's widest
-   *  horizontal row. Note.ts wraps this in a vertically-tiled TileSprite
-   *  for hold tails, so the column inherits the ball's fuzzy left + right
-   *  edge fade. White-base so Phaser tint paints it cleanly with the
-   *  lane color (or the mint active-hold color). Safe no-op on any
-   *  failure — the tail still draws as a flat TileSprite. */
-  private generateTailStripeTexture(): void {
-    const KEY = 'tail-stripe';
-    const TAIL_W = 18;
+  /** Build a cylinder-shaped texture from the middle horizontal band
+   *  of the fuzzy ball — preserves the ball's fuzzy left/right edge
+   *  fade while keeping vertical edges effectively parallel (the ball
+   *  is a circle, so within the middle 30 % of its height the width
+   *  varies by less than 1 %). Note.ts uses this as a stretchy Image
+   *  for hold-note tails: same fuzzy texture family as the ball, no
+   *  visible curvature at any tail length. White-base so Phaser tint
+   *  paints it cleanly. */
+  private generateTailCylinderTexture(): void {
+    const KEY = 'tail-cylinder';
+    const TARGET_W = 24;
+    const BAND_FRACTION = 0.3; // middle 30 % of source height
     if (this.textures.exists(KEY)) return;
     try {
       const source = this.textures.get(AssetKeys.Image.PspspsTargetWhite);
@@ -171,17 +173,20 @@ export class Preloader extends Scene {
       const srcW = srcImage.width;
       const srcH = srcImage.height;
       if (!srcW || !srcH) return;
-      const canvas = this.textures.createCanvas(KEY, TAIL_W, 1);
+      const bandH = Math.max(1, Math.floor(srcH * BAND_FRACTION));
+      const bandY = Math.floor((srcH - bandH) / 2);
+      const canvas = this.textures.createCanvas(KEY, TARGET_W, bandH);
       if (!canvas) return;
       const ctx = canvas.getContext();
-      ctx.clearRect(0, 0, TAIL_W, 1);
-      // 1-row slice from the vertical middle (= the widest row of the
-      // ball) scaled down to TAIL_W so the fuzzy edge fade compresses
-      // proportionally into a narrow stripe.
-      ctx.drawImage(srcImage, 0, Math.floor(srcH / 2), srcW, 1, 0, 0, TAIL_W, 1);
+      ctx.clearRect(0, 0, TARGET_W, bandH);
+      // Source band → target canvas at TARGET_W. The Note renderer
+      // stretches this vertically to whatever the tail's height is —
+      // stretching a near-uniform band looks like a parallel-edged
+      // cylinder, with the ball's natural fuzz on the left + right.
+      ctx.drawImage(srcImage, 0, bandY, srcW, bandH, 0, 0, TARGET_W, bandH);
       canvas.refresh();
     } catch (err) {
-      console.warn('[Preloader] tail-stripe texture build failed:', err);
+      console.warn('[Preloader] tail-cylinder texture build failed:', err);
     }
   }
 

@@ -5,10 +5,11 @@ import { LANE_COLORS, liftTowardWhite, BALL_BRIGHTNESS_LIFT } from './note-color
 
 export { LANE_COLORS };
 
-/** Hold-tail TileSprite width — narrower than the 54px head ball so the
- *  trailing column reads as a tail, not a second note. Must match the
- *  'tail-stripe' texture width in Preloader.generateTailStripeTexture(). */
-const TAIL_WIDTH = 18;
+/** Hold-tail width — narrower than the 54px head ball so the trailing
+ *  column reads as a tail, not a second note. Matches the 'tail-cylinder'
+ *  texture width in Preloader.generateTailCylinderTexture() so we render
+ *  the source band at its natural width (no horizontal scaling). */
+const TAIL_WIDTH = 24;
 
 /**
  * A falling rhythm note rendered as the original Phase 1 "PS element" ball
@@ -41,24 +42,25 @@ export class Note extends GameObjects.Container {
 
   private ball: GameObjects.Image;
   private letters: GameObjects.Image;
-  /** TileSprite using the Preloader-generated 'tail-stripe' texture
-   *  (a 1px-tall horizontal slice from the fuzzy ball's widest row).
-   *  Vertically tiled, the column inherits the ball's fuzzy left/right
-   *  edges — narrow tail with the same visual treatment. Clipped to
-   *  the lane band via a GeometryMask applied from Game on spawn. */
-  private tail: GameObjects.TileSprite;
+  /** Stretchy Image using the Preloader-generated 'tail-cylinder'
+   *  texture (middle band of the fuzzy ball). Vertical displaySize
+   *  scales the band to the tail's full height — near-parallel sides
+   *  + fuzzy left/right edges baked in. Clipped to the lane band via
+   *  a GeometryMask applied from Game on spawn. */
+  private tail: GameObjects.Image;
   /** Cached tail height so pickRandomVisibleTailWorldPos can locate
-   *  the tail's bounds without poking at TileSprite internals. */
+   *  the tail's bounds. */
   private currentTailHeight = 0;
 
   constructor(scene: Scene) {
     super(scene, 0, 0);
-    // Tail TileSprite FIRST so it renders behind the ball + letters.
-    // Origin (0.5, 1) anchors it at bottom-center so it grows UPWARD
-    // from the ball's center as we resize. Initial height 0 = invisible
-    // for tap notes; hold configure resizes to the actual tail length.
-    this.tail = scene.add.tileSprite(0, 0, TAIL_WIDTH, 0, 'tail-stripe');
+    // Tail Image FIRST so it renders behind the ball + letters. Origin
+    // (0.5, 1) anchors it at bottom-center so it grows UPWARD from the
+    // ball's center when we resize via setDisplaySize. Hidden by default;
+    // hold configure flips it on and sets the actual tail length.
+    this.tail = scene.add.image(0, 0, 'tail-cylinder');
     this.tail.setOrigin(0.5, 1);
+    this.tail.setVisible(false);
     // 54px — matches the 50% bump applied to the lane hit targets (48 → 72)
     // so the falling notes read at the same visual weight as the target.
     // White-base ball — greyscale-stretched so the per-bg sampled tint
@@ -125,10 +127,11 @@ export class Note extends GameObjects.Container {
       this.isHold = true;
       this.holdEndAtMs = hold.releaseAtMs;
       this.currentTailHeight = hold.tailHeightPx;
-      // Resize the TileSprite to the actual tail length. Width is the
-      // fixed narrow TAIL_WIDTH (the stripe texture's width); height
-      // tiles vertically. Tint colors the white-base stripe.
-      this.tail.setSize(TAIL_WIDTH, hold.tailHeightPx);
+      // Stretch the cylinder texture vertically to the hold's full
+      // length. Width is fixed at TAIL_WIDTH; the source band's
+      // near-parallel sides stay parallel under vertical-only scaling.
+      // Tint matches the head ball so they read as one note.
+      this.tail.setDisplaySize(TAIL_WIDTH, hold.tailHeightPx);
       this.tail.setTint(
         liftTowardWhite(tintColor ?? LANE_COLORS[laneId], BALL_BRIGHTNESS_LIFT),
       );
@@ -139,7 +142,6 @@ export class Note extends GameObjects.Container {
       this.holdEndAtMs = 0;
       this.currentTailHeight = 0;
       this.tail.setVisible(false);
-      this.tail.setSize(TAIL_WIDTH, 0);
     }
 
     this.scene.tweens.add({
@@ -161,7 +163,6 @@ export class Note extends GameObjects.Container {
     this.scene.tweens.killTweensOf(this);
     this.setActive(false).setVisible(false);
     this.tail.setVisible(false);
-    this.tail.setSize(TAIL_WIDTH, 0);
     this.isHold = false;
     this.holdActive = false;
     this.holdEndAtMs = 0;
