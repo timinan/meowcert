@@ -110,5 +110,21 @@
     "rarity": "rare",
     "bgShiftUp": 41,
     "bgScale": 1.15
+  },
+  "underwaterpalace": {
+    "displayName": "Underwater Palace",
+    "backdropKey": "theme-underwaterpalace-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 42,
+    "bgScale": 1.16
+  },
+  "piratecove": {
+    "displayName": "Pirate's Cove",
+    "backdropKey": "theme-piratecove-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 15,
+    "bgScale": 1.09
   }
 }

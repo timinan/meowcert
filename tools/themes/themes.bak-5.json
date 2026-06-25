@@ -47,44 +47,12 @@
     "bgShiftUp": 75,
     "bgScale": 1.08
   },
-  "observatory": {
-    "displayName": "Observatory",
-    "backdropKey": "theme-observatory-bg",
-    "musicKey": "theme-default-music",
-    "rarity": "rare",
-    "bgShiftUp": 98,
-    "bgScale": 1
-  },
   "saloon": {
     "displayName": "Saloon",
     "backdropKey": "theme-saloon-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
     "bgShiftUp": 84,
-    "bgScale": 1
-  },
-  "subwaystation": {
-    "displayName": "Subway Station",
-    "backdropKey": "theme-subwaystation-bg",
-    "musicKey": "theme-default-music",
-    "rarity": "rare",
-    "bgShiftUp": 113,
-    "bgScale": 1
-  },
-  "sushi": {
-    "displayName": "Sushi Restaurant",
-    "backdropKey": "theme-sushi-bg",
-    "musicKey": "theme-default-music",
-    "rarity": "rare",
-    "bgShiftUp": 104,
-    "bgScale": 1
-  },
-  "robotfactory": {
-    "displayName": "Robot Factory",
-    "backdropKey": "theme-robotfactory-bg",
-    "musicKey": "theme-default-music",
-    "rarity": "rare",
-    "bgShiftUp": 95,
     "bgScale": 1
   },
   "cathedral": {
@@ -119,14 +87,6 @@
     "bgShiftUp": 55,
     "bgScale": 1
   },
-  "ramenshop": {
-    "displayName": "Ramen Shop",
-    "backdropKey": "theme-ramenshop-bg",
-    "musicKey": "theme-default-music",
-    "rarity": "rare",
-    "bgShiftUp": 94,
-    "bgScale": 1
-  },
   "japanesegarden": {
     "displayName": "Japanese Garden",
     "backdropKey": "theme-japanesegarden-bg",
@@ -150,5 +110,21 @@
     "rarity": "rare",
     "bgShiftUp": 41,
     "bgScale": 1.15
+  },
+  "underwaterpalace": {
+    "displayName": "Underwater Palace",
+    "backdropKey": "theme-underwaterpalace-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 42,
+    "bgScale": 1.16
+  },
+  "piratecove": {
+    "displayName": "Pirate's Cove",
+    "backdropKey": "theme-piratecove-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 31,
+    "bgScale": 1
   }
 }

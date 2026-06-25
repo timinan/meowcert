@@ -18,6 +18,8 @@ export const BACKGROUND_CATALOG = {
   japanesegarden: { id: "japanesegarden", displayName: "Japanese Garden", backdropKey: "theme-japanesegarden-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 19, bgScale: 1.07 },
   wizardlab: { id: "wizardlab", displayName: "Wizard's Lab", backdropKey: "theme-wizardlab-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 15, bgScale: 1.11 },
   dojo: { id: "dojo", displayName: "Dojo", backdropKey: "theme-dojo-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 41, bgScale: 1.15 },
+  underwaterpalace: { id: "underwaterpalace", displayName: "Underwater Palace", backdropKey: "theme-underwaterpalace-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 42, bgScale: 1.16 },
+  piratecove: { id: "piratecove", displayName: "Pirate's Cove", backdropKey: "theme-piratecove-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 15, bgScale: 1.09 },
 } as const;
 
 // Legacy alias — keep so existing THEME_CATALOG consumers compile without a rename sweep.
@@ -37,4 +39,6 @@ export const GENERATED_THEME_CATALOG = [
   BACKGROUND_CATALOG.japanesegarden,
   BACKGROUND_CATALOG.wizardlab,
   BACKGROUND_CATALOG.dojo,
+  BACKGROUND_CATALOG.underwaterpalace,
+  BACKGROUND_CATALOG.piratecove,
 ] as const;
