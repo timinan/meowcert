@@ -94,6 +94,10 @@ export const Balance = {
    *  uses the same constant to draw the no-place restricted zone so
    *  authors can't drop notes that won't have time to play. */
   roundWindDownMs: 500,
+  /** Combo counts at which a milestone burst fires (screen shake +
+   *  combo text scale-punch). Listed in any order; Game checks for
+   *  exact match each tap. */
+  comboMilestones: [10, 25, 50, 100, 200] as const,
   /** Hold notes: tint applied to the tail balls while the hold is
    *  active (same mint as the 'great' grade flash so success reads
    *  consistently across taps and held notes). */

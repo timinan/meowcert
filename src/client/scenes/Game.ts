@@ -844,8 +844,16 @@ export class Game extends Scene {
   private showHitFeedback(laneId: LaneId, grade: 'perfect' | 'great' | 'miss'): void {
     const txt = this.hitFeedbackTexts[laneId];
     if (!txt) return;
+    // Score-popup style — the +points payload is the headline, grade
+    // word kept as a small companion below it via newline. Per-lane
+    // placement (existing) so popups don't compete with the centered
+    // combo callout above the lanes.
     const label =
-      grade === 'perfect' ? 'PERFECT!' : grade === 'great' ? 'GREAT' : 'MISS';
+      grade === 'perfect'
+        ? `+${Balance.pointsPerfect}\nPERFECT`
+        : grade === 'great'
+        ? `+${Balance.pointsGreat}\nGREAT`
+        : 'MISS';
     const color =
       grade === 'perfect' ? '#4dffff' : grade === 'great' ? '#4dffb4' : '#ff6b6b';
     txt.setText(label);
@@ -874,7 +882,9 @@ export class Game extends Scene {
     });
   }
 
-  /** Pop the combo callout. Hides itself when combo drops to 0. */
+  /** Pop the combo callout. Hides itself when combo drops to 0. Also
+   *  fires a milestone burst (camera shake + bigger scale punch) when
+   *  combo crosses a Balance.comboMilestones value exactly. */
   private pulseCombo(): void {
     const combo = this.score.getCombo();
     if (combo <= 0) {
@@ -885,13 +895,28 @@ export class Game extends Scene {
     this.comboText.setText(`x${combo} COMBO`);
     this.tweens.killTweensOf(this.comboText);
     this.comboText.setAlpha(1);
-    this.comboText.setScale(1.3);
-    this.tweens.add({
-      targets: this.comboText,
-      scale: 1,
-      duration: 140,
-      ease: 'Back.easeOut',
-    });
+    const isMilestone = (Balance.comboMilestones as readonly number[]).includes(combo);
+    if (isMilestone) {
+      // Bigger scale punch on milestone — twice the normal pop, with
+      // a Back.easeOut so it overshoots before settling.
+      this.comboText.setScale(1.9);
+      this.tweens.add({
+        targets: this.comboText,
+        scale: 1,
+        duration: 280,
+        ease: 'Back.easeOut',
+      });
+      // Camera shake — gentle horizontal nudge, not jarring.
+      this.cameras.main.shake(140, 0.005);
+    } else {
+      this.comboText.setScale(1.3);
+      this.tweens.add({
+        targets: this.comboText,
+        scale: 1,
+        duration: 140,
+        ease: 'Back.easeOut',
+      });
+    }
   }
 
   private bindInput(): void {
