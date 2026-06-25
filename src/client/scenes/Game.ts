@@ -1558,10 +1558,11 @@ export class Game extends Scene {
       } else if (note!.isSlide && pointer) {
         // Slide engaged. Lock to this pointer id; scene-level pointermove
         // tracks the head's local x until pointerup decides success/miss.
-        // No tint flip — the source-to-target gradient stays so the
-        // player sees the path they're crossing.
+        // Tube tint flips to the same mint "great" color a tap hit
+        // flashes so the player gets immediate "you caught it" feedback.
         note!.slideActive = true;
         note!.slidePointerId = pointer.id;
+        note!.setSlideEngagedTint(Balance.holdActiveTint);
       } else {
         note!.consumed = true;
         note!.recycle();

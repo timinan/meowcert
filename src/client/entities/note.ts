@@ -286,6 +286,13 @@ export class Note extends GameObjects.Container {
     this.tail.setTint(color);
   }
 
+  /** Overwrite the slide tube's gradient with a solid color (no per-
+   *  corner tints) — Game calls this on slide engage to flip the tube
+   *  to the same mint "great" color a successful tap shows. */
+  setSlideEngagedTint(color: number): void {
+    this.slideTube.setTint(color);
+  }
+
   /** Pick a uniformly random point along the VISIBLE portion of the
    *  tail and return its world position. Used by Game to spawn the
    *  recurring effect burst along the tail. Returns null if no part
