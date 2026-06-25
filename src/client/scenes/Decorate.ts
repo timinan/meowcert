@@ -74,6 +74,10 @@ export class Decorate extends Scene {
    *  the solid-color placeholder for the real thumbnail without the
    *  player needing to leave and re-enter the screen. */
   private onBgTextureAdded: ((key: string) => void) | undefined;
+  /** Debounce timer for the bg-texture refresh — a burst of loads
+   *  coalesces into a single renderTray call instead of N destroy/
+   *  recreate cycles back-to-back. */
+  private bgRefreshTimer: Phaser.Time.TimerEvent | null = null;
 
   // Tab state — each tab tracks its own page index so swapping back-and-forth
   // doesn't lose your spot.
@@ -159,22 +163,20 @@ export class Decorate extends Scene {
     // Shutdown cleanup
     this.events.on(Scenes.Events.SHUTDOWN, () => this.cleanup());
 
-    // Now that the player is in their home base, sequentially prefetch
-    // the remaining theme bgs (Preloader only eager-loads 'stage' to
-    // keep cold-load fast). Brief delay so Decorate's own setup loads
-    // get a clean run first. By the time the player opens the SET
-    // STAGE picker, most/all thumbnails will be ready.
-    this.time.delayedCall(1000, () => BackgroundManager.prefetchAll(this));
+    // Background auto-prefetch is OFF for now — it was firing
+    // `scene.load.start()` concurrent with the hamburger drawer's
+    // tween animation and the listener was thrashing renderTray,
+    // freezing the WebView on mobile. Bgs load on-demand when the
+    // player taps a placeholder; the spinner+LOADING… overlay tells
+    // them it's coming.
 
-    // Live-refresh the tray when prefetched bg textures land. Without
-    // this, a player who opens SET STAGE before a bg finishes loading
-    // sees a solid-color placeholder that never updates — they'd have
-    // to back out and reopen to see the real thumbnail. Strict guards:
-    // - only act on bg textures (other texture adds are unrelated)
-    // - only act when the BACKGROUNDS tab is showing (cats tab doesn't
-    //   need re-render and we don't want to destroy/recreate the cats
-    //   tray underneath an open hamburger drawer or context menu)
-    // - bail if the scene is shutting down (events can fire post-shutdown)
+    // Still listen for texture-add so the picked bg's thumbnail
+    // updates in-place once its on-demand load finishes (player
+    // shouldn't have to back out + reopen). Heavily guarded:
+    // - only act on bg textures (other adds are unrelated)
+    // - only when the BACKGROUNDS tab is showing
+    // - bail if scene is shutting down
+    // - debounced (300ms) so multiple loads coalesce to one re-render
     this.onBgTextureAdded = (key: string) => {
       if (!this.scene.isActive()) return;
       if (this.activeTab !== 'BACKGROUNDS') return;
@@ -183,7 +185,13 @@ export class Decorate extends Scene {
         (b) => b.backdropKey === key,
       );
       if (!isBg) return;
-      this.renderTray();
+      if (this.bgRefreshTimer) this.bgRefreshTimer.remove();
+      this.bgRefreshTimer = this.time.delayedCall(300, () => {
+        this.bgRefreshTimer = null;
+        if (!this.scene.isActive()) return;
+        if (this.activeTab !== 'BACKGROUNDS') return;
+        if (this.trayContainer) this.renderTray();
+      });
     };
     this.textures.on(Phaser.Textures.Events.ADD, this.onBgTextureAdded);
   }
@@ -1089,6 +1097,10 @@ export class Decorate extends Scene {
     if (this.onBgTextureAdded) {
       this.textures.off(Phaser.Textures.Events.ADD, this.onBgTextureAdded);
       this.onBgTextureAdded = undefined;
+    }
+    if (this.bgRefreshTimer) {
+      this.bgRefreshTimer.remove();
+      this.bgRefreshTimer = null;
     }
     this.contextMenu?.destroy();
     this.placementZones?.destroy(true);
