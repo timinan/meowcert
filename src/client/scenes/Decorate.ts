@@ -169,16 +169,21 @@ export class Decorate extends Scene {
     // Live-refresh the tray when prefetched bg textures land. Without
     // this, a player who opens SET STAGE before a bg finishes loading
     // sees a solid-color placeholder that never updates — they'd have
-    // to back out and reopen to see the real thumbnail.
+    // to back out and reopen to see the real thumbnail. Strict guards:
+    // - only act on bg textures (other texture adds are unrelated)
+    // - only act when the BACKGROUNDS tab is showing (cats tab doesn't
+    //   need re-render and we don't want to destroy/recreate the cats
+    //   tray underneath an open hamburger drawer or context menu)
+    // - bail if the scene is shutting down (events can fire post-shutdown)
     this.onBgTextureAdded = (key: string) => {
+      if (!this.scene.isActive()) return;
+      if (this.activeTab !== 'BACKGROUNDS') return;
+      if (!this.trayContainer) return;
       const isBg = Object.values(BACKGROUND_CATALOG).some(
         (b) => b.backdropKey === key,
       );
       if (!isBg) return;
-      // Re-render whatever's currently in the tray — if it's the bgs
-      // tab, the new texture replaces the solid-color box; if it's
-      // some other tab, the redraw is harmless + cheap.
-      if (this.trayContainer) this.renderTray();
+      this.renderTray();
     };
     this.textures.on(Phaser.Textures.Events.ADD, this.onBgTextureAdded);
   }
