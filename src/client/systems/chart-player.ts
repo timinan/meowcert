@@ -3,6 +3,10 @@ import type { Chart, LaneId } from '../../shared/state';
 export interface ChartPlayerOpts {
   loopCount: number;
   noteFallMs: number;
+  /** Hard cap on totalMs regardless of loopCount × pass duration. Game.ts
+   *  uses this to enforce a spawn cutoff so the last note finishes before
+   *  the round-end wall-clock. When omitted, totalMs = loopCount × pass. */
+  maxTotalMs?: number;
 }
 
 export class ChartPlayer {
@@ -20,7 +24,8 @@ export class ChartPlayer {
   ) {
     // 8 steps per bar => msPerStep = (60000 / bpm) / 2 (assumes 8 eighth-notes per bar)
     this.msPerStep = 60000 / (chart.bpm * 2);
-    this.totalMs = this.msPerStep * chart.stepCount * opts.loopCount;
+    const naturalTotal = this.msPerStep * chart.stepCount * opts.loopCount;
+    this.totalMs = Math.min(naturalTotal, opts.maxTotalMs ?? Number.POSITIVE_INFINITY);
   }
 
   onSpawn(fn: (lane: LaneId, hitAt: number) => void): void {

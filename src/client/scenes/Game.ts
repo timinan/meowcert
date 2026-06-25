@@ -1224,17 +1224,22 @@ export class Game extends Scene {
    *  TRY path resolves via initChartPlayer; the Generate path passes the
    *  freshly generated chart directly. */
   private attachChartAndMusic(playChart: Chart): void {
-    // Loop the chart enough passes to fill the round, but STOP spawning
-    // early enough that the LAST possible note (tap, hold, or slide) has
-    // fully resolved before the round-end wall-clock fires. Otherwise
-    // the summary screen yanks notes that were still on-screen mid-fall.
+    // Spawn cutoff so the LAST possible note (tap, hold, or slide)
+    // fully resolves before the round-end wall-clock fires. Otherwise
+    // the summary screen yanks notes still on-screen mid-fall.
     //
-    // Buffer = noteFallMs (fall time) + maxHoldMs (from the actual chart,
-    // not a guess — author-emitted holds can be much longer than the
-    // generator's max) + 1500 ms wind-down so the last tap/hold ends
-    // with visible breathing room before the summary takes over.
-    const onePassMs = (60000 / (playChart.bpm * 2)) * playChart.stepCount;
+    // Buffer = noteFallMs (fall time) + maxHoldMs (from the actual
+    // chart's holds[], since author-emitted holds can be much longer
+    // than the generator's max) + 1500 ms wind-down.
+    //
+    // ChartPlayer's maxTotalMs cap enforces this independent of
+    // loopCount — earlier we clamped loopCount × onePassMs at
+    // onePassMs minimum which silently turned the cutoff into a no-op
+    // for charts whose one pass already filled the round (default
+    // generator output at typical BPMs). maxTotalMs cuts the spawn
+    // loop directly so the cap actually applies.
     const msPerStep = 60000 / (playChart.bpm * 2);
+    const onePassMs = msPerStep * playChart.stepCount;
     let maxHoldMs = 0;
     if (playChart.holds) {
       for (const h of playChart.holds) {
@@ -1244,14 +1249,15 @@ export class Game extends Scene {
     }
     const windDownMs = 1500;
     const spawnCutoffMs = Math.max(
-      onePassMs,
+      msPerStep, // at least one step so very short rounds still emit something
       Balance.maxRoundMs - Balance.noteFallMs - maxHoldMs - windDownMs,
     );
-    const loopCount = Math.max(1, Math.floor(spawnCutoffMs / onePassMs));
+    const loopCount = Math.max(1, Math.ceil(Balance.maxRoundMs / onePassMs) + 1);
 
     this.player = new ChartPlayer(playChart, {
       loopCount,
       noteFallMs: Balance.noteFallMs,
+      maxTotalMs: spawnCutoffMs,
     });
 
     this.player.onSpawn((lane, hitAt) => this.spawnNote(lane, hitAt));
