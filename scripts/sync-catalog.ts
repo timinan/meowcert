@@ -241,6 +241,29 @@ async function genMusic(): Promise<number> {
   } catch {
     // missing or unparseable — write an empty catalog so MusicSystem stays silent
   }
+  // Read user-extensible taxonomies (vibes/genres/moods) so the game's
+  // SongPicker can offer any custom values Tim added via the
+  // calibrator. Falls back to the canonical seed if the file's missing.
+  let tax: { vibes?: string[]; genres?: string[]; moods?: string[] } = {};
+  try {
+    const taxText = await fs.readFile(
+      path.join(PROJECT_ROOT, 'tools', 'music', 'taxonomies.json'),
+      'utf8',
+    );
+    tax = JSON.parse(taxText) as typeof tax;
+  } catch {
+    // missing — use defaults below
+  }
+  const vibes = tax.vibes ?? ['upbeat', 'melodic', 'smooth'];
+  const genres = tax.genres ?? [
+    'bubblegum-pop', 'synthwave', 'lo-fi', 'bossa-nova', 'acoustic-folk',
+    'chiptune', 'jazz', 'funk', 'ambient', 'house',
+    'rock', 'dance-pop', 'trance', 'hip-hop', 'world',
+  ];
+  const moods = tax.moods ?? [
+    'energetic', 'chill', 'playful', 'romantic', 'mysterious',
+    'dramatic', 'nostalgic', 'bright', 'dark', 'dreamy',
+  ];
   const entries = Object.entries(raw);
   const catalogLines: string[] = [];
   for (const [id, v] of entries) {
@@ -256,6 +279,12 @@ async function genMusic(): Promise<number> {
     BANNER,
     '',
     `import type { BackingTrack } from './state';`,
+    '',
+    `// User-extensible taxonomies sourced from tools/music/taxonomies.json.`,
+    `// SongPicker + calibrator read these to populate genre/mood/vibe pickers.`,
+    `export const BACKING_VIBES: readonly string[] = ${JSON.stringify(vibes)};`,
+    `export const BACKING_GENRES: readonly string[] = ${JSON.stringify(genres)};`,
+    `export const BACKING_MOODS: readonly string[] = ${JSON.stringify(moods)};`,
     '',
     `export const BACKING_CATALOG: Record<string, BackingTrack> = {`,
     ...catalogLines,

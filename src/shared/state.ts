@@ -208,53 +208,21 @@ export const COSMETIC_CATALOG: CosmeticEntry[] = [
  *  - `melodic`  — pretty, dreamy, lo-fi, ambient, melodic
  *  - `smooth`   — jazzy, bossa, lounge, soulful
  */
-export type BackingVibe = 'upbeat' | 'melodic' | 'smooth';
+/** Vibe / Genre / Mood are user-extensible strings — the calibrator
+ *  edits tools/music/taxonomies.json and sync-catalog regenerates
+ *  BACKING_VIBES / BACKING_GENRES / BACKING_MOODS into the generated
+ *  catalog. Strict string unions were tried and reverted: anything Tim
+ *  added via the calibrator failed to type-check, and the game's
+ *  SongPicker needs to recognize new values at runtime. */
+export type BackingVibe = string;
+export type BackingGenre = string;
+export type BackingMood = string;
 
-/** Musical genre — what kind of music it is. Drives prompt-generator
- *  suggestions and (eventually) lets the editor's song picker filter
- *  by genre instead of just vibe. Edit the list via the music
- *  calibrator; sync-catalog regenerates the TS catalog. */
-export type BackingGenre =
-  | 'bubblegum-pop'
-  | 'synthwave'
-  | 'lo-fi'
-  | 'bossa-nova'
-  | 'acoustic-folk'
-  | 'chiptune'
-  | 'jazz'
-  | 'funk'
-  | 'ambient'
-  | 'house'
-  | 'rock'
-  | 'dance-pop'
-  | 'trance'
-  | 'hip-hop'
-  | 'world';
-
-/** Emotional mood — how the song feels regardless of genre. Songs in
- *  the same genre can swing across many moods. */
-export type BackingMood =
-  | 'energetic'
-  | 'chill'
-  | 'playful'
-  | 'romantic'
-  | 'mysterious'
-  | 'dramatic'
-  | 'nostalgic'
-  | 'bright'
-  | 'dark'
-  | 'dreamy';
-
-/** Stable ordered lists for picker UIs (calibrator + editor). */
-export const BACKING_GENRES: readonly BackingGenre[] = [
-  'bubblegum-pop', 'synthwave', 'lo-fi', 'bossa-nova', 'acoustic-folk',
-  'chiptune', 'jazz', 'funk', 'ambient', 'house',
-  'rock', 'dance-pop', 'trance', 'hip-hop', 'world',
-] as const;
-export const BACKING_MOODS: readonly BackingMood[] = [
-  'energetic', 'chill', 'playful', 'romantic', 'mysterious',
-  'dramatic', 'nostalgic', 'bright', 'dark', 'dreamy',
-] as const;
+/** Stable ordered lists for picker UIs (calibrator + editor + game
+ *  SongPicker). Re-exported from the generated catalog which sources
+ *  them from tools/music/taxonomies.json. Run `npm run sync:catalog`
+ *  after adding new values via the calibrator to refresh. */
+export { BACKING_VIBES, BACKING_GENRES, BACKING_MOODS } from './music-catalog.generated';
 
 /** One backing instrumental loop. Lives in `public/assets/audio/backings/`. */
 export interface BackingTrack {

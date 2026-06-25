@@ -1056,6 +1056,10 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(200, { 'content-type': 'application/json' });
         res.end(JSON.stringify({ ok: true, slug, list: tax[kind] }));
         console.log(`[music-taxonomy] added ${kind} = ${slug}`);
+        // Regenerate music-catalog.generated.ts so the game's SongPicker
+        // (which imports BACKING_VIBES/GENRES/MOODS from the generated
+        // file) picks up the new value on the next bundle rebuild.
+        scheduleCatalogSync();
       } catch (e) {
         res.writeHead(400, { 'content-type': 'application/json' });
         res.end(JSON.stringify({ ok: false, error: e.message }));
