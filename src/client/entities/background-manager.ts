@@ -56,6 +56,33 @@ export class BackgroundManager {
     this.scene.load.start();
   }
 
+  /** Background prefetch: queue up every theme bg that isn't cached
+   *  yet and load them sequentially (one at a time so we don't hog
+   *  bandwidth from the active scene). Call from the first interactive
+   *  scene after Preloader hands off — by the time the player opens
+   *  the bg picker, most/all thumbnails will already be ready.
+   *
+   *  Safe to call multiple times: each call skips entries that landed
+   *  in the cache since the previous run, so repeated invocations
+   *  (e.g., re-entering Decorate) just resume where the queue left off. */
+  static prefetchAll(scene: Scene): void {
+    const ids = Object.keys(BACKGROUND_CATALOG) as BackgroundId[];
+    const next = (i: number): void => {
+      if (i >= ids.length) return;
+      const id = ids[i]!;
+      const entry = BACKGROUND_CATALOG[id];
+      if (!entry || scene.textures.exists(entry.backdropKey)) {
+        next(i + 1);
+        return;
+      }
+      const eventKey = `filecomplete-image-${entry.backdropKey}`;
+      scene.load.image(entry.backdropKey, `assets/themes/${entry.id}-bg.png`);
+      scene.load.once(eventKey, () => next(i + 1));
+      scene.load.start();
+    };
+    next(0);
+  }
+
   /** Redraws the container contents for the active background id.
    *  Renders the catalog's backdrop texture stretched to fill the
    *  canvas. Falls back to a solid color rect if the texture isn't

@@ -153,6 +153,13 @@ export class Decorate extends Scene {
 
     // Shutdown cleanup
     this.events.on(Scenes.Events.SHUTDOWN, () => this.cleanup());
+
+    // Now that the player is in their home base, sequentially prefetch
+    // the remaining theme bgs (Preloader only eager-loads 'stage' to
+    // keep cold-load fast). Brief delay so Decorate's own setup loads
+    // get a clean run first. By the time the player opens the SET
+    // STAGE picker, most/all thumbnails will be ready.
+    this.time.delayedCall(1000, () => BackgroundManager.prefetchAll(this));
   }
 
   // ---------------------------------------------------------------------------
