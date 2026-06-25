@@ -31,4 +31,6 @@ export const BACKING_CATALOG: Record<string, BackingTrack> = {
   "the-great-awakening": { id: "the-great-awakening", displayName: "The Great Awakening", speedLabel: "fast", vibe: "upbeat", genre: "lo-fi", mood: "chill", bpm: 130, audioKey: "backing-the-great-awakening", loopDurationMs: 62000 },
   "vice-circuit-1": { id: "vice-circuit-1", displayName: "Vice Circuit (1)", speedLabel: "fast", vibe: "upbeat", genre: "lo-fi", mood: "chill", bpm: 130, audioKey: "backing-vice-circuit-1", loopDurationMs: 62000 },
   "vice-circuit": { id: "vice-circuit", displayName: "Vice Circuit", speedLabel: "fast", vibe: "upbeat", genre: "lo-fi", mood: "chill", bpm: 130, audioKey: "backing-vice-circuit", loopDurationMs: 62000 },
+  "basement-spin-2": { id: "basement-spin-2", displayName: "Basement Spin", speedLabel: "fast", vibe: "upbeat", bpm: 130, audioKey: "backing-basement-spin-2", loopDurationMs: 62000 },
+  "neon-pulse-remove-section": { id: "neon-pulse-remove-section", displayName: "Neon Pulse (Remove Section)", speedLabel: "fast", vibe: "upbeat", bpm: 130, audioKey: "backing-neon-pulse-remove-section", loopDurationMs: 62000 },
 };

@@ -229,22 +229,6 @@
     "bpm": 130,
     "loopDurationMs": 62000
   },
-  "windy-floor-1": {
-    "id": "windy-floor-1",
-    "displayName": "Windy Floor (1)",
-    "speedLabel": "fast",
-    "vibe": "upbeat",
-    "bpm": 130,
-    "loopDurationMs": 62000
-  },
-  "windy-floor-2": {
-    "id": "windy-floor-2",
-    "displayName": "Windy Floor (2)",
-    "speedLabel": "fast",
-    "vibe": "upbeat",
-    "bpm": 130,
-    "loopDurationMs": 62000
-  },
   "windy-floor": {
     "id": "windy-floor",
     "displayName": "Windy Floor",
