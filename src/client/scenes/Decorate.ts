@@ -967,8 +967,15 @@ export class Decorate extends Scene {
 
       // Background backdrop as the actual thumbnail. Borderless on
       // inactive thumbs (matches dressing room treatment); active bg
-      // gets a green ring so the current pick still pops.
-      const thumb = this.textures.exists(entry.backdropKey)
+      // gets a green ring so the current pick still pops. While the
+      // texture is still streaming in (prefetcher hasn't reached it
+      // yet), render a solid-color placeholder + spinner + LOADING…
+      // text so the player sees that it's coming, not just an empty
+      // box. The texture-add listener (onBgTextureAdded) re-renders
+      // this tray as soon as the file lands — placeholder swaps to
+      // the real thumbnail without the player needing to back out.
+      const isLoaded = this.textures.exists(entry.backdropKey);
+      const thumb = isLoaded
         ? this.add
             .image(x + thumbW / 2, y + thumbH / 2, entry.backdropKey)
             .setDisplaySize(thumbW, thumbH)
@@ -999,6 +1006,37 @@ export class Decorate extends Scene {
 
       this.trayContainer.add([thumb, label]);
       this.trayContainer.add(border);
+
+      if (!isLoaded) {
+        // Spinner — Unicode ↻ rotated continuously, killed automatically
+        // by removeAll(true) when the tray re-renders on texture load.
+        const spinner = this.add
+          .text(x + thumbW / 2, y + thumbH / 2 - 8, '↻', {
+            fontFamily: '"Courier New", monospace',
+            fontStyle: 'bold',
+            fontSize: '22px',
+            color: '#ffffff',
+          })
+          .setOrigin(0.5);
+        this.tweens.add({
+          targets: spinner,
+          angle: 360,
+          duration: 900,
+          repeat: -1,
+          ease: 'Linear',
+        });
+        const loadingLabel = this.add
+          .text(x + thumbW / 2, y + thumbH / 2 + 12, 'LOADING…', {
+            fontFamily: '"Courier New", monospace',
+            fontStyle: 'bold',
+            fontSize: '8px',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2,
+          })
+          .setOrigin(0.5);
+        this.trayContainer.add([spinner, loadingLabel]);
+      }
 
       if (isActive) {
         const badge = this.add.circle(x + thumbW - 6, y + 6, 7, 0x4dffb4, 1);
