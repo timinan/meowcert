@@ -393,12 +393,16 @@ export class Note extends GameObjects.Container {
       this.slideArrow.setVisible(!headAbove);
     }
 
-    // Tail vibration jitter — layered sines for organic feel.
+    // Tail sway — smooth single-sine pulse at ~5 Hz so the column
+    // visibly "breathes" without reading as a vibration. Body + cap
+    // move in lockstep so the whole tail rocks together.
     if (this.holdActive) {
-      const t = this.scene.time.now;
-      this.tail.x = Math.sin(t * 0.15) * jitterPx + Math.sin(t * 0.06) * (jitterPx * 0.35);
+      const offset = Math.sin(this.scene.time.now * 0.03) * jitterPx;
+      this.tail.x = offset;
+      this.tailCap.x = offset;
     } else {
       this.tail.x = 0;
+      this.tailCap.x = 0;
     }
   }
 }

@@ -104,10 +104,10 @@ export const Balance = {
    *  active (same mint as the 'great' grade flash so success reads
    *  consistently across taps and held notes). */
   holdActiveTint: 0x4dffb4,
-  /** Hold notes: max ± horizontal jitter (px) applied per frame to
-   *  visible tail balls while held — gives the column a subtle
-   *  vibration cue that the player is in the hold. */
-  holdJitterPx: 2.5,
+  /** Hold notes: peak ± horizontal sway (px) applied each frame to
+   *  the tail body + cap while held. Sine-driven (smooth, not random)
+   *  at a slow frequency so it reads as a gentle pulse, not vibration. */
+  holdJitterPx: 1.5,
   catReactionMs: 500,
   // Rehearsal pass gate. Author must hit at least this accuracy on their
   // own chart (in editor → REHEARSE / testMode) before they're allowed to
