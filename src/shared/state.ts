@@ -155,6 +155,34 @@ export const EFFECT_COSMETIC_CATALOG: CosmeticEntry[] = [
   { id: 'effect-fire',        name: 'Fire',        rarity: 'rare',      slot: 'effect' },
   { id: 'effect-bubbles',     name: 'Bubbles',     rarity: 'uncommon',  slot: 'effect' },
   { id: 'effect-butterfly',   name: 'Butterflies', rarity: 'legendary', slot: 'effect' },
+  // Nature
+  { id: 'effect-leaves',      name: 'Leaves',        rarity: 'common',    slot: 'effect' },
+  { id: 'effect-autumn',      name: 'Autumn Leaves', rarity: 'uncommon',  slot: 'effect' },
+  { id: 'effect-sunflower',   name: 'Sunflowers',    rarity: 'rare',      slot: 'effect' },
+  { id: 'effect-clover',      name: 'Lucky Clovers', rarity: 'rare',      slot: 'effect' },
+  { id: 'effect-mushroom',    name: 'Mushrooms',     rarity: 'uncommon',  slot: 'effect' },
+  // Weather / sky
+  { id: 'effect-lightning',   name: 'Lightning',     rarity: 'rare',      slot: 'effect' },
+  { id: 'effect-clouds',      name: 'Clouds',        rarity: 'common',    slot: 'effect' },
+  { id: 'effect-sunbeam',     name: 'Sunbeams',      rarity: 'uncommon',  slot: 'effect' },
+  { id: 'effect-moon',        name: 'Moonlight',     rarity: 'uncommon',  slot: 'effect' },
+  { id: 'effect-rainbow',     name: 'Rainbows',      rarity: 'legendary', slot: 'effect' },
+  // Sweets
+  { id: 'effect-cherry',      name: 'Cherries',      rarity: 'common',    slot: 'effect' },
+  { id: 'effect-candy',       name: 'Candy',         rarity: 'common',    slot: 'effect' },
+  { id: 'effect-cupcake',     name: 'Cupcakes',      rarity: 'uncommon',  slot: 'effect' },
+  { id: 'effect-donut',       name: 'Donuts',        rarity: 'uncommon',  slot: 'effect' },
+  // Cosmic / magical
+  { id: 'effect-dizzy',       name: 'Dizzy Stars',   rarity: 'uncommon',  slot: 'effect' },
+  { id: 'effect-glow-star',   name: 'Glow Stars',    rarity: 'rare',      slot: 'effect' },
+  { id: 'effect-diamond',     name: 'Diamonds',      rarity: 'legendary', slot: 'effect' },
+  // Cat-themed
+  { id: 'effect-paws',        name: 'Paw Prints',    rarity: 'common',    slot: 'effect' },
+  { id: 'effect-fish',        name: 'Fish',          rarity: 'rare',      slot: 'effect' },
+  { id: 'effect-bird',        name: 'Birds',         rarity: 'rare',      slot: 'effect' },
+  // Charm
+  { id: 'effect-balloon',     name: 'Balloons',      rarity: 'common',    slot: 'effect' },
+  { id: 'effect-crown',       name: 'Crowns',        rarity: 'legendary', slot: 'effect' },
 ];
 
 /** Merged cosmetic catalog: generated atlas-backed cosmetics + effect cosmetics. */
