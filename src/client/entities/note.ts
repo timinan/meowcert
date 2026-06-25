@@ -336,27 +336,33 @@ export class Note extends GameObjects.Container {
   }
 
   /** Slide-and-return variant. Outbound (ball moving toward target):
-   *  tube stays FULLY visible (covers source→target the whole time).
-   *  Return (ball moving back to source after reaching target): tube
-   *  erases behind the ball, shrinking to cover only ball→target. So
-   *  on the way home, the tube visibly retreats toward the target. */
+   *  tube stays FULLY visible (covers source→target the whole time) and
+   *  the ◀▶ arrow stays at the target end. Return (ball moving back to
+   *  source after reaching target): the ball EATS the tube — visible
+   *  tube spans only [source, ball], so as the ball returns home the
+   *  tube shrinks to nothing. The arrow hides immediately on flip to
+   *  return so it doesn't sit orphaned at the target. */
   setSlideReturnHeadX(localX: number): void {
     this.ball.x = localX;
     this.letters.x = localX;
     if (!this.slideReturnReachedTarget) {
-      // Outbound — keep tube fully visible (full source→target span).
+      // Outbound — keep tube fully visible (full source→target span)
+      // and arrow visible at target.
       const tubeLen = Math.abs(this.slideDeltaX);
       this.slideTube.setPosition(this.slideDeltaX / 2, 0);
       this.slideTube.setDisplaySize(SLIDE_TUBE_THICKNESS, tubeLen);
+      this.slideArrow.setVisible(true);
     } else {
-      // Return — erase the portion between source (x=0) and the ball.
-      // Remaining tube spans [ball, target]. Same math as the regular
-      // slide's tube erasure, just relative to the (now reversed)
-      // motion direction.
-      const remainingLen = Math.abs(this.slideDeltaX - localX);
-      const center = (localX + this.slideDeltaX) / 2;
+      // Return — ball eats the tube. Visible tube spans [source, ball]
+      // (= [0, localX]), so as the ball returns toward source both
+      // tube center and length shrink toward zero. Arrow hides — its
+      // job ("get to target") is done; leaving it floating at the
+      // target end while the tube collapses looked detached.
+      const remainingLen = Math.abs(localX);
+      const center = localX / 2;
       this.slideTube.setPosition(center, 0);
       this.slideTube.setDisplaySize(SLIDE_TUBE_THICKNESS, remainingLen);
+      this.slideArrow.setVisible(false);
     }
   }
 
