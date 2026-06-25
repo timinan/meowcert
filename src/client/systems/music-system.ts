@@ -7,6 +7,7 @@ import {
 } from '@/../shared/state';
 import { NoteSynth } from './note-synth';
 import { getEffectiveMusicVolume, onUserSettingsChange } from './user-settings';
+import { getSlot } from '@/services/custom-song-store';
 
 /**
  * Audio runtime for one round. Owns:
@@ -41,6 +42,12 @@ export class MusicSystem {
    *  more than once for the same round is cheap — subsequent calls reuse
    *  this promise so start() and an upfront preload() resolve together. */
   private loadPromise: Promise<void> | null = null;
+  /** Resolved custom-song slot (blob + startSec + bpm) for chart.audioKey
+   *  === 'custom'. Cached so start() doesn't re-query IndexedDB. */
+  private customSlot: { startSec: number } | null = null;
+  /** Phaser audio cache key used for the loaded custom-song blob. Distinct
+   *  from any catalog id so it doesn't collide. */
+  private static readonly CUSTOM_KEY = 'custom-song';
 
   constructor(
     private readonly scene: Scene,
@@ -60,6 +67,14 @@ export class MusicSystem {
    */
   preload(): Promise<void> {
     if (this.loadPromise) return this.loadPromise;
+    // Custom-song path: pull the Blob from IndexedDB and load it under
+    // a fixed cache key. Always evict the previous custom-song entry
+    // first so a player who REPLACEd their song doesn't accidentally
+    // hear the old one (the cache key stays the same across replaces).
+    if (this.chart.audioKey === 'custom') {
+      this.loadPromise = this.preloadCustom();
+      return this.loadPromise;
+    }
     const backing = this.pickBacking();
     if (!backing) {
       this.loadPromise = Promise.resolve();
@@ -89,6 +104,39 @@ export class MusicSystem {
     return this.loadPromise;
   }
 
+  private async preloadCustom(): Promise<void> {
+    const slot = await getSlot();
+    if (!slot) {
+      // No slot means the player nuked it between scene start and now —
+      // round goes silent. Logging here so console makes the cause clear.
+      console.warn('[MusicSystem] custom-song slot missing, round will be silent');
+      return;
+    }
+    this.customSlot = { startSec: slot.startSec };
+    const cache = this.scene.cache.audio;
+    // Evict the prior custom-song entry so a REPLACE between rounds
+    // doesn't keep serving the stale Blob from cache.
+    if (cache.exists(MusicSystem.CUSTOM_KEY)) cache.remove(MusicSystem.CUSTOM_KEY);
+    return new Promise<void>((resolve) => {
+      const loader = this.scene.load;
+      const url = URL.createObjectURL(slot.blob);
+      const onComplete = () => {
+        loader.off('loaderror', onError);
+        URL.revokeObjectURL(url);
+        resolve();
+      };
+      const onError = (file: { key: string }) => {
+        if (file.key === MusicSystem.CUSTOM_KEY) {
+          console.warn('[MusicSystem] custom-song load failed');
+        }
+      };
+      loader.audio(MusicSystem.CUSTOM_KEY, url);
+      loader.once(Loader.Events.COMPLETE, onComplete);
+      loader.on('loaderror', onError);
+      if (!loader.isLoading()) loader.start();
+    });
+  }
+
   /**
    * Start the backing track for this round. Awaits the lazy load if
    * needed — typically a no-op because Game.create kicked preload off
@@ -102,6 +150,26 @@ export class MusicSystem {
     if (this.destroyed) return;
     await this.preload();
     if (this.destroyed) return;
+    // Custom-song path: no catalog lookup, no loop. Seek = saved startSec
+    // (the chunk the player wants to rehearse) + any in-chart offset
+    // (rehearse-from-page in the editor — currently unreachable from
+    // SongPicker but kept consistent with the catalog path).
+    if (this.chart.audioKey === 'custom') {
+      if (!this.customSlot) return;
+      if (!this.scene.cache.audio.exists(MusicSystem.CUSTOM_KEY)) return;
+      this.backing = this.scene.sound.add(MusicSystem.CUSTOM_KEY, {
+        loop: false,
+        volume: BACKING_VOLUME * getEffectiveMusicVolume(),
+      });
+      const seekSec = this.customSlot.startSec + startOffsetMs / 1000;
+      this.backing.play({ seek: seekSec });
+      this.settingsUnsubscribe = onUserSettingsChange(() => {
+        if (!this.backing) return;
+        const s = this.backing as Sound.WebAudioSound;
+        s.setVolume(BACKING_VOLUME * getEffectiveMusicVolume());
+      });
+      return;
+    }
     const backing = this.pickBacking();
     if (!backing) return;
     if (!this.scene.cache.audio.exists(backing.audioKey)) return;

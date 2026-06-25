@@ -9,6 +9,7 @@ import {
   type BackingGenre,
   type BackingMood,
 } from '@/../shared/state';
+import { CustomSongModal } from './custom-song-modal';
 const SONGS_PER_PAGE = 5;
 const PREVIEW_VOLUME = 0.6;
 
@@ -55,6 +56,8 @@ export class SongPickerModal {
   private selectedMood: BackingMood | 'all' = 'all';
   private selectedAudioKey: string | null = null;
   private page = 0;
+  private showCustomSongTile = false;
+  private customSongModal: CustomSongModal | null = null;
   private onPickRef: ((result: SongPickerResult) => void) | null = null;
   private onCancelRef: (() => void) | null = null;
 
@@ -64,10 +67,16 @@ export class SongPickerModal {
     initial?: { audioKey?: string; vibe?: BackingVibe };
     onPick: (result: SongPickerResult) => void;
     onCancel?: () => void;
+    /** Show a "CUSTOM SONG" entry at the top of the vibe step that
+     *  routes into the local-only custom-song flow. Set true only on
+     *  the rehearsal entry path — charts that get posted publicly must
+     *  use catalog songs (no copyright surface for shared content). */
+    showCustomSong?: boolean;
   }): void {
     this.close();
     this.onPickRef = args.onPick;
     this.onCancelRef = args.onCancel ?? null;
+    this.showCustomSongTile = args.showCustomSong === true;
 
     const availableVibes = this.availableVibes();
     if (availableVibes.length === 0) {
@@ -95,6 +104,7 @@ export class SongPickerModal {
 
   close(): void {
     this.stopPreview();
+    this.customSongModal?.close();
     if (this.container) {
       this.container.destroy(true);
       this.container = null;
@@ -107,6 +117,24 @@ export class SongPickerModal {
     this.page = 0;
     this.onPickRef = null;
     this.onCancelRef = null;
+  }
+
+  /** Hand off to the custom-song flow, then fire the picker's onPick
+   *  with the result so the caller treats it like any other song pick
+   *  (audioKey='custom' routes the downstream code into the IndexedDB
+   *  blob path in MusicSystem). */
+  private openCustomSongModal(): void {
+    if (!this.customSongModal) this.customSongModal = new CustomSongModal(this.scene);
+    this.customSongModal.open({
+      onDone: (result) => {
+        const cb = this.onPickRef;
+        this.close();
+        cb?.({ audioKey: result.audioKey, bpm: result.bpm, vibe: result.vibe });
+      },
+      // Cancelled custom flow leaves the SongPicker open on the vibe
+      // step so the player can pick a catalog song instead.
+      onCancel: () => { /* no-op — picker stays open */ },
+    });
   }
 
   destroy(): void {
@@ -123,15 +151,43 @@ export class SongPickerModal {
     const btnW = Math.min(284, this.scene.scale.width - 24) - 56;
     const btnH = 48;
     const btnGap = 12;
-    const stackH = vibes.length * btnH + (vibes.length - 1) * btnGap;
+    // Custom-song tile (rehearsal entry only) prepends an extra row at
+    // the top of the stack so it's the first thing the player sees.
+    const totalRows = vibes.length + (this.showCustomSongTile ? 1 : 0);
+    const stackH = totalRows * btnH + Math.max(0, totalRows - 1) * btnGap;
     // Title area (~70px) + stack + gap + cancel (32) + pad
     const panelH = SongPickerModal.TITLE_AREA_H + stackH + 24 + 32 + 20;
 
     const { panelX, panelY, panelW, cx } = this.renderChrome(panelH, 'PICK A SONG', 'Choose a vibe');
 
+    let rowIndex = 0;
     const topY = panelY + SongPickerModal.TITLE_AREA_H + btnH / 2;
+
+    if (this.showCustomSongTile) {
+      const y = topY;
+      // Distinct chrome — yellow primary action color — so the custom
+      // entry reads as "different thing" vs the regular vibe options.
+      const bg = this.scene.add
+        .rectangle(cx, y, btnW, btnH, 0xffd34d, 1)
+        .setInteractive({ useHandCursor: true });
+      bg.on('pointerover', () => bg.setFillStyle(0xffe680, 1));
+      bg.on('pointerout', () => bg.setFillStyle(0xffd34d, 1));
+      bg.on('pointerdown', () => this.openCustomSongModal());
+      const txt = this.scene.add
+        .text(cx, y, '🎵  CUSTOM SONG', {
+          fontFamily: 'Pixeloid Sans, sans-serif',
+          fontStyle: 'bold',
+          fontSize: '14px',
+          color: '#1a0a2e',
+        })
+        .setOrigin(0.5);
+      this.container!.add([bg, txt]);
+      this.stepChildren.push(bg, txt);
+      rowIndex++;
+    }
+
     vibes.forEach((v, i) => {
-      const y = topY + i * (btnH + btnGap);
+      const y = topY + (rowIndex + i) * (btnH + btnGap);
       const bg = this.scene.add
         .rectangle(cx, y, btnW, btnH, 0x2c1856, 1)
         .setStrokeStyle(2, 0xc678ff, 0.8)

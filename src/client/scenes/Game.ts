@@ -1806,6 +1806,10 @@ export class Game extends Scene {
             ? { vibe: this.playerState.chart.vibe }
             : {}),
       },
+      // Rehearsal-only entry so the custom-song option only surfaces here
+      // (catalog-only on the ChartEditor entry — anything that gets
+      // posted publicly has to use a known catalog song).
+      showCustomSong: true,
       onPick: (result) => {
         this.pendingSong = result;
         this.showDifficultyPicker();
