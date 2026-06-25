@@ -136,16 +136,16 @@
   <section class="section">
     <div class="section-head">
       <h2>🖼  Backgrounds</h2>
-      <span class="hint">chunky pixel art · 1024×1820 · decoration in top 3/10 · horizon at y ≈ 546</span>
+      <span class="hint">chunky pixel art · 1024×2200 · decoration in top 3/10 · horizon at y ≈ 660</span>
     </div>
     <p class="blurb">
-      v8 composition rule: <b>1024×1820 portrait</b> (taller than v7's 1536 so
-      the floor covers the full in-game screen), densely-decorated <b>top 3/10</b>
-      above the horizon at y ≈ 546, completely empty floor in the <b>bottom 7/10</b>
-      for the engine to seat cats on. v7's top 1/5 was too cramped; v8 gives
-      the decoration more room while still leaving plenty of clear floor.
-      FAILURE MODE warnings and explicit negative constraints stop the model
-      from drifting.
+      v9 composition rule: <b>1024×2200 portrait</b> (taller than v8's 1820 so
+      the floor still covers the in-game screen after bgShiftUp + bgScale crop),
+      densely-decorated <b>top 3/10</b> above the horizon at y ≈ 660, completely
+      empty floor in the <b>bottom 7/10</b> for the engine to seat cats on. v8 was
+      coming out slightly too short — shifted + zoomed bgs were exposing the
+      black canvas at the bottom edge. FAILURE MODE warnings and explicit
+      negative constraints stop the model from drifting.
     </p>
     <button class="regen" id="regen-bg"><span class="icon">🎲</span>Regenerate</button>
 
@@ -193,10 +193,10 @@ const MUSIC_PROMPTS_PER_BATCH = 6;
 
 // ─── Background themes ───────────────────────────────────────────────────
 //
-// Each theme is a structured object that fills the v8 template:
+// Each theme is a structured object that fills the v9 template:
 //
-//   HEADER (constant pixel-art preamble, 1024×1820 portrait)
-//   COMPOSITION RULE: horizon at y ≈ 546 (top 3/10 of the 1820-tall
+//   HEADER (constant pixel-art preamble, 1024×2200 portrait)
+//   COMPOSITION RULE: horizon at y ≈ 660 (top 3/10 of the 2200-tall
 //                     image), what's above/below
 //   ABOVE HORIZON: dense scene-specific props + atmosphere packed
 //                  into the upper 3/10 strip
@@ -213,8 +213,9 @@ const MUSIC_PROMPTS_PER_BATCH = 6;
 const BG_HEADER =
   'Chunky retro pixel art, 16-bit / SNES era style. Blocky pixels, ' +
   'visible large pixel chunks, limited palette, no anti-aliasing, no ' +
-  'smooth gradients. Portrait, exactly 1024 × 1820 pixels (taller than ' +
-  'standard portrait so the floor covers the full game screen).';
+  'smooth gradients. Portrait, exactly 1024 × 2200 pixels (taller than ' +
+  'standard portrait so the floor still covers the full game screen even ' +
+  'after the engine shifts and zooms the image).';
 
 const BG_THEMES = [
   {
@@ -537,13 +538,13 @@ function bgPromptFromTheme(theme) {
   return [
     BG_HEADER,
     '',
-    `**Composition rule (read this first):** Image is 1024 × 1820 portrait. The decorated scene occupies ONLY the top 3/10 of the image. The horizon line ${theme.horizonContext} sits at image y ≈ 546 (three-tenths of the way down the 1820-tall portrait). Below that line (image y 546 to 1820) is a completely empty ${theme.floorMaterial} — that's the bottom 7/10 of the image, a clear floor that fills the in-game playfield. Above the line (image y 0 to 546) is the densely decorated ${theme.title.toLowerCase()} packed into the upper region.`,
+    `**Composition rule (read this first):** Image is 1024 × 2200 portrait. The decorated scene occupies ONLY the top 3/10 of the image. The horizon line ${theme.horizonContext} sits at image y ≈ 660 (three-tenths of the way down the 2200-tall portrait). Below that line (image y 660 to 2200) is a completely empty ${theme.floorMaterial} — that's the bottom 7/10 of the image, a clear floor that fills the in-game playfield. Above the line (image y 0 to 660) is the densely decorated ${theme.title.toLowerCase()} packed into the upper region.`,
     '',
-    `**Above the horizon (image y 0 to 546, the top 3/10):** ${theme.aboveHorizon}. Pack this upper region densely with no large empty zones — the decorated band has real vertical space so use it: foreground props at the bottom of the band, mid-ground in the middle, ceiling / sky / distant atmosphere at the very top.`,
+    `**Above the horizon (image y 0 to 660, the top 3/10):** ${theme.aboveHorizon}. Pack this upper region densely with no large empty zones — the decorated band has real vertical space so use it: foreground props at the bottom of the band, mid-ground in the middle, ceiling / sky / distant atmosphere at the very top.`,
     '',
-    `**Below the horizon (image y 546 to 1820, the bottom 7/10):** clean flat ${theme.floorMaterial}. No props, no objects, no decoration of any kind. Completely empty — this is the entire bottom seven-tenths of the image and it must read as one continuous empty floor.`,
+    `**Below the horizon (image y 660 to 2200, the bottom 7/10):** clean flat ${theme.floorMaterial}. No props, no objects, no decoration of any kind. Completely empty — this is the entire bottom seven-tenths of the image and it must read as one continuous empty floor.`,
     '',
-    `**FAILURE MODE — do NOT do this:** do not put any ${theme.failureProps}, or any other objects below image y 546 (the game draws the cats on top of the floor — the bg must NOT include cat seating). Do not let the decoration leak past the top 3/10 of the image. Do not leave the upper region sparse. Do not put the horizon line significantly lower than y 546 — the floor needs the full bottom seven-tenths of the image.`,
+    `**FAILURE MODE — do NOT do this:** do not put any ${theme.failureProps}, or any other objects below image y 660 (the game draws the cats on top of the floor — the bg must NOT include cat seating). Do not let the decoration leak past the top 3/10 of the image. Do not leave the upper region sparse. Do not put the horizon line significantly lower than y 660 — the floor needs the full bottom seven-tenths of the image.`,
     '',
     `No cats, no characters, no people${theme.negativeExtras ? ', ' + theme.negativeExtras : ''}, no animals anywhere in the scene. Chunky pixel art, not smooth illustration.`,
   ].join('\n');
