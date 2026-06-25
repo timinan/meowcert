@@ -925,10 +925,12 @@ export class ChartEditor extends Scene {
 
       // Tail body + cap — same two-piece TileSprite-body + Image-cap
       // pattern the game uses so the editor preview reads the same way.
-      // Body tiles the texture (no stretch distortion at any length),
-      // cap supplies the rounded end on top.
-      const tailWidth = 28;
-      const capH = 16;
+      // Width matches the TailBody tile width (44) so the TileSprite
+      // shows the full tile (both fuzzy edges) without horizontal
+      // cropping — otherwise the body looks left-shifted vs the head.
+      // Cap aspect = 44:32 to match the source.
+      const tailWidth = 44;
+      const capH = 32;
       const yTop = this.gridTop + localStart * this.cellH + 2;
       const yBottom = headInView
         ? headY
