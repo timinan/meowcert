@@ -1788,6 +1788,7 @@ export class Game extends Scene {
           bpm: song.bpm,
           vibe: song.vibe,
           targetDurationMs: Balance.maxRoundMs,
+          audioKey: song.audioKey,
         });
         chart.audioKey = song.audioKey;
         this.attachChartAndMusic(chart);

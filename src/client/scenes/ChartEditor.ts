@@ -262,6 +262,7 @@ export class ChartEditor extends Scene {
       bpm: song.bpm,
       vibe: song.vibe,
       targetDurationMs: playableMs,
+      audioKey: song.audioKey,
     });
     chart.audioKey = song.audioKey;
     this.finishSetup(chart);

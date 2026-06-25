@@ -116,6 +116,17 @@ function makeRng(seed: number): () => number {
   };
 }
 
+/** Stable string→int hash for the rng seed. Same string ⇒ same number,
+ *  always. Different songs / difficulties / vibes naturally diverge
+ *  because they hash to different ints. */
+function stableSeed(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = (h * 31 + s.charCodeAt(i)) | 0;
+  }
+  return h | 0;
+}
+
 /**
  * Generate a playable chart that fills at least `targetDurationMs` at
  * the selected BPM. The chart is fully populated — no empty pages — so
@@ -133,13 +144,22 @@ export function generateChart(args: {
   bpm: number;
   vibe: BackingVibe;
   targetDurationMs: number;
+  /** Stable song identifier (catalog audioKey or 'custom'). Folded into
+   *  the rng seed so the SAME (song, difficulty, vibe, bpm) combo always
+   *  produces the SAME chart — lets rehearsal feel like real practice
+   *  instead of a fresh roll every time. Omit only when no stable id
+   *  exists (e.g. one-off generator tests). */
+  audioKey?: string;
 }): Chart {
-  const { authorId, title, difficulty, bpm, vibe, targetDurationMs } = args;
+  const { authorId, title, difficulty, bpm, vibe, targetDurationMs, audioKey } = args;
   const profile = PROFILES[difficulty];
   const stepCount = stepsForDuration(bpm, targetDurationMs);
 
-  const seed =
-    (bpm * 31 + difficulty.charCodeAt(0) + vibe.charCodeAt(0) + Date.now()) | 0;
+  // Deterministic seed — same (audioKey, bpm, difficulty, vibe) ⇒ same
+  // chart every regen. Date.now() used to be folded in here, which is
+  // why every "regenerate" in the editor handed back a different chart
+  // and rehearsal felt like fresh terrain on each attempt.
+  const seed = stableSeed(`${audioKey ?? ''}:${bpm}:${difficulty}:${vibe}`);
   const rng = makeRng(seed);
 
   const steps: ChartStep[] = Array.from({ length: stepCount }, () => ({ lanes: [] as LaneId[] }));
