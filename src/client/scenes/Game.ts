@@ -1581,7 +1581,10 @@ export class Game extends Scene {
     // to keep hit timing locked to Balance.noteFallMs at the target.
     const endY = this.scale.height + 80;
     const totalFallMs = ((endY - startY) / (hitY - startY)) * Balance.noteFallMs;
-    note.configure(laneId, x, startY, endY, totalFallMs, hitAtMs, this.laneTints[laneId]);
+    note.configure(
+      laneId, x, startY, endY, totalFallMs, hitAtMs, this.laneTints[laneId],
+      undefined, undefined, Balance.noteFallMs,
+    );
   }
 
   /** Spawn a hold note — head ball + tail of stacked fuzzballs extending
@@ -1612,6 +1615,7 @@ export class Game extends Scene {
     note.configure(
       laneId, x, startY, endY, totalFallMs, hitAtMs, this.laneTints[laneId],
       { tailHeightPx, tailWidthPx, releaseAtMs },
+      undefined, Balance.noteFallMs,
     );
     if (this.holdLaneMask) note.applyTailMask(this.holdLaneMask);
   }
@@ -1639,6 +1643,7 @@ export class Game extends Scene {
         sourceTint: this.laneTints[sourceLane],
         targetTint: this.laneTints[targetLane],
       },
+      Balance.noteFallMs,
     );
   }
 
