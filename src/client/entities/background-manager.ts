@@ -38,49 +38,34 @@ export class BackgroundManager {
   }
 
   /** Lazy-fetch the bg texture if Preloader skipped it. Only 'stage'
-   *  is eager-loaded; everything else lands here. Triggers a redraw
-   *  once the file completes so the solid-color fallback gets replaced
-   *  by the actual bg the moment it's available. */
+   *  is eager-loaded; everything else lands here on demand.
+   *
+   *  Uses a native browser Image + TextureManager.addImage instead of
+   *  Phaser's Loader because the Loader is designed for the preload
+   *  phase and gets into bad states when scene.load.start() is called
+   *  mid-scene concurrent with tweens / other animations (was freezing
+   *  the hamburger drawer). textures.addImage fires the same ADD event
+   *  the texture-load listener listens for, so live-refresh still works. */
   private ensureLoaded(id: BackgroundId): void {
     const entry = BACKGROUND_CATALOG[id];
     if (!entry) return;
     if (this.scene.textures.exists(entry.backdropKey)) return;
-    const eventKey = `filecomplete-image-${entry.backdropKey}`;
-    this.scene.load.image(entry.backdropKey, `assets/themes/${entry.id}-bg.png`);
-    this.scene.load.once(eventKey, () => {
-      // Guard: the player may have switched bgs again before this one
-      // finished downloading — only redraw if the active bg is still
-      // the one this fetch was for.
-      if (this.active === id) this.draw();
-    });
-    this.scene.load.start();
-  }
-
-  /** Background prefetch: queue up every theme bg that isn't cached
-   *  yet and load them sequentially (one at a time so we don't hog
-   *  bandwidth from the active scene). Call from the first interactive
-   *  scene after Preloader hands off — by the time the player opens
-   *  the bg picker, most/all thumbnails will already be ready.
-   *
-   *  Safe to call multiple times: each call skips entries that landed
-   *  in the cache since the previous run, so repeated invocations
-   *  (e.g., re-entering Decorate) just resume where the queue left off. */
-  static prefetchAll(scene: Scene): void {
-    const ids = Object.keys(BACKGROUND_CATALOG) as BackgroundId[];
-    const next = (i: number): void => {
-      if (i >= ids.length) return;
-      const id = ids[i]!;
-      const entry = BACKGROUND_CATALOG[id];
-      if (!entry || scene.textures.exists(entry.backdropKey)) {
-        next(i + 1);
+    const img = new Image();
+    img.onload = () => {
+      // Race guard: scene may have shut down, or another caller may
+      // have already added this key (e.g., a parallel ensureLoaded).
+      if (!this.scene.scene.isActive()) return;
+      if (this.scene.textures.exists(entry.backdropKey)) {
+        if (this.active === id) this.draw();
         return;
       }
-      const eventKey = `filecomplete-image-${entry.backdropKey}`;
-      scene.load.image(entry.backdropKey, `assets/themes/${entry.id}-bg.png`);
-      scene.load.once(eventKey, () => next(i + 1));
-      scene.load.start();
+      this.scene.textures.addImage(entry.backdropKey, img);
+      if (this.active === id) this.draw();
     };
-    next(0);
+    img.onerror = (e) => {
+      console.warn('[BackgroundManager] failed to load bg', id, e);
+    };
+    img.src = `assets/themes/${entry.id}-bg.png`;
   }
 
   /** Redraws the container contents for the active background id.

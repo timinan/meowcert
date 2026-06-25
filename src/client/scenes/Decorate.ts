@@ -163,12 +163,10 @@ export class Decorate extends Scene {
     // Shutdown cleanup
     this.events.on(Scenes.Events.SHUTDOWN, () => this.cleanup());
 
-    // Background auto-prefetch is OFF for now — it was firing
-    // `scene.load.start()` concurrent with the hamburger drawer's
-    // tween animation and the listener was thrashing renderTray,
-    // freezing the WebView on mobile. Bgs load on-demand when the
-    // player taps a placeholder; the spinner+LOADING… overlay tells
-    // them it's coming.
+    // Background auto-prefetch is OFF — bgs lazy-load on demand via
+    // BackgroundManager.ensureLoaded (native Image element, bypasses
+    // Phaser's Loader). Spinner + LOADING… overlay tells the player
+    // it's coming.
 
     // Still listen for texture-add so the picked bg's thumbnail
     // updates in-place once its on-demand load finishes (player
