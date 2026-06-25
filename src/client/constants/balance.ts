@@ -86,9 +86,11 @@ export const Balance = {
    *  combo break. Full hold pays full (steps × pointsPerHoldStep). */
   pointsPerHoldStep: 50,
   /** Hold notes: cadence (ms) at which the lane effect burst + cat
-   *  pulse re-fire while a hold is active. ~220ms reads as a steady
-   *  chug without strobing. */
-  holdEffectIntervalMs: 220,
+   *  pulse re-fire while a hold is active. Bumped 220→320ms — at
+   *  220ms with 3 active holds we were churning ~75 GameObject creates
+   *  per second (score texts + tmp burst targets + particles). 320ms
+   *  still reads as a chug, ~30 % less GameObject pressure. */
+  holdEffectIntervalMs: 320,
   /** Wall-clock buffer at the end of a round between the last note's
    *  full resolution (fall + hold + release) and round-end. Editor
    *  uses the same constant to draw the no-place restricted zone so

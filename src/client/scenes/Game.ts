@@ -817,10 +817,12 @@ export class Game extends Scene {
     const scaleY = this.scale.height / L.DESIGN_H;
     const laneTopY = L.LANE_TOP_Y * scaleY;
     const targetY = L.HIT_LINE_Y * scaleY;
-    // 2 burst points (was 4) — halves the GameObject churn from
-    // tmp-target Image creation + delayed destroy. Visually still
-    // reads as "tail emitting" but lighter on the renderer.
-    const points = n.getVisibleTailWorldPoints(laneTopY, targetY, 2);
+    // 1 burst point along the tail — was 4 → 2 → 1. Each cadence
+    // tick used to spawn 2 tmp Images + 2 bursts + their particles
+    // per hold; on busy charts with 2-3 simultaneous holds this was
+    // the loudest perf hit. One mid-tail point reads as "tail still
+    // emitting" without the GameObject churn.
+    const points = n.getVisibleTailWorldPoints(laneTopY, targetY, 1);
     for (const p of points) {
       const tmp = this.add.image(p.x, p.y, AssetKeys.Image.PspspsTargetWhite);
       tmp.setVisible(false);
