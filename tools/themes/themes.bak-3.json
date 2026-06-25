@@ -28,7 +28,7 @@
     "backdropKey": "theme-icecave-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 70,
+    "bgShiftUp": 65,
     "bgScale": 1.24
   },
   "volcanicpalace": {
@@ -44,8 +44,8 @@
     "backdropKey": "theme-underwater-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 75,
-    "bgScale": 1.08
+    "bgShiftUp": 60,
+    "bgScale": 1.22
   },
   "saloon": {
     "displayName": "Saloon",
@@ -124,7 +124,31 @@
     "backdropKey": "theme-piratecove-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 16,
-    "bgScale": 1.08
+    "bgShiftUp": 15,
+    "bgScale": 1.09
+  },
+  "ramenshop": {
+    "displayName": "Ramen Shop",
+    "backdropKey": "theme-ramenshop-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 53,
+    "bgScale": 1.22
+  },
+  "robotworkshop": {
+    "displayName": "Robot Workshop",
+    "backdropKey": "theme-robotworkshop-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 26,
+    "bgScale": 0.84
+  },
+  "subwaystation": {
+    "displayName": "Subway Station",
+    "backdropKey": "theme-subwaystation-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 39,
+    "bgScale": 1.15
   }
 }

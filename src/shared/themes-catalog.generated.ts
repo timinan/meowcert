@@ -7,9 +7,9 @@ export const BACKGROUND_CATALOG = {
   stage: { id: "stage", displayName: "Meow Live", backdropKey: "theme-stage-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 55, bgScale: 1.19 },
   cattemple: { id: "cattemple", displayName: "Cat Temple", backdropKey: "theme-cattemple-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 49, bgScale: 1.13 },
   pumpkinpatch: { id: "pumpkinpatch", displayName: "Pumpkin Patch", backdropKey: "theme-pumpkinpatch-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: -13, bgScale: 1.19 },
-  icecave: { id: "icecave", displayName: "Ice Cave", backdropKey: "theme-icecave-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 70, bgScale: 1.24 },
+  icecave: { id: "icecave", displayName: "Ice Cave", backdropKey: "theme-icecave-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 65, bgScale: 1.24 },
   volcanicpalace: { id: "volcanicpalace", displayName: "Volcanic Palace", backdropKey: "theme-volcanicpalace-bg", musicKey: "theme-default-music", rarity: "legendary" as const, bgShiftUp: 24, bgScale: 1.09 },
-  underwater: { id: "underwater", displayName: "Under Water", backdropKey: "theme-underwater-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 75, bgScale: 1.08 },
+  underwater: { id: "underwater", displayName: "Under Water", backdropKey: "theme-underwater-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 60, bgScale: 1.22 },
   saloon: { id: "saloon", displayName: "Saloon", backdropKey: "theme-saloon-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 84, bgScale: 1 },
   cathedral: { id: "cathedral", displayName: "Cathedral", backdropKey: "theme-cathedral-bg", musicKey: "theme-default-music", rarity: "legendary" as const, bgShiftUp: 52, bgScale: 1.09 },
   candybakery: { id: "candybakery", displayName: "Candyland Bakery", backdropKey: "theme-candybakery-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 53, bgScale: 1.13 },
@@ -20,6 +20,9 @@ export const BACKGROUND_CATALOG = {
   dojo: { id: "dojo", displayName: "Dojo", backdropKey: "theme-dojo-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 41, bgScale: 1.15 },
   underwaterpalace: { id: "underwaterpalace", displayName: "Underwater Palace", backdropKey: "theme-underwaterpalace-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 42, bgScale: 1.16 },
   piratecove: { id: "piratecove", displayName: "Pirate's Cove", backdropKey: "theme-piratecove-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 15, bgScale: 1.09 },
+  ramenshop: { id: "ramenshop", displayName: "Ramen Shop", backdropKey: "theme-ramenshop-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 53, bgScale: 1.22 },
+  robotworkshop: { id: "robotworkshop", displayName: "Robot Workshop", backdropKey: "theme-robotworkshop-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 26, bgScale: 0.84 },
+  subwaystation: { id: "subwaystation", displayName: "Subway Station", backdropKey: "theme-subwaystation-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 39, bgScale: 1.15 },
 } as const;
 
 // Legacy alias — keep so existing THEME_CATALOG consumers compile without a rename sweep.
@@ -41,4 +44,7 @@ export const GENERATED_THEME_CATALOG = [
   BACKGROUND_CATALOG.dojo,
   BACKGROUND_CATALOG.underwaterpalace,
   BACKGROUND_CATALOG.piratecove,
+  BACKGROUND_CATALOG.ramenshop,
+  BACKGROUND_CATALOG.robotworkshop,
+  BACKGROUND_CATALOG.subwaystation,
 ] as const;
