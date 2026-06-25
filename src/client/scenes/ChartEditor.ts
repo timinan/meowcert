@@ -797,15 +797,22 @@ export class ChartEditor extends Scene {
       const cy = this.gridTop + localStep * this.cellH + this.cellH / 2;
       const srcX = this.colCenterXs[slide.sourceLane]!;
       const tgtX = this.colCenterXs[slide.targetLane]!;
-      const tint = darkenTowardBlack(this.laneTints[slide.sourceLane]!, 0.18);
+      const srcTint = darkenTowardBlack(this.laneTints[slide.sourceLane]!, 0.18);
+      const tgtTint = darkenTowardBlack(this.laneTints[slide.targetLane]!, 0.18);
 
-      // Sideways tube — PSTube-white rotated 90° between source and
-      // target lane centers. Behind the head fuzzball depth-wise.
+      // Sideways tube — PSTube-white stretched horizontally between
+      // source and target lane centers. Tube is naturally vertical so
+      // we just override the displaySize to use it horizontally (no
+      // rotation needed in the editor's smaller cells). Per-vertex
+      // tint paints a source→target lane-color gradient like game-side.
       const tubeLen = Math.abs(tgtX - srcX);
       const tubeMidX = (srcX + tgtX) / 2;
       const tube = this.add.image(tubeMidX, cy, AssetKeys.Image.PspspsTubeWhite);
-      tube.setDisplaySize(tubeLen, 22);
-      tube.setTint(tint);
+      tube.setDisplaySize(tubeLen, 28);
+      // Left side = source if source is to the left of target, else target.
+      const leftTint = slide.targetLane > slide.sourceLane ? srcTint : tgtTint;
+      const rightTint = slide.targetLane > slide.sourceLane ? tgtTint : srcTint;
+      tube.setTint(leftTint, rightTint, leftTint, rightTint);
       tube.setDepth(38);
       this.root.add(tube);
       this.holdGraphics.push(tube);
@@ -814,7 +821,7 @@ export class ChartEditor extends Scene {
       const headSize = Math.min(this.cellW - 4, this.cellH + 2, 56);
       const head = this.add.image(srcX, cy, AssetKeys.Image.PspspsTargetWhite);
       head.setDisplaySize(headSize, headSize);
-      head.setTint(tint);
+      head.setTint(srcTint);
       head.setDepth(40);
       this.root.add(head);
       this.holdGraphics.push(head);
@@ -866,25 +873,23 @@ export class ChartEditor extends Scene {
       const headY = this.gridTop + localEnd * this.cellH + this.cellH / 2;
       const headSize = Math.min(this.cellW - 4, this.cellH + 2, 56);
 
-      // Tail balls — stacked fuzzballs going up from just above the
-      // head. Matches game-side: aggressively overlapping (stride ≪ size)
-      // so the column reads as a single fuzzy tail with no visible
-      // seams between balls.
-      const tailBallSize = 16;
-      const stride = 5;
-      const startBallY = headInView
-        ? headY - stride
-        : this.gridTop + (localEnd + 1) * this.cellH - stride / 2;
-      const topLimitY = this.gridTop + localStart * this.cellH;
-      let by = startBallY;
-      while (by + tailBallSize / 2 > topLimitY) {
-        const tb = this.add.image(cx, by, AssetKeys.Image.PspspsTargetWhite);
-        tb.setDisplaySize(tailBallSize, tailBallSize);
-        tb.setTint(tint);
-        tb.setDepth(38);
-        this.root.add(tb);
-        this.holdGraphics.push(tb);
-        by -= stride;
+      // Tail as the PspspsTubeWhite asset (same one game-side uses for
+      // hold tails) — single stretchy Image instead of the previous
+      // stacked-ball approximation, so the editor preview matches the
+      // in-game look.
+      const tailWidth = 28;
+      const yTop = this.gridTop + localStart * this.cellH + 2;
+      const yBottom = headInView
+        ? headY
+        : this.gridTop + (localEnd + 1) * this.cellH - 2;
+      const tailHeight = yBottom - yTop;
+      if (tailHeight > 0) {
+        const tail = this.add.image(cx, (yTop + yBottom) / 2, AssetKeys.Image.PspspsTubeWhite);
+        tail.setDisplaySize(tailWidth, tailHeight);
+        tail.setTint(tint);
+        tail.setDepth(38);
+        this.root.add(tail);
+        this.holdGraphics.push(tail);
       }
 
       if (headInView) {
