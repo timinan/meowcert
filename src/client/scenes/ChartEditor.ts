@@ -241,13 +241,18 @@ export class ChartEditor extends Scene {
   private buildTemplateChart(song: SongPickerResult, difficulty: GenDifficulty): void {
     const username = this.playerState?.username ?? 'anon';
     const title = this.playerState?.chart?.title ?? 'My Beat';
+    // Target the PLAYABLE window (not the full round) so the chart
+    // doesn't extend into the cutoff zone. 1500ms estimated hold buffer
+    // matches the player's runtime maxHold-aware cutoff for typical
+    // generator output.
+    const playableMs = Balance.maxRoundMs - Balance.noteFallMs - Balance.roundWindDownMs - 1500;
     const chart = generateChart({
       authorId: username,
       title,
       difficulty,
       bpm: song.bpm,
       vibe: song.vibe,
-      targetDurationMs: Balance.maxRoundMs,
+      targetDurationMs: playableMs,
     });
     chart.audioKey = song.audioKey;
     this.finishSetup(chart);
@@ -256,9 +261,11 @@ export class ChartEditor extends Scene {
   private buildScratchChart(song: SongPickerResult): void {
     const username = this.playerState?.username ?? 'anon';
     const title = this.playerState?.chart?.title ?? 'My Beat';
-    // Scratch: pad chart length to one full round at this song's BPM
-    // rounded up to a CHART_PAGE_SIZE so validateChart is happy.
-    const rawSteps = stepsForDuration(song.bpm, Balance.maxRoundMs);
+    // Scratch chart sized to the PLAYABLE window so the author isn't
+    // editing into the cutoff zone. Rounded up to CHART_PAGE_SIZE so
+    // validateChart is happy.
+    const playableMs = Balance.maxRoundMs - Balance.noteFallMs - Balance.roundWindDownMs - 1500;
+    const rawSteps = stepsForDuration(song.bpm, playableMs);
     const stepCount = Math.max(
       CHART_PAGE_SIZE,
       Math.ceil(rawSteps / CHART_PAGE_SIZE) * CHART_PAGE_SIZE,
@@ -275,6 +282,11 @@ export class ChartEditor extends Scene {
    *  back from rehearsal) so the editor opens on the right page. */
   private finishSetup(chart: Chart): void {
     this.chart = chart;
+    // Strip any tap/hold/slide that falls past the playable cutoff —
+    // legacy charts (or template-generated charts before this guard)
+    // can have notes there; they'll never play in-round so visually
+    // clear them up front. New placements are blocked at commit time.
+    this.stripRestrictedNotes();
     const totalPages = Math.max(1, Math.ceil(chart.stepCount / CHART_PAGE_SIZE));
     const requested = Math.max(0, Math.min(totalPages - 1, this.pendingInitialPage));
     this.scrollOffset = requested * CHART_PAGE_SIZE;
@@ -617,6 +629,26 @@ export class ChartEditor extends Scene {
     const msPerStep = 60000 / (this.chart.bpm * 2);
     const cutoffMs = Balance.maxRoundMs - Balance.noteFallMs - Balance.roundWindDownMs;
     return Math.max(1, Math.floor(cutoffMs / msPerStep));
+  }
+
+  /** One-shot cleanup of any tap/hold/slide that lands past the
+   *  playable cutoff. Called on chart load so legacy / generator-
+   *  produced notes in the red zone don't visually persist as
+   *  "uneditable garbage." */
+  private stripRestrictedNotes(): void {
+    const cutoffStep = this.getCutoffStep();
+    for (let s = cutoffStep; s < this.chart.steps.length; s++) {
+      const step = this.chart.steps[s];
+      if (step) step.lanes = [];
+    }
+    if (this.chart.holds) {
+      this.chart.holds = this.chart.holds.filter(
+        (h) => h.startStep < cutoffStep && h.endStep < cutoffStep,
+      );
+    }
+    if (this.chart.slides) {
+      this.chart.slides = this.chart.slides.filter((s) => s.startStep < cutoffStep);
+    }
   }
 
   private toggleCell(localStep: number, lane: LaneId): void {
