@@ -1470,13 +1470,30 @@ export class Game extends Scene {
    *  three yoyo tweens total, running for the whole round. Killed
    *  inside cleanup via the scene's tween manager. */
   private startLanePulse(): void {
-    // Subtler amplitude (was 0.78↔0.92) — too much contrast made
-    // falling notes look jittery against the pulsing wash. 0.82↔0.90
-    // is still a perceivable breath without compounding visual noise.
+    // Bumped amplitude back up (0.95↔0.68) — the 0.82↔0.90 range was
+    // too subtle to read. Compounding the lane pulse with a
+    // COUNTER-PHASE hit-target scale pulse so the playfield breathes:
+    // lane dims → target swells, lane brightens → target shrinks.
+    // Together they create a heartbeat rhythm tied to the BPM.
     for (const lane of this.laneRects) {
       this.tweens.add({
         targets: lane,
-        alpha: { from: 0.90, to: 0.82 },
+        alpha: { from: 0.95, to: 0.68 },
+        duration: this.playMsPerStep * 2,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.inOut',
+      });
+    }
+    // Counter-phase target scale pulse — starts at the opposite end
+    // of the lane tween so they oscillate in mirror image.
+    for (let i = 0; i < this.hitTargets.length; i++) {
+      const target = this.hitTargets[i]!;
+      const base = this.hitTargetBaseScale[i]!;
+      this.tweens.add({
+        targets: target,
+        scaleX: { from: base * 0.92, to: base * 1.08 },
+        scaleY: { from: base * 0.92, to: base * 1.08 },
         duration: this.playMsPerStep * 2,
         yoyo: true,
         repeat: -1,

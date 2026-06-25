@@ -923,23 +923,36 @@ export class ChartEditor extends Scene {
       const headY = this.gridTop + localEnd * this.cellH + this.cellH / 2;
       const headSize = Math.min(this.cellW - 4, this.cellH + 2, 56);
 
-      // Tail as the PspspsTubeWhite asset (same one game-side uses for
-      // hold tails) — single stretchy Image instead of the previous
-      // stacked-ball approximation, so the editor preview matches the
-      // in-game look.
+      // Tail body + cap — same two-piece TileSprite-body + Image-cap
+      // pattern the game uses so the editor preview reads the same way.
+      // Body tiles the texture (no stretch distortion at any length),
+      // cap supplies the rounded end on top.
       const tailWidth = 28;
+      const capH = 16;
       const yTop = this.gridTop + localStart * this.cellH + 2;
       const yBottom = headInView
         ? headY
         : this.gridTop + (localEnd + 1) * this.cellH - 2;
-      const tailHeight = yBottom - yTop;
-      if (tailHeight > 0) {
-        const tail = this.add.image(cx, (yTop + yBottom) / 2, AssetKeys.Image.PspspsTubeWhite);
-        tail.setDisplaySize(tailWidth, tailHeight);
-        tail.setTint(tint);
-        tail.setDepth(38);
-        this.root.add(tail);
-        this.holdGraphics.push(tail);
+      const totalH = yBottom - yTop;
+      if (totalH > 0) {
+        const bodyH = Math.max(0, totalH - capH);
+        if (bodyH > 0) {
+          const body = this.add.tileSprite(
+            cx, yBottom, tailWidth, bodyH, AssetKeys.Image.TailBody,
+          );
+          body.setOrigin(0.5, 1);
+          body.setTint(tint);
+          body.setDepth(38);
+          this.root.add(body);
+          this.holdGraphics.push(body);
+        }
+        const cap = this.add.image(cx, yTop + capH, AssetKeys.Image.TailCap);
+        cap.setOrigin(0.5, 1);
+        cap.setDisplaySize(tailWidth, capH);
+        cap.setTint(tint);
+        cap.setDepth(38);
+        this.root.add(cap);
+        this.holdGraphics.push(cap);
       }
 
       if (headInView) {
