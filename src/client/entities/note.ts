@@ -293,30 +293,39 @@ export class Note extends GameObjects.Container {
     this.slideTube.setTint(color);
   }
 
-  /** Pick a uniformly random point along the VISIBLE portion of the
-   *  tail and return its world position. Used by Game to spawn the
-   *  recurring effect burst along the tail. Returns null if no part
-   *  of the tail is currently inside the lane band. */
-  pickRandomVisibleTailWorldPos(laneTopY: number, targetY: number): { x: number; y: number } | null {
-    if (this.currentTailHeight <= 0) return null;
+  /** Evenly-spaced world-y points along the VISIBLE portion of the
+   *  tail. Used by Game to fire recurring effect bursts simultaneously
+   *  at multiple points along the body so the whole column reads as
+   *  "actively emitting" instead of one spot at a time. Returns []
+   *  if the tail isn't in the lane band. */
+  getVisibleTailWorldPoints(laneTopY: number, targetY: number, count: number): Array<{ x: number; y: number }> {
+    if (this.currentTailHeight <= 0 || count <= 0) return [];
     const tailTopWorld = this.y - this.currentTailHeight;
     const tailBottomWorld = this.y;
     const visTop = Math.max(tailTopWorld, laneTopY);
     const visBottom = Math.min(tailBottomWorld, targetY);
-    if (visBottom <= visTop) return null;
-    const y = visTop + Math.random() * (visBottom - visTop);
-    return { x: this.x, y };
+    if (visBottom <= visTop) return [];
+    const points: Array<{ x: number; y: number }> = [];
+    const step = (visBottom - visTop) / (count + 1);
+    for (let i = 1; i <= count; i++) {
+      points.push({ x: this.x, y: visTop + step * i });
+    }
+    return points;
   }
 
   /** Per-frame update for active and falling hold notes. Mask handles
    *  tail clipping; this just hides the head past the disappear line
-   *  and applies x-jitter to the tail while engaged. */
+   *  and applies smooth sine-wave vibration to the tail while engaged.
+   *  Sine (not random) so the motion reads as a steady wobble instead
+   *  of jagged jitter — same amplitude (jitterPx) but visually smooth. */
   updateHoldVisuals(_laneTopY: number, _targetY: number, disappearY: number, jitterPx: number): void {
     const headPast = this.y > disappearY;
     this.ball.setVisible(!headPast);
     this.letters.setVisible(!headPast);
     if (this.holdActive) {
-      this.tail.x = (Math.random() - 0.5) * 2 * jitterPx;
+      // ~36 Hz oscillation — fast enough to read as vibration, slow
+      // enough to look intentional rather than glitchy.
+      this.tail.x = Math.sin(this.scene.time.now * 0.04) * jitterPx;
     } else {
       this.tail.x = 0;
     }

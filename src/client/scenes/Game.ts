@@ -798,10 +798,12 @@ export class Game extends Scene {
     });
   }
 
-  /** Fire the lane effect's `burst` at a random visible tail ball of
-   *  an active hold, at the same scale ratio the tail balls have to
-   *  the head (22/54 ≈ 0.4). The burst is self-cleaning; the temp
-   *  target Image is destroyed after the burst's animation window. */
+  /** Fire the lane effect's `burst` at 4 evenly-spaced points along
+   *  the visible portion of an active hold's tail — all simultaneously,
+   *  not staggered, at a small scale so the column reads as actively
+   *  emitting without overwhelming other interactions. Each burst gets
+   *  its own throwaway target Image (self-destroyed after the burst's
+   *  animation window). */
   private burstEffectOnTail(n: Note): void {
     const effectId = this.laneEffects[n.laneId];
     if (!effectId) return;
@@ -810,16 +812,13 @@ export class Game extends Scene {
     const scaleY = this.scale.height / L.DESIGN_H;
     const laneTopY = L.LANE_TOP_Y * scaleY;
     const targetY = L.HIT_LINE_Y * scaleY;
-    const worldPos = n.pickRandomVisibleTailWorldPos(laneTopY, targetY);
-    if (!worldPos) return;
-    // Tiny invisible Image at the chosen tail position — burst reads
-    // its x/y for placement. Self-destroys after a beat so it doesn't
-    // accumulate; the burst's own particles/graphics have their own
-    // lifetimes (independent of this target).
-    const tmp = this.add.image(worldPos.x, worldPos.y, AssetKeys.Image.PspspsTargetWhite);
-    tmp.setVisible(false);
-    effect.burst(this, tmp, 0.4);
-    this.time.delayedCall(800, () => tmp.destroy());
+    const points = n.getVisibleTailWorldPoints(laneTopY, targetY, 4);
+    for (const p of points) {
+      const tmp = this.add.image(p.x, p.y, AssetKeys.Image.PspspsTargetWhite);
+      tmp.setVisible(false);
+      effect.burst(this, tmp, 0.25);
+      this.time.delayedCall(800, () => tmp.destroy());
+    }
   }
 
   /** Echo the seated cat's equipped effect out of the lane's fuzzball
