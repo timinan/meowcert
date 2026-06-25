@@ -7,6 +7,7 @@ import { RemoveBadge } from '@/entities/remove-badge';
 import { TopHud } from '@/ui/top-hud';
 import { ContextMenu, buildCatMenu } from '@/ui/context-menu';
 import { SettingsModal } from '@/ui/settings-modal';
+import { InboxModal } from '@/ui/inbox-modal';
 import * as L from '@/constants/scene-layout';
 import { CAT_CATALOG, COSMETIC_CATALOG, BACKGROUND_CATALOG } from '@/../shared/state';
 import { CAT_EFFECT_BY_ID } from '@/effects/cat-effects';
@@ -66,6 +67,7 @@ export class Decorate extends Scene {
   // Tap-menu + placement state
   private contextMenu!: ContextMenu;
   private settingsModal: SettingsModal | null = null;
+  private inboxModal: InboxModal | null = null;
   /** Cat instance id being placed, or null. */
   private placingCatInstanceId: string | null = null;
   private placementZones: GameObjects.Container | null = null;
@@ -492,6 +494,12 @@ export class Decorate extends Scene {
           icon: '🎪',
           key: SceneKeys.VisitShows,
           onTap: () => this.scene.start(SceneKeys.VisitShows, { playerState: this.playerState }),
+        },
+        {
+          label: 'INBOX',
+          description: 'Who played your shows?',
+          icon: '📬',
+          onTap: () => this.openInbox(),
         },
         {
           label: 'SETTINGS',
@@ -1038,6 +1046,8 @@ export class Decorate extends Scene {
     this.seatedNameLabels = [];
     this.settingsModal?.destroy();
     this.settingsModal = null;
+    this.inboxModal?.destroy();
+    this.inboxModal = null;
     this.root?.destroy(true);
     this.hud?.destroy();
   }
@@ -1048,6 +1058,13 @@ export class Decorate extends Scene {
   private openSettings(): void {
     if (!this.settingsModal) this.settingsModal = new SettingsModal(this);
     this.settingsModal.open();
+  }
+
+  /** Open the inbox modal — owner-side view of recent activity on
+   *  their posts. Async because it fetches the inbox stream on open. */
+  private openInbox(): void {
+    if (!this.inboxModal) this.inboxModal = new InboxModal(this);
+    void this.inboxModal.open();
   }
 }
 

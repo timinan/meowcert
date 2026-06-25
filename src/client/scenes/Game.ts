@@ -21,7 +21,15 @@ import { GenerateModal } from '@/ui/generate-modal';
 import { SongPickerModal, type SongPickerResult } from '@/ui/song-picker-modal';
 import { DifficultyPickerModal } from '@/ui/difficulty-picker-modal';
 import { SettingsModal } from '@/ui/settings-modal';
+import { CommentComposeModal } from '@/ui/comment-compose-modal';
 import { CAT_EFFECT_BY_ID, isEffectCosmeticId } from '@/effects/cat-effects';
+import { submitPlay } from '@/services/social-client';
+import {
+  classifyScore,
+  rewardWithComment,
+  type PlaySummary,
+  type GiftPayload,
+} from '@/../shared/social-loop';
 
 /**
  * Phase 5 Game scene — vertical lane rhythm gameplay.
@@ -91,6 +99,7 @@ export class Game extends Scene {
   private pendingStart = true;
   private generateModal: GenerateModal | null = null;
   private settingsModal: SettingsModal | null = null;
+  private commentModal: CommentComposeModal | null = null;
   private songPicker: SongPickerModal | null = null;
   private difficultyPicker: DifficultyPickerModal | null = null;
   /** Carries the song picked in step 1 through to step 2 so the
@@ -1360,10 +1369,86 @@ export class Game extends Scene {
   };
 
   private onPostCommentClicked = (): void => {
-    console.info('[Game] Post Comment clicked. Score:', this.score.get());
-    // Real Devvit comment post wiring comes later. Same retry behavior for now.
-    this.scene.restart({ playerState: this.playerState });
+    // Open the social-loop comment composer. Player gets one screen
+    // to add free-text + optional gift, then POST (=2x reward) or
+    // SKIP (=base reward). Both paths call submitPlay() to record the
+    // run on the leaderboard + inbox + earn coins. Owner defaults to
+    // the chart's authorId; for self-rehearse the server rejects
+    // self-gifting and self-inboxing but the comment flow still runs
+    // through the same UI for now (visitor-mode entry comes next).
+    const summary = this.buildPlaySummary();
+    if (!this.commentModal) this.commentModal = new CommentComposeModal(this);
+    this.commentModal.open({
+      summary,
+      onPost: (commentBody: string, gift: GiftPayload | undefined) => {
+        void this.finalizePlay(summary, commentBody, gift);
+      },
+      onSkip: () => {
+        void this.finalizePlay(summary, undefined, undefined);
+      },
+    });
   };
+
+  /** Build the PlaySummary blob from the round's score + chart context.
+   *  Used by the comment modal preview + submit pipeline. */
+  private buildPlaySummary(): PlaySummary {
+    const visitor = this.playerState?.username ?? 'anon';
+    const owner = this.playChart?.authorId ?? visitor;
+    const postId = (this.registry.get('postId') as string | undefined) ?? 'preview';
+    const totalNotes = this.score.getJudged();
+    const notesHit = this.score.getLanded();
+    const accuracyPct = this.score.getAccuracy();
+    const accuracy = accuracyPct / 100;
+    const passed = accuracyPct >= Balance.passAccuracyPct;
+    const { tier, baseReward } = classifyScore(accuracy, passed);
+    return {
+      visitor,
+      owner,
+      postId,
+      score: this.score.get(),
+      totalNotes,
+      notesHit,
+      maxCombo: this.score.getMaxCombo(),
+      accuracy,
+      passed,
+      tier,
+      baseReward,
+    };
+  }
+
+  /** POST or SKIP path — submit the play to the server. Server returns
+   *  the canonical tier + baseReward (matches our client classify) so
+   *  we trust its number for the toast. Coins land in the visitor's
+   *  state automatically server-side. Then route as before (restart). */
+  private async finalizePlay(
+    summary: PlaySummary,
+    commentBody: string | undefined,
+    gift: GiftPayload | undefined,
+  ): Promise<void> {
+    try {
+      const result = await submitPlay({
+        postId: summary.postId,
+        owner: summary.owner,
+        score: summary.score,
+        totalNotes: summary.totalNotes,
+        notesHit: summary.notesHit,
+        maxCombo: summary.maxCombo,
+        accuracy: summary.accuracy,
+        ...(commentBody ? { commentBody } : {}),
+        ...(gift ? { gift } : {}),
+      });
+      if (result.ok) {
+        const final = rewardWithComment(result.baseReward, !!commentBody);
+        console.info(`[Game] play submitted — ${result.tier} (+${final} coins)`);
+      } else {
+        console.warn('[Game] submitPlay failed:', result.reason);
+      }
+    } catch (err) {
+      console.warn('[Game] submitPlay threw:', err);
+    }
+    if (!this.scene.isActive()) return;
+    this.scene.restart({ playerState: this.playerState });
+  }
 
   // Test-mode summary handlers. Both currently return to ChartEditor since
   // POST is a stub — when the real post flow lands, only onPostFromTestClicked
@@ -2174,6 +2259,10 @@ export class Game extends Scene {
     tearDown('settings-modal', () => {
       this.settingsModal?.destroy();
       this.settingsModal = null;
+    });
+    tearDown('comment-modal', () => {
+      this.commentModal?.destroy();
+      this.commentModal = null;
     });
     tearDown('song-picker', () => {
       this.songPicker?.destroy();
