@@ -13,6 +13,7 @@ const OPTIONS: DifficultyOption[] = [
   { id: 'medium', label: 'NORMAL', blurb: 'Balanced — the default rehearsal', color: 0xffd34d },
   { id: 'spicy',  label: 'SPICY',  blurb: 'Step up: more chords + holds + slides', color: 0xff9a3c },
   { id: 'hard',   label: 'HARD',   blurb: 'Dense chart, tight windows', color: 0xff6b6b },
+  { id: 'insane', label: 'INSANE', blurb: 'All-out chaos — still fair, barely', color: 0xff3399 },
 ];
 
 /**
@@ -62,9 +63,10 @@ export class DifficultyPickerModal {
     this.container.add(scrim);
 
     const panelW = Math.min(284, width - 24);
-    // Bumped 420 → 460 to fit the 4-difficulty stack (EASY/NORMAL/SPICY/HARD)
-    // without colliding with the START/BACK bottom buttons.
-    const panelH = 460;
+    // Bumped 460 → 500 to fit the 5-difficulty stack (EASY / NORMAL /
+    // SPICY / HARD / INSANE) without colliding with the START/BACK
+    // bottom buttons.
+    const panelH = 500;
     const panel = this.scene.add
       .rectangle(cx, cy, panelW, panelH, 0x1a0a2e, 1)
       .setStrokeStyle(2, 0xffd34d, 0.85)
@@ -115,9 +117,9 @@ export class DifficultyPickerModal {
       .setOrigin(0.5);
     this.container.add(subtitle);
 
-    // Stacked option buttons — shrunk from 58→48 + gap 10→8 to fit 4 rows
+    // Stacked option buttons — tightened to 46h + gap 8 to fit 5 rows.
     const btnW = panelW - 48;
-    const btnH = 48;
+    const btnH = 46;
     const gap = 8;
     const topY = cy - panelH / 2 + 88 + btnH / 2;
 

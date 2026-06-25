@@ -9,7 +9,7 @@ import {
   type BackingVibe,
 } from './state';
 
-export type GenDifficulty = 'easy' | 'medium' | 'spicy' | 'hard';
+export type GenDifficulty = 'easy' | 'medium' | 'spicy' | 'hard' | 'insane';
 
 /**
  * Per-difficulty knobs for the procedural chart generator. Tuned by feel
@@ -54,12 +54,16 @@ const PROFILES: Record<GenDifficulty, {
   slideReturnCooldownSteps: number;
 }> = {
   easy:   { density: 0.30, chord2Chance: 0.00, chord3Chance: 0.00, minGapSteps: 2, holdChance: 0.04, holdMinSteps: 2, holdMaxSteps: 3, slideChance: 0.04, slide2LaneChance: 0.00, slideReturnChance: 0.02, slideReturnCooldownSteps: 4 },
-  medium: { density: 0.45, chord2Chance: 0.18, chord3Chance: 0.00, minGapSteps: 1, holdChance: 0.12, holdMinSteps: 2, holdMaxSteps: 4, slideChance: 0.10, slide2LaneChance: 0.30, slideReturnChance: 0.05, slideReturnCooldownSteps: 3 },
+  medium: { density: 0.45, chord2Chance: 0.18, chord3Chance: 0.00, minGapSteps: 1, holdChance: 0.12, holdMinSteps: 2, holdMaxSteps: 4, slideChance: 0.10, slide2LaneChance: 0.30, slideReturnChance: 0.07, slideReturnCooldownSteps: 3 },
   // Spicy sits between medium and hard — meaningful step-up without
-  // jumping straight to the chord-heavy hard profile. All numbers
-  // linearly between medium and hard.
-  spicy:  { density: 0.55, chord2Chance: 0.25, chord3Chance: 0.03, minGapSteps: 1, holdChance: 0.15, holdMinSteps: 2, holdMaxSteps: 5, slideChance: 0.14, slide2LaneChance: 0.40, slideReturnChance: 0.15, slideReturnCooldownSteps: 2 },
+  // jumping straight to the chord-heavy hard profile.
+  spicy:  { density: 0.55, chord2Chance: 0.25, chord3Chance: 0.03, minGapSteps: 1, holdChance: 0.15, holdMinSteps: 2, holdMaxSteps: 5, slideChance: 0.14, slide2LaneChance: 0.40, slideReturnChance: 0.10, slideReturnCooldownSteps: 2 },
   hard:   { density: 0.65, chord2Chance: 0.32, chord3Chance: 0.06, minGapSteps: 0, holdChance: 0.18, holdMinSteps: 2, holdMaxSteps: 6, slideChance: 0.18, slide2LaneChance: 0.50, slideReturnChance: 0.12, slideReturnCooldownSteps: 2 },
+  // Insane — top tier. Sliders + double-slides feature heavily, taps
+  // dense + chord-rich, holds longer. Cooldown after slide-return
+  // dropped to 1 step (less recovery) but still > 0 (Tim's rule:
+  // "still fair" — no fully impossible runs).
+  insane: { density: 0.78, chord2Chance: 0.42, chord3Chance: 0.12, minGapSteps: 0, holdChance: 0.22, holdMinSteps: 3, holdMaxSteps: 7, slideChance: 0.26, slide2LaneChance: 0.65, slideReturnChance: 0.18, slideReturnCooldownSteps: 1 },
 };
 
 /** Round a target step count UP to the nearest multiple of CHART_PAGE_SIZE.
