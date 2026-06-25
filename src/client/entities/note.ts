@@ -160,11 +160,8 @@ export class Note extends GameObjects.Container {
     // Kill any in-flight tween from the pool's previous use FIRST. If we
     // set position before killing, a still-running fall tween from the
     // prior life can re-write y in the same frame and the note appears
-    // to "teleport down" instead of starting at startY. Kill the ball's
-    // pulse tween too so a recycled note doesn't inherit mid-pulse alpha
-    // or scale from its previous life.
+    // to "teleport down" instead of starting at startY.
     this.scene.tweens.killTweensOf(this);
-    this.scene.tweens.killTweensOf(this.ball);
     this.laneId = laneId;
     this.hitAtMs = hitAtMs;
     this.consumed = false;
@@ -177,10 +174,8 @@ export class Note extends GameObjects.Container {
     // Reset ball + letters visibility — updateHoldVisuals may have
     // hidden them on a previous pool use (head fades when past the
     // disappear line). Without this, a recycled note would spawn
-    // invisible. Also reset ball alpha + scale (pulse may have mid-tweened).
+    // invisible.
     this.ball.setVisible(true);
-    this.ball.setAlpha(1);
-    this.ball.setScale(1);
     this.letters.setVisible(true);
     // Lift the ball tint toward white so the falling note pops against
     // the alpha-0.55 lane underneath (lane + ball were previously the
@@ -276,7 +271,6 @@ export class Note extends GameObjects.Container {
 
   recycle(): void {
     this.scene.tweens.killTweensOf(this);
-    this.scene.tweens.killTweensOf(this.ball);
     this.setActive(false).setVisible(false);
     this.tail.setVisible(false);
     this.tailCap.setVisible(false);
@@ -291,25 +285,6 @@ export class Note extends GameObjects.Container {
     this.slideActive = false;
     this.slideDeltaX = 0;
     this.slidePointerId = -1;
-  }
-
-  /** BPM-locked alpha + scale pulse on the head fuzz-ball, matching
-   *  the lane pulse so the catching target visually breathes with the
-   *  beat (alpha 1.0↔0.78 + scale 1.0↔1.10, sine.inOut, period =
-   *  msPerStep × 2). Called by Game right after configure with the
-   *  scene's playMsPerStep. */
-  startBallPulse(msPerStep: number): void {
-    if (msPerStep <= 0) return;
-    this.scene.tweens.add({
-      targets: this.ball,
-      alpha: { from: 1.0, to: 0.78 },
-      scaleX: { from: 1.0, to: 1.1 },
-      scaleY: { from: 1.0, to: 1.1 },
-      duration: msPerStep * 2,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.inOut',
-    });
   }
 
   /** Set the head ball's local x within the container. Game calls this

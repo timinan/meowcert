@@ -1485,15 +1485,19 @@ export class Game extends Scene {
         ease: 'Sine.inOut',
       });
     }
-    // Counter-phase target scale pulse — starts at the opposite end
-    // of the lane tween so they oscillate in mirror image.
+    // Counter-phase target scale + brightness flicker. Scale tightened
+    // way down from ±8% → ±4% per Tim ("just a tiny bit"). Alpha 0.85↔1.0
+    // pumped in lock-step so the target dims as it shrinks and brightens
+    // as it expands — gives the catching fuzz-ball a heartbeat that
+    // visually echoes the lane breath without overpowering it.
     for (let i = 0; i < this.hitTargets.length; i++) {
       const target = this.hitTargets[i]!;
       const base = this.hitTargetBaseScale[i]!;
       this.tweens.add({
         targets: target,
-        scaleX: { from: base * 0.92, to: base * 1.08 },
-        scaleY: { from: base * 0.92, to: base * 1.08 },
+        scaleX: { from: base * 0.96, to: base * 1.04 },
+        scaleY: { from: base * 0.96, to: base * 1.04 },
+        alpha: { from: 0.85, to: 1.0 },
         duration: this.playMsPerStep * 2,
         yoyo: true,
         repeat: -1,
@@ -1635,7 +1639,6 @@ export class Game extends Scene {
     const endY = this.scale.height + 80;
     const totalFallMs = ((endY - startY) / (hitY - startY)) * Balance.noteFallMs;
     note.configure(laneId, x, startY, endY, totalFallMs, hitAtMs, this.laneTints[laneId]);
-    note.startBallPulse(this.playMsPerStep);
   }
 
   /** Spawn a hold note — head ball + tail of stacked fuzzballs extending
@@ -1667,7 +1670,6 @@ export class Game extends Scene {
       laneId, x, startY, endY, totalFallMs, hitAtMs, this.laneTints[laneId],
       { tailHeightPx, tailWidthPx, releaseAtMs },
     );
-    note.startBallPulse(this.playMsPerStep);
     if (this.holdLaneMask) note.applyTailMask(this.holdLaneMask);
   }
 
@@ -1695,7 +1697,6 @@ export class Game extends Scene {
         targetTint: this.laneTints[targetLane],
       },
     );
-    note.startBallPulse(this.playMsPerStep);
   }
 
   /** Build the lane-band GeometryMask used to clip hold tails. The
