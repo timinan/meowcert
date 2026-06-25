@@ -1450,7 +1450,11 @@ export class Game extends Scene {
       sourceLane, sourceX, startY, endY, totalFallMs, hitAtMs,
       this.laneTints[sourceLane],
       undefined,
-      { deltaX },
+      {
+        deltaX,
+        sourceTint: this.laneTints[sourceLane],
+        targetTint: this.laneTints[targetLane],
+      },
     );
   }
 
@@ -1554,10 +1558,10 @@ export class Game extends Scene {
       } else if (note!.isSlide && pointer) {
         // Slide engaged. Lock to this pointer id; scene-level pointermove
         // tracks the head's local x until pointerup decides success/miss.
-        // Tube flips to mint so the player sees the gesture register.
+        // No tint flip — the source-to-target gradient stays so the
+        // player sees the path they're crossing.
         note!.slideActive = true;
         note!.slidePointerId = pointer.id;
-        note!.setHoldTint(Balance.holdActiveTint);
       } else {
         note!.consumed = true;
         note!.recycle();

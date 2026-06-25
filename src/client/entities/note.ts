@@ -5,14 +5,13 @@ import { LANE_COLORS, liftTowardWhite, BALL_BRIGHTNESS_LIFT } from './note-color
 
 export { LANE_COLORS };
 
-/** Hold-tail width — much narrower than the 54px head ball (Tim's spec)
- *  so the trailing column reads as a thin strand, not a second note.
- *  PspspsTubeWhite gets scaled down horizontally to this width. */
-const TAIL_WIDTH = 18;
-/** Slide-tube thickness (perpendicular to drag direction). Slightly
- *  narrower than the 54px head ball per Tim's spec so the ball still
- *  reads as the dominant element along the sideways path. */
-const SLIDE_TUBE_THICKNESS = 44;
+/** Hold-tail width — moderately narrower than the 54px head ball so
+ *  the column reads as a tail, not a second note. */
+const TAIL_WIDTH = 44;
+/** Slide-tube thickness (perpendicular to drag direction) — wider than
+ *  the hold tail so the sideways path reads as the primary corridor
+ *  the head will travel. */
+const SLIDE_TUBE_THICKNESS = 64;
 
 /**
  * A falling rhythm note rendered as the original Phase 1 "PS element" ball
@@ -133,8 +132,10 @@ export class Note extends GameObjects.Container {
     /** Optional slide config. When set, a horizontal tube + arrow draw
      *  alongside the ball indicating the drag target. The ball itself
      *  starts at container-local x=0 (= source lane center) and slides
-     *  toward x=deltaX (= target lane center) under player input. */
-    slide?: { deltaX: number },
+     *  toward x=deltaX (= target lane center) under player input.
+     *  sourceTint + targetTint paint a lane-to-lane gradient along the
+     *  tube via per-vertex setTint. */
+    slide?: { deltaX: number; sourceTint: number; targetTint: number },
   ): void {
     // Kill any in-flight tween from the pool's previous use FIRST. If we
     // set position before killing, a still-running fall tween from the
@@ -189,14 +190,21 @@ export class Note extends GameObjects.Container {
       // PRE-rotation displaySize so the post-90°-rotation screen size
       // is `abs(deltaX)` wide × SLIDE_TUBE_THICKNESS tall, then center
       // it between the source (x=0) and target (x=deltaX) in container
-      // coords.
+      // coords. setSlideHeadX updates size + position during drag so
+      // the "already slid" portion behind the ball erases.
       const tubeLen = Math.abs(slide.deltaX);
       this.slideTube.setDisplaySize(SLIDE_TUBE_THICKNESS, tubeLen);
       this.slideTube.setRotation(Math.PI / 2);
       this.slideTube.setPosition(slide.deltaX / 2, 0);
-      this.slideTube.setTint(
-        liftTowardWhite(tintColor ?? LANE_COLORS[laneId], BALL_BRIGHTNESS_LIFT),
-      );
+      // Per-vertex tint paints a lane-to-lane gradient. Image's TOP
+      // (Y=0) maps to screen RIGHT after 90° CW rotation, BOTTOM maps
+      // to screen LEFT. For a rightward slide: source on screen left
+      // = image bottom; target on screen right = image top.
+      const srcLifted = liftTowardWhite(slide.sourceTint, BALL_BRIGHTNESS_LIFT);
+      const tgtLifted = liftTowardWhite(slide.targetTint, BALL_BRIGHTNESS_LIFT);
+      const topColor = slide.deltaX > 0 ? tgtLifted : srcLifted;
+      const bottomColor = slide.deltaX > 0 ? srcLifted : tgtLifted;
+      this.slideTube.setTint(topColor, topColor, bottomColor, bottomColor);
       this.slideTube.setVisible(true);
       // Arrow at the target end, pointing toward target. ▶ for right
       // (deltaX > 0), ◀ for left.
@@ -252,11 +260,19 @@ export class Note extends GameObjects.Container {
   }
 
   /** Set the head ball's local x within the container. Game calls this
-   *  on slide-drag pointermove to make the head follow the finger while
-   *  the tube + arrow stay anchored. */
+   *  on slide-drag pointermove to make the head follow the finger.
+   *  Also erases the "already slid" portion of the tube behind the
+   *  ball — the visible tube shrinks to cover only the yet-to-cover
+   *  path from the ball to the target. Arrow stays pinned at target. */
   setSlideHeadX(localX: number): void {
     this.ball.x = localX;
     this.letters.x = localX;
+    // Remaining tube spans [localX, deltaX]. Recenter + resize so the
+    // tube only renders the not-yet-covered portion.
+    const remainingLen = Math.abs(this.slideDeltaX - localX);
+    const center = (localX + this.slideDeltaX) / 2;
+    this.slideTube.setPosition(center, 0);
+    this.slideTube.setDisplaySize(SLIDE_TUBE_THICKNESS, remainingLen);
   }
 
   /** Current head ball local-x (= 0 at source, deltaX at target). */
