@@ -1229,15 +1229,9 @@ export class Game extends Scene {
     // the summary screen yanks notes still on-screen mid-fall.
     //
     // Buffer = noteFallMs (fall time) + maxHoldMs (from the actual
-    // chart's holds[], since author-emitted holds can be much longer
-    // than the generator's max) + 1500 ms wind-down.
-    //
-    // ChartPlayer's maxTotalMs cap enforces this independent of
-    // loopCount — earlier we clamped loopCount × onePassMs at
-    // onePassMs minimum which silently turned the cutoff into a no-op
-    // for charts whose one pass already filled the round (default
-    // generator output at typical BPMs). maxTotalMs cuts the spawn
-    // loop directly so the cap actually applies.
+    // chart's holds[]) + roundWindDownMs (final silence). Editor
+    // reads the same Balance constant so its restricted-zone overlay
+    // matches what actually plays.
     const msPerStep = 60000 / (playChart.bpm * 2);
     const onePassMs = msPerStep * playChart.stepCount;
     let maxHoldMs = 0;
@@ -1247,10 +1241,9 @@ export class Game extends Scene {
         if (dur > maxHoldMs) maxHoldMs = dur;
       }
     }
-    const windDownMs = 1500;
     const spawnCutoffMs = Math.max(
       msPerStep, // at least one step so very short rounds still emit something
-      Balance.maxRoundMs - Balance.noteFallMs - maxHoldMs - windDownMs,
+      Balance.maxRoundMs - Balance.noteFallMs - maxHoldMs - Balance.roundWindDownMs,
     );
     const loopCount = Math.max(1, Math.ceil(Balance.maxRoundMs / onePassMs) + 1);
 

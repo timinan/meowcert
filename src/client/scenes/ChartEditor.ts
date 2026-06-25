@@ -609,10 +609,21 @@ export class ChartEditor extends Scene {
 
   // ─── Interactions ───────────────────────────────────────────────────────
 
+  /** Steps past this index will never play because they fall after the
+   *  round-end wall-clock minus the fall + wind-down buffer. Editor
+   *  refuses placements past this and paints those cells red so authors
+   *  see the dead zone. */
+  private getCutoffStep(): number {
+    const msPerStep = 60000 / (this.chart.bpm * 2);
+    const cutoffMs = Balance.maxRoundMs - Balance.noteFallMs - Balance.roundWindDownMs;
+    return Math.max(1, Math.floor(cutoffMs / msPerStep));
+  }
+
   private toggleCell(localStep: number, lane: LaneId): void {
     const modelStep = this.scrollOffset + localStep;
     const step = this.chart.steps[modelStep];
     if (!step) return;
+    if (modelStep >= this.getCutoffStep()) return;
     const idx = step.lanes.indexOf(lane);
     const note = this.cellNotes[localStep]![lane]!;
     if (idx >= 0) {
@@ -732,6 +743,8 @@ export class ChartEditor extends Scene {
   }
 
   private commitHold(startStep: number, endStep: number, lane: LaneId): void {
+    // Refuse if either edge falls in the unplayable zone past cutoff.
+    if (startStep >= this.getCutoffStep() || endStep >= this.getCutoffStep()) return;
     // Same-lane overlap → silently refuse. The drag completes but no
     // hold is committed. Cross-lane is fine (different array entries).
     if (this.chart.holds?.some(
@@ -768,6 +781,7 @@ export class ChartEditor extends Scene {
 
   private commitSlide(startStep: number, sourceLane: LaneId, targetLane: LaneId): void {
     if (sourceLane === targetLane) return;
+    if (startStep >= this.getCutoffStep()) return;
     // Refuse if a slide already exists at this source cell.
     if (this.chart.slides?.some(
       (s) => s.startStep === startStep && s.sourceLane === sourceLane,
@@ -908,13 +922,16 @@ export class ChartEditor extends Scene {
   }
 
   private refreshPage(): void {
+    const cutoffStep = this.getCutoffStep();
     for (let localStep = 0; localStep < EDITOR_VISIBLE_ROWS; localStep++) {
       const modelStep = this.scrollOffset + localStep;
       const step = this.chart.steps[modelStep];
       // Cells beyond the end of the chart render empty + dim (no note,
       // panel still visible but greyed out so the author sees where the
-      // chart "ends").
+      // chart "ends"). Cells past the round-end cutoff get a translucent
+      // red wash so authors see which rows won't actually play.
       const beyondChart = modelStep >= this.chart.stepCount;
+      const restricted = !beyondChart && modelStep >= cutoffStep;
       for (let lane = 0; lane < L.LANE_COUNT; lane++) {
         const note = this.cellNotes[localStep]![lane]!;
         const active = step?.lanes.includes(lane as LaneId) ?? false;
@@ -922,6 +939,15 @@ export class ChartEditor extends Scene {
         note.setScale(1);
         const panel = this.cellPanels[localStep]![lane]!;
         panel.setAlpha(beyondChart ? 0.18 : 1);
+        // Repaint the panel fill: transparent for normal cells; red
+        // translucent for restricted; cell stroke + interactivity stay
+        // the same so authors can still see the grid + try tapping
+        // (taps just silently no-op).
+        if (restricted) {
+          panel.setFillStyle(0xff4444, 0.22);
+        } else {
+          panel.setFillStyle(0x000000, 0);
+        }
       }
     }
     // Page break labels — top label = the page sitting at the top of

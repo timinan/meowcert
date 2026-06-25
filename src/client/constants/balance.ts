@@ -89,6 +89,11 @@ export const Balance = {
    *  pulse re-fire while a hold is active. ~220ms reads as a steady
    *  chug without strobing. */
   holdEffectIntervalMs: 220,
+  /** Wall-clock buffer at the end of a round between the last note's
+   *  full resolution (fall + hold + release) and round-end. Editor
+   *  uses the same constant to draw the no-place restricted zone so
+   *  authors can't drop notes that won't have time to play. */
+  roundWindDownMs: 500,
   /** Hold notes: tint applied to the tail balls while the hold is
    *  active (same mint as the 'great' grade flash so success reads
    *  consistently across taps and held notes). */
