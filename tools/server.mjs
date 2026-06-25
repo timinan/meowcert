@@ -786,13 +786,17 @@ async function handleMusicUpload(req, res, slug) {
     res.end(JSON.stringify({ ok: false, error: `bad slug: ${slug}` }));
     return;
   }
-  // Optional defaults via query string — calibrator can drop a file
-  // with an opinion attached. Falls back to FAST 130 UPBEAT otherwise.
+  // Optional defaults via query string — calibrator's tune-metadata
+  // modal can pass all of these. Falls back to FAST 130 UPBEAT + no
+  // genre/mood (server-side guess happens in the calibrator's render
+  // pass via guessGenreMood).
   const q = new URL(req.url, 'http://localhost').searchParams;
   const displayName = q.get('displayName') || slug;
   const speedLabel = q.get('speedLabel') || 'fast';
   const vibe = q.get('vibe') || 'upbeat';
   const bpm = Number(q.get('bpm')) || 130;
+  const genre = q.get('genre') || undefined;
+  const mood = q.get('mood') || undefined;
 
   const chunks = [];
   req.on('data', (chunk) => chunks.push(chunk));
@@ -844,6 +848,10 @@ async function handleMusicUpload(req, res, slug) {
       } catch {
         // first upload — file might not exist yet
       }
+      // Preserve addedAt if the slug already had one (re-upload doesn't
+      // restart the clock); otherwise stamp now. addedAt is calibrator-
+      // only metadata — the runtime BackingTrack type doesn't care.
+      const addedAt = (raw[slug] && raw[slug].addedAt) || Date.now();
       raw[slug] = {
         id: slug,
         displayName,
@@ -852,6 +860,9 @@ async function handleMusicUpload(req, res, slug) {
         bpm,
         loopDurationMs: CLIP_DURATION_S * 1000,
         clipStartS: bestStart,
+        addedAt,
+        ...(genre ? { genre } : {}),
+        ...(mood ? { mood } : {}),
       };
       await rotateBackups(MUSIC_JSON);
       await fs.writeFile(MUSIC_JSON, JSON.stringify(raw, null, 2) + '\n');

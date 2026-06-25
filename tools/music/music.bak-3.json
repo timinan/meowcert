@@ -352,5 +352,47 @@
     "vibe": "upbeat",
     "bpm": 130,
     "loopDurationMs": 62000
+  },
+  "mahalia-i-wish-i-missed-my-ex-lyrics": {
+    "id": "mahalia-i-wish-i-missed-my-ex-lyrics",
+    "displayName": "Mahalia - I Wish I Missed My Ex (Lyrics)",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 62000
+  },
+  "daft-punk-one-more-time-official-audio": {
+    "id": "daft-punk-one-more-time-official-audio",
+    "displayName": "Daft Punk - One More Time (Official Audio)",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 62000
+  },
+  "justin-bieber-yummy-lyrics": {
+    "id": "justin-bieber-yummy-lyrics",
+    "displayName": "Justin Bieber - Yummy (Lyrics)",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 62000
+  },
+  "halsey-you-should-be-sad-lyrics": {
+    "id": "halsey-you-should-be-sad-lyrics",
+    "displayName": "Halsey - You should be sad (Lyrics)",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 65000,
+    "clipStartS": 0
+  },
+  "hozier-too-sweet-lyrics": {
+    "id": "hozier-too-sweet-lyrics",
+    "displayName": "Hozier - Too Sweet (Lyrics)",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 65000,
+    "clipStartS": 0
   }
 }

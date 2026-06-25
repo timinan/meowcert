@@ -123,6 +123,22 @@
     <input id="file-input" type="file" multiple accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.opus,.webm" />
   </label>
 
+  <div id="filter-bar" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:14px 0 8px 0; font-size:11px; color:#c0a0e6;">
+    <span><b>FILTER:</b></span>
+    <label>vibe <select id="filter-vibe" style="background:#0b041a; color:#fff; border:1px solid #c0a0e6; padding:2px 4px;"><option value="all">all</option><option value="upbeat">upbeat</option><option value="melodic">melodic</option><option value="smooth">smooth</option></select></label>
+    <label>genre <select id="filter-genre" style="background:#0b041a; color:#fff; border:1px solid #c0a0e6; padding:2px 4px;"></select></label>
+    <label>mood <select id="filter-mood" style="background:#0b041a; color:#fff; border:1px solid #c0a0e6; padding:2px 4px;"></select></label>
+    <span style="flex:1;"></span>
+    <span><b>SORT:</b></span>
+    <select id="sort-by" style="background:#0b041a; color:#fff; border:1px solid #c0a0e6; padding:2px 4px;">
+      <option value="alpha-asc">name A→Z</option>
+      <option value="alpha-desc">name Z→A</option>
+      <option value="newest">newest first</option>
+      <option value="oldest">oldest first</option>
+    </select>
+    <span id="filter-count" style="margin-left:6px;"></span>
+  </div>
+
   <table>
     <thead>
       <tr>
@@ -141,6 +157,48 @@
   </table>
 
   <div class="toast" id="toast"></div>
+
+  <!-- Tune-metadata modal — shown after a single-file upload (NOT batch).
+       Lets the user override the auto-guessed genre/mood/vibe/tempo/bpm/
+       displayName before the catalog row finalizes. Tap APPLY → re-saves
+       music.json with the chosen values + re-renders the table. -->
+  <div id="meta-modal-scrim" style="display:none; position:fixed; inset:0; background:rgba(8,4,20,0.85); z-index:1100; align-items:center; justify-content:center;">
+    <div id="meta-modal-panel" style="background:#1a0a2e; border:2px solid #ffd34d; border-radius:8px; padding:18px 20px; max-width:480px; width:90%;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+        <h2 id="meta-modal-title" style="margin:0; color:#ffd34d; font-size:16px;">Tune metadata</h2>
+        <button id="meta-modal-close" type="button" style="background:#ff5050; color:#fff; border:none; border-radius:50%; width:24px; height:24px; cursor:pointer;">✕</button>
+      </div>
+      <p style="font-size:11px; color:#c0a0e6; margin:0 0 14px 0;">auto-guessed from filename — override if needed, then APPLY to commit</p>
+      <div style="display:grid; grid-template-columns:1fr 2fr; gap:8px 12px; align-items:center; font-size:12px;">
+        <label style="color:#c0a0e6;">DISPLAY NAME</label>
+        <input id="meta-name" type="text" style="background:#0b041a; color:#fff; border:1px solid #c0a0e6; padding:4px 6px; border-radius:4px;" />
+        <label style="color:#c0a0e6;">VIBE</label>
+        <select id="meta-vibe" class="cycle" style="padding:4px 6px;">
+          <option value="upbeat">UPBEAT</option>
+          <option value="melodic">MELODIC</option>
+          <option value="smooth">SMOOTH</option>
+        </select>
+        <label style="color:#c0a0e6;">GENRE</label>
+        <select id="meta-genre" class="cycle" style="padding:4px 6px;"></select>
+        <label style="color:#c0a0e6;">MOOD</label>
+        <select id="meta-mood" class="cycle" style="padding:4px 6px;"></select>
+        <label style="color:#c0a0e6;">TEMPO</label>
+        <select id="meta-tempo" class="cycle" style="padding:4px 6px;">
+          <option value="slow">SLOW</option>
+          <option value="medium">MEDIUM</option>
+          <option value="fast">FAST</option>
+          <option value="faster">FASTER</option>
+        </select>
+        <label style="color:#c0a0e6;">BPM</label>
+        <input id="meta-bpm" type="number" min="40" max="240" value="130" style="background:#0b041a; color:#fff; border:1px solid #c0a0e6; padding:4px 6px; border-radius:4px; width:80px;" />
+      </div>
+      <div style="display:flex; gap:8px; margin-top:18px;">
+        <span style="flex:1;"></span>
+        <button id="meta-modal-cancel" type="button" class="preview-btn">use auto-guess</button>
+        <button id="meta-modal-apply" type="button" class="pick" style="font-weight:bold;">apply + upload</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Waveform clip editor — opened by the ✂️ button on each row. -->
   <div id="clip-editor-scrim" style="display:none; position:fixed; inset:0; background:rgba(8,4,20,0.85); z-index:1000; align-items:center; justify-content:center;">
@@ -269,10 +327,42 @@ function fmtBytes(n) {
 
 function render() {
   const tbody = document.getElementById('tbody');
-  const ids = Object.keys(catalog).sort();
-  document.getElementById('entry-count').textContent = ids.length + ' track' + (ids.length === 1 ? '' : 's');
+  // Pull the active filter + sort selections. First render lazily fills
+  // the dropdowns from current catalog values.
+  populateFilterSelects();
+  const filterVibe = document.getElementById('filter-vibe').value || 'all';
+  const filterGenre = document.getElementById('filter-genre').value || 'all';
+  const filterMood = document.getElementById('filter-mood').value || 'all';
+  const sortBy = document.getElementById('sort-by').value || 'alpha-asc';
+  const allIds = Object.keys(catalog);
+  const filtered = allIds.filter((id) => {
+    const e = catalog[id];
+    if (filterVibe !== 'all' && (e.vibe || 'upbeat') !== filterVibe) return false;
+    if (filterGenre !== 'all' && (e.genre || '') !== filterGenre) return false;
+    if (filterMood !== 'all' && (e.mood || '') !== filterMood) return false;
+    return true;
+  });
+  filtered.sort((a, b) => {
+    const ea = catalog[a];
+    const eb = catalog[b];
+    switch (sortBy) {
+      case 'alpha-desc':
+        return (eb.displayName || b).localeCompare(ea.displayName || a);
+      case 'newest':
+        return (eb.addedAt || 0) - (ea.addedAt || 0) || (ea.displayName || a).localeCompare(eb.displayName || b);
+      case 'oldest':
+        return (ea.addedAt || 0) - (eb.addedAt || 0) || (ea.displayName || a).localeCompare(eb.displayName || b);
+      case 'alpha-asc':
+      default:
+        return (ea.displayName || a).localeCompare(eb.displayName || b);
+    }
+  });
+  document.getElementById('entry-count').textContent = allIds.length + ' track' + (allIds.length === 1 ? '' : 's');
+  document.getElementById('filter-count').textContent = filtered.length === allIds.length
+    ? ''
+    : `showing ${filtered.length}/${allIds.length}`;
   tbody.innerHTML = '';
-  for (const id of ids) {
+  for (const id of filtered) {
     const entry = catalog[id];
     const tr = document.createElement('tr');
     tr.dataset.id = id;
@@ -474,13 +564,23 @@ const fileInput = document.getElementById('file-input');
 );
 dz.addEventListener('drop', (e) => {
   const files = Array.from(e.dataTransfer?.files ?? []);
-  if (files.length > 0) uploadMany(files);
+  if (files.length > 0) routeUpload(files);
 });
 fileInput.addEventListener('change', () => {
   const files = Array.from(fileInput.files ?? []);
-  if (files.length > 0) uploadMany(files);
+  if (files.length > 0) routeUpload(files);
   fileInput.value = '';
 });
+
+/** Single file → tune-metadata modal first; multiple files → straight to
+ *  the batch path with auto-guessed defaults (keeps mass-add fast). */
+function routeUpload(files) {
+  if (files.length === 1) {
+    openMetaModal(files[0]);
+  } else {
+    uploadMany(files);
+  }
+}
 
 /** Sequential mass upload — runs uploadFile one at a time so the server
  *  isn't hammered AND so slug disambiguation works correctly against the
@@ -512,6 +612,79 @@ async function uploadMany(files) {
   else toast(`added ${ok}/${files.length} — ${fail} failed (see console)`, 'err');
 }
 
+// ── Tune-metadata modal (single-file upload) ──────────────────────────
+
+const metaModalState = {
+  file: null,
+  baseName: '',
+};
+
+function openMetaModal(file) {
+  const baseName = file.name.replace(/\.[^.]+$/, '');
+  metaModalState.file = file;
+  metaModalState.baseName = baseName;
+  // Populate GENRE + MOOD selects from the global option lists
+  const genreSel = document.getElementById('meta-genre');
+  genreSel.innerHTML = '';
+  for (const g of GENRE_OPTIONS) {
+    const o = document.createElement('option');
+    o.value = g;
+    o.textContent = g.replace(/-/g, ' ').toUpperCase();
+    genreSel.appendChild(o);
+  }
+  const moodSel = document.getElementById('meta-mood');
+  moodSel.innerHTML = '';
+  for (const m of MOOD_OPTIONS) {
+    const o = document.createElement('option');
+    o.value = m;
+    o.textContent = m.toUpperCase();
+    moodSel.appendChild(o);
+  }
+  // Default values: auto-guess from filename, fall back to FAST/UPBEAT/130
+  const guess = guessGenreMood(slugify(baseName));
+  document.getElementById('meta-name').value = baseName;
+  document.getElementById('meta-vibe').value = 'upbeat';
+  document.getElementById('meta-tempo').value = 'fast';
+  document.getElementById('meta-bpm').value = 130;
+  document.getElementById('meta-genre').value = guess.genre;
+  document.getElementById('meta-mood').value = guess.mood;
+  document.getElementById('meta-modal-title').textContent = `Tune metadata — ${baseName}`;
+  document.getElementById('meta-modal-scrim').style.display = 'flex';
+}
+
+function closeMetaModal() {
+  document.getElementById('meta-modal-scrim').style.display = 'none';
+  metaModalState.file = null;
+}
+
+document.getElementById('meta-modal-cancel').addEventListener('click', () => {
+  // Use auto-guess path: upload with no metadata overrides; server picks
+  // its defaults + the row's dropdowns will reflect the auto-guess.
+  const file = metaModalState.file;
+  closeMetaModal();
+  if (file) uploadFile(file);
+});
+
+document.getElementById('meta-modal-apply').addEventListener('click', () => {
+  const file = metaModalState.file;
+  if (!file) return;
+  const meta = {
+    displayName: document.getElementById('meta-name').value || metaModalState.baseName,
+    vibe: document.getElementById('meta-vibe').value,
+    speedLabel: document.getElementById('meta-tempo').value,
+    bpm: Number(document.getElementById('meta-bpm').value) || 130,
+    genre: document.getElementById('meta-genre').value,
+    mood: document.getElementById('meta-mood').value,
+  };
+  closeMetaModal();
+  uploadFile(file, { meta });
+});
+
+document.getElementById('meta-modal-close').addEventListener('click', closeMetaModal);
+document.getElementById('meta-modal-scrim').addEventListener('click', (e) => {
+  if (e.target.id === 'meta-modal-scrim') closeMetaModal();
+});
+
 async function uploadFile(file, opts = {}) {
   // No client-side format check — ffmpeg on the server accepts anything
   // it can decode (mp3 / wav / m4a / aac / ogg / flac / opus / webm
@@ -533,7 +706,17 @@ async function uploadFile(file, opts = {}) {
   if (!opts.silent) toast('uploading + processing…');
   try {
     const buf = await file.arrayBuffer();
-    const params = new URLSearchParams({ displayName: baseName });
+    // opts.meta (from the tune-metadata modal) wins over filename guesses.
+    // Server reads displayName + speedLabel + vibe + bpm + genre + mood
+    // from the query string and stamps them onto the music.json entry.
+    const params = new URLSearchParams({
+      displayName: opts.meta?.displayName ?? baseName,
+      ...(opts.meta?.vibe ? { vibe: opts.meta.vibe } : {}),
+      ...(opts.meta?.speedLabel ? { speedLabel: opts.meta.speedLabel } : {}),
+      ...(opts.meta?.bpm ? { bpm: String(opts.meta.bpm) } : {}),
+      ...(opts.meta?.genre ? { genre: opts.meta.genre } : {}),
+      ...(opts.meta?.mood ? { mood: opts.meta.mood } : {}),
+    });
     const r = await fetch('/upload-music/' + encodeURIComponent(slug) + '?' + params, {
       method: 'POST',
       headers: { 'content-type': 'audio/mpeg' },

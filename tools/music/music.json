@@ -376,5 +376,50 @@
     "vibe": "upbeat",
     "bpm": 130,
     "loopDurationMs": 62000
+  },
+  "halsey-you-should-be-sad-lyrics": {
+    "id": "halsey-you-should-be-sad-lyrics",
+    "displayName": "Halsey - You should be sad (Lyrics)",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 65000,
+    "clipStartS": 0
+  },
+  "hozier-too-sweet-lyrics": {
+    "id": "hozier-too-sweet-lyrics",
+    "displayName": "Hozier - Too Sweet (Lyrics)",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 65000,
+    "clipStartS": 0
+  },
+  "the-last-one": {
+    "id": "the-last-one",
+    "displayName": "The Last One",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 65000,
+    "clipStartS": 22
+  },
+  "ravyn-lenae-love-me-not-lyrics": {
+    "id": "ravyn-lenae-love-me-not-lyrics",
+    "displayName": "Ravyn Lenae - Love Me Not (Lyrics)",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 65000,
+    "clipStartS": 58
+  },
+  "jawny-honeypie-lyrics": {
+    "id": "jawny-honeypie-lyrics",
+    "displayName": "JAWNY - Honeypie (Lyrics)",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 65000,
+    "clipStartS": 0
   }
 }
