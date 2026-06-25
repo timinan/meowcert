@@ -882,33 +882,64 @@ export class Game extends Scene {
     });
   }
 
-  /** Escalating tier for the combo callout — bigger, hotter color,
-   *  vibration at the top tier. Returns the active config for the
-   *  given combo count. */
+  /** Escalating tier for the combo callout — 12 progressive tiers
+   *  layer size + color + vibration + rotation + rainbow color cycle
+   *  as combo climbs. Each layer composes on its own tween so they
+   *  don't clobber each other (different target properties). */
   private getComboTier(combo: number): {
     fontSize: string;
     color: string;
     strokeThickness: number;
     vibrate: boolean;
+    vibrateAmp: number;
+    vibrateMs: number;
+    rotate: boolean;
+    rotateAmp: number; // radians
+    cycleColor: boolean;
   } {
-    if (combo >= 100) return { fontSize: '38px', color: '#ff44dd', strokeThickness: 6, vibrate: true };
-    if (combo >= 50) return { fontSize: '34px', color: '#ff4444', strokeThickness: 5, vibrate: false };
-    if (combo >= 25) return { fontSize: '30px', color: '#ff8800', strokeThickness: 5, vibrate: false };
-    if (combo >= 10) return { fontSize: '26px', color: '#ffb000', strokeThickness: 4, vibrate: false };
-    return { fontSize: '22px', color: '#ffd34d', strokeThickness: 4, vibrate: false };
+    // Tier 12 — apex
+    if (combo >= 500) return { fontSize: '44px', color: '#ffffff', strokeThickness: 8, vibrate: true, vibrateAmp: 5, vibrateMs: 40, rotate: true, rotateAmp: 0.12, cycleColor: true };
+    // Tier 11
+    if (combo >= 300) return { fontSize: '42px', color: '#44ffff', strokeThickness: 7, vibrate: true, vibrateAmp: 5, vibrateMs: 50, rotate: true, rotateAmp: 0.10, cycleColor: true };
+    // Tier 10
+    if (combo >= 200) return { fontSize: '40px', color: '#cc44ff', strokeThickness: 7, vibrate: true, vibrateAmp: 4, vibrateMs: 55, rotate: true, rotateAmp: 0.08, cycleColor: false };
+    // Tier 9
+    if (combo >= 150) return { fontSize: '38px', color: '#ff44dd', strokeThickness: 6, vibrate: true, vibrateAmp: 4, vibrateMs: 55, rotate: false, rotateAmp: 0, cycleColor: false };
+    // Tier 8
+    if (combo >= 100) return { fontSize: '36px', color: '#ff44aa', strokeThickness: 6, vibrate: true, vibrateAmp: 3, vibrateMs: 60, rotate: false, rotateAmp: 0, cycleColor: false };
+    // Tier 7
+    if (combo >= 75) return { fontSize: '34px', color: '#ff4444', strokeThickness: 6, vibrate: true, vibrateAmp: 2, vibrateMs: 80, rotate: false, rotateAmp: 0, cycleColor: false };
+    // Tier 6
+    if (combo >= 50) return { fontSize: '32px', color: '#ff6644', strokeThickness: 5, vibrate: false, vibrateAmp: 0, vibrateMs: 0, rotate: false, rotateAmp: 0, cycleColor: false };
+    // Tier 5
+    if (combo >= 30) return { fontSize: '30px', color: '#ff8800', strokeThickness: 5, vibrate: false, vibrateAmp: 0, vibrateMs: 0, rotate: false, rotateAmp: 0, cycleColor: false };
+    // Tier 4
+    if (combo >= 20) return { fontSize: '28px', color: '#ffa000', strokeThickness: 5, vibrate: false, vibrateAmp: 0, vibrateMs: 0, rotate: false, rotateAmp: 0, cycleColor: false };
+    // Tier 3
+    if (combo >= 10) return { fontSize: '26px', color: '#ffb000', strokeThickness: 4, vibrate: false, vibrateAmp: 0, vibrateMs: 0, rotate: false, rotateAmp: 0, cycleColor: false };
+    // Tier 2
+    if (combo >= 5) return { fontSize: '24px', color: '#ffd34d', strokeThickness: 4, vibrate: false, vibrateAmp: 0, vibrateMs: 0, rotate: false, rotateAmp: 0, cycleColor: false };
+    // Tier 1 — base
+    return { fontSize: '22px', color: '#ffd34d', strokeThickness: 4, vibrate: false, vibrateAmp: 0, vibrateMs: 0, rotate: false, rotateAmp: 0, cycleColor: false };
   }
 
   /** Scale-punch tween for the combo text — tracked by ref so the
-   *  vibration tween (separate, targets x) doesn't get clobbered by
-   *  the scale tween. */
+   *  vibration tween (separate, targets x) doesn't get clobbered. */
   private comboPulseTween: Phaser.Tweens.Tween | undefined;
-  /** Continuous wobble tween on the combo text's x — runs only while
-   *  the combo is in the top tier (≥ 100). Targets only x, so it
-   *  composes cleanly with the scale-punch tween. */
+  /** Continuous wobble tween on the combo text's x (high tiers). */
   private comboVibrationTween: Phaser.Tweens.Tween | undefined;
-  /** Cached tier key so we only restyle / start-stop the vibration
-   *  tween on tier transitions, not every tap. */
+  /** Continuous rotation wobble on the combo text (top 3 tiers). */
+  private comboRotateTween: Phaser.Tweens.Tween | undefined;
+  /** Rainbow color-cycle timer (top 2 tiers). */
+  private comboColorCycleTimer: Phaser.Time.TimerEvent | undefined;
+  /** Cached tier key so we only restyle / start-stop the recurring
+   *  effects on tier transitions, not every tap. */
   private currentComboTierKey = '';
+  /** Palette for the rainbow color cycle at tier 11+. */
+  private static readonly COMBO_RAINBOW = [
+    '#ff44ff', '#ff8844', '#ffff44', '#44ff88', '#44aaff', '#aa44ff',
+  ];
+  private comboColorCycleIdx = 0;
 
   /** Pop the combo callout — escalates size + color + vibration with
    *  combo count. Hides on combo === 0. Milestone touches (10/25/50/
@@ -920,15 +951,20 @@ export class Game extends Scene {
       this.comboPulseTween = undefined;
       this.comboVibrationTween?.remove();
       this.comboVibrationTween = undefined;
+      this.comboRotateTween?.remove();
+      this.comboRotateTween = undefined;
+      this.comboColorCycleTimer?.remove();
+      this.comboColorCycleTimer = undefined;
       this.comboText.setAlpha(0);
       this.comboText.setScale(1);
+      this.comboText.rotation = 0;
       this.comboText.x = this.scale.width / 2;
       this.currentComboTierKey = '';
       return;
     }
 
     const tier = this.getComboTier(combo);
-    const tierKey = `${tier.fontSize}|${tier.color}|${tier.vibrate}`;
+    const tierKey = `${tier.fontSize}|${tier.color}|${tier.vibrate}|${tier.vibrateAmp}|${tier.vibrateMs}|${tier.rotate}|${tier.rotateAmp}|${tier.cycleColor}`;
     if (tierKey !== this.currentComboTierKey) {
       this.currentComboTierKey = tierKey;
       this.comboText.setStyle({
@@ -936,24 +972,55 @@ export class Game extends Scene {
         color: tier.color,
         strokeThickness: tier.strokeThickness,
       });
-      // Start / stop continuous vibration when crossing into / out of
-      // the top tier. Composes with the scale-punch tween (different
-      // property — x vs scale).
-      if (tier.vibrate && !this.comboVibrationTween) {
-        const baseX = this.scale.width / 2;
-        this.comboText.x = baseX;
+      // Vibration tween — kill + recreate on tier change so amp/speed
+      // can escalate at higher tiers.
+      if (this.comboVibrationTween) {
+        this.comboVibrationTween.remove();
+        this.comboVibrationTween = undefined;
+      }
+      this.comboText.x = this.scale.width / 2;
+      if (tier.vibrate) {
         this.comboVibrationTween = this.tweens.add({
           targets: this.comboText,
-          x: baseX + 3,
-          duration: 60,
+          x: this.scale.width / 2 + tier.vibrateAmp,
+          duration: tier.vibrateMs,
           yoyo: true,
           repeat: -1,
           ease: 'Sine.inOut',
         });
-      } else if (!tier.vibrate && this.comboVibrationTween) {
-        this.comboVibrationTween.remove();
-        this.comboVibrationTween = undefined;
-        this.comboText.x = this.scale.width / 2;
+      }
+      // Rotation tween — same pattern; runs at top 3 tiers.
+      if (this.comboRotateTween) {
+        this.comboRotateTween.remove();
+        this.comboRotateTween = undefined;
+      }
+      this.comboText.rotation = 0;
+      if (tier.rotate) {
+        this.comboRotateTween = this.tweens.add({
+          targets: this.comboText,
+          rotation: { from: -tier.rotateAmp, to: tier.rotateAmp },
+          duration: 220,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.inOut',
+        });
+      }
+      // Rainbow color cycle — top 2 tiers swap through a palette every
+      // 100 ms via setColor (faster than setStyle, no layout recalc).
+      if (this.comboColorCycleTimer) {
+        this.comboColorCycleTimer.remove();
+        this.comboColorCycleTimer = undefined;
+      }
+      if (tier.cycleColor) {
+        this.comboColorCycleIdx = 0;
+        this.comboColorCycleTimer = this.time.addEvent({
+          delay: 100,
+          loop: true,
+          callback: () => {
+            this.comboColorCycleIdx = (this.comboColorCycleIdx + 1) % Game.COMBO_RAINBOW.length;
+            this.comboText.setColor(Game.COMBO_RAINBOW[this.comboColorCycleIdx]!);
+          },
+        });
       }
     }
 
@@ -1359,6 +1426,27 @@ export class Game extends Scene {
     // Generate path showGenerateModal awaits start() before begin.
     this.music = new MusicSystem(this, playChart);
     void this.music.preload();
+
+    // Lane pulse to beat — each lane's alpha oscillates 0.78↔0.92 at
+    // BPM cadence so the playfield feels alive between notes. One
+    // continuous yoyo tween per lane, started together so they sync.
+    this.startLanePulse();
+  }
+
+  /** Continuous BPM-locked alpha pulse on every lane backdrop. Cheap —
+   *  three yoyo tweens total, running for the whole round. Killed
+   *  inside cleanup via the scene's tween manager. */
+  private startLanePulse(): void {
+    for (const lane of this.laneRects) {
+      this.tweens.add({
+        targets: lane,
+        alpha: { from: 0.92, to: 0.78 },
+        duration: this.playMsPerStep * 2, // half-beat to half-beat
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.inOut',
+      });
+    }
   }
 
   /** Spawn a page-boundary line that falls top → hit line over the
