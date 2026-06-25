@@ -725,10 +725,10 @@ export class Game extends Scene {
         .text(cx, hitLineY - 36, '', {
           ...fontBase,
           fontStyle: 'bold',
-          fontSize: '14px',
+          fontSize: '11px',
           color: '#ffffff',
           stroke: '#000000',
-          strokeThickness: 3,
+          strokeThickness: 2,
         })
         .setOrigin(0.5)
         .setAlpha(0)
@@ -971,9 +971,11 @@ export class Game extends Scene {
       duration,
       ease: 'Back.easeOut',
     });
-    if (isMilestone) {
-      this.cameras.main.shake(140, 0.005);
-    }
+    // Milestone — combo text alone handles the "wow" via the bigger
+    // scale-punch above. Camera shake removed per Tim's request — the
+    // tier escalation (size + color heat + 100+ vibration) is the
+    // visual cue, no screen-wide motion.
+    void isMilestone;
   }
 
   private bindInput(): void {
@@ -1766,15 +1768,23 @@ export class Game extends Scene {
       const n = this.notes[i]!;
       if (!n.active || !n.isHold || !n.holdActive) continue;
       // Recurring effect burst while held — same flashLaneEffect +
-      // cat pulse the head tap fires, just throttled to ~220 ms so it
-      // chugs instead of strobing. ALSO bursts a smaller-scale echo on
-      // a random visible tail ball so the column reads as actively
-      // emitting along its length, not just at the catching position.
-      if (now - n.holdLastEffectMs >= Balance.holdEffectIntervalMs) {
+      // cat pulse the head tap fires, throttled to ~220 ms. Each tick
+      // also accrues a chunk of hold score proportional to elapsed
+      // time (replaces the old end-of-hold lump sum) and pops a tiny
+      // "+N" popup at the catch line so the player sees the score
+      // climbing live — makes holds feel rewarding while in progress.
+      const dt = now - n.holdLastEffectMs;
+      if (dt >= Balance.holdEffectIntervalMs) {
+        const points = Math.round(dt * (Balance.pointsPerHoldStep / this.playMsPerStep));
+        if (points > 0) {
+          this.score.add(points);
+          this.showHoldScorePop(n.laneId, points);
+        }
         this.flashLaneEffect(n.laneId);
         this.cats[n.laneId]?.pulseEffectHit();
         this.burstEffectOnTail(n);
         n.holdLastEffectMs = now;
+        this.updateHud();
       }
       if (now >= n.holdEndAtMs) {
         this.endActiveHold(n, /* fullCredit */ true);
@@ -1792,25 +1802,52 @@ export class Game extends Scene {
     }
   }
 
-  /** Tally a hold's bonus and recycle the note. Full credit = entire
-   *  step range × pointsPerHoldStep. Partial = prorated by held fraction
-   *  (no combo break — Tim's forgiving rule). */
-  private endActiveHold(note: Note, fullCredit: boolean): void {
-    const totalMs = Math.max(1, note.holdEndAtMs - note.hitAtMs);
-    const stepsTotal = Math.max(1, Math.round(totalMs / this.playMsPerStep));
-    if (fullCredit) {
-      this.score.add(stepsTotal * Balance.pointsPerHoldStep);
-    } else {
-      const now = this.time.now - this.startTimeMs;
-      const heldMs = Math.max(0, now - note.hitAtMs);
-      const fraction = Math.max(0, Math.min(1, heldMs / totalMs));
-      const earned = Math.floor(stepsTotal * fraction * Balance.pointsPerHoldStep);
-      if (earned > 0) this.score.add(earned);
+  /** Flush any unfired time since the last cadence tick and recycle
+   *  the note. Scoring is now continuous via tickHolds, so endActive
+   *  only needs to award the trailing remainder between the last tick
+   *  and the release/auto-end moment (max ~220 ms worth). */
+  private endActiveHold(note: Note, _fullCredit: boolean): void {
+    const now = this.time.now - this.startTimeMs;
+    const dt = now - note.holdLastEffectMs;
+    if (dt > 0) {
+      const points = Math.round(dt * (Balance.pointsPerHoldStep / this.playMsPerStep));
+      if (points > 0) {
+        this.score.add(points);
+        this.showHoldScorePop(note.laneId, points);
+      }
     }
     note.holdActive = false;
     note.consumed = true;
     note.recycle();
     this.updateHud();
+  }
+
+  /** One-shot tiny "+N" popup at the catch line for the given lane —
+   *  used by hold ticks to show score climbing live. Auto-destroys
+   *  after the float-up + fade. */
+  private showHoldScorePop(laneId: LaneId, points: number): void {
+    const scaleY = this.scale.height / L.DESIGN_H;
+    const targetY = L.HIT_LINE_Y * scaleY;
+    const cx = L.laneCenterX(laneId, this.scale.width);
+    const txt = this.add
+      .text(cx, targetY - 12, `+${points}`, {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontStyle: 'bold',
+        fontSize: '9px',
+        color: '#4dffb4',
+        stroke: '#1a0a2e',
+        strokeThickness: 2,
+      })
+      .setOrigin(0.5)
+      .setDepth(50);
+    this.tweens.add({
+      targets: txt,
+      y: targetY - 36,
+      alpha: 0,
+      duration: 450,
+      ease: 'Quad.easeOut',
+      onComplete: () => txt.destroy(),
+    });
   }
 
   // -----------------------------------------------------------------------
