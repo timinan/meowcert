@@ -58,8 +58,8 @@ const PROFILES: Record<GenDifficulty, {
   // Spicy sits between medium and hard — meaningful step-up without
   // jumping straight to the chord-heavy hard profile. All numbers
   // linearly between medium and hard.
-  spicy:  { density: 0.55, chord2Chance: 0.25, chord3Chance: 0.03, minGapSteps: 1, holdChance: 0.15, holdMinSteps: 2, holdMaxSteps: 5, slideChance: 0.14, slide2LaneChance: 0.40, slideReturnChance: 0.08, slideReturnCooldownSteps: 2 },
-  hard:   { density: 0.65, chord2Chance: 0.32, chord3Chance: 0.06, minGapSteps: 0, holdChance: 0.18, holdMinSteps: 2, holdMaxSteps: 6, slideChance: 0.18, slide2LaneChance: 0.50, slideReturnChance: 0.12, slideReturnCooldownSteps: 1 },
+  spicy:  { density: 0.55, chord2Chance: 0.25, chord3Chance: 0.03, minGapSteps: 1, holdChance: 0.15, holdMinSteps: 2, holdMaxSteps: 5, slideChance: 0.14, slide2LaneChance: 0.40, slideReturnChance: 0.15, slideReturnCooldownSteps: 2 },
+  hard:   { density: 0.65, chord2Chance: 0.32, chord3Chance: 0.06, minGapSteps: 0, holdChance: 0.18, holdMinSteps: 2, holdMaxSteps: 6, slideChance: 0.18, slide2LaneChance: 0.50, slideReturnChance: 0.12, slideReturnCooldownSteps: 2 },
 };
 
 /** Round a target step count UP to the nearest multiple of CHART_PAGE_SIZE.
