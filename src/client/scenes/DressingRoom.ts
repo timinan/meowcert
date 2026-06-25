@@ -306,17 +306,26 @@ export class DressingRoom extends Scene {
       const x = startX + i * (tabW + gap);
       const isActive = this.activeSlot === tab.key;
       const equipped = equippedSlots[tab.key];
+      // Border + text color signal both active state AND equipped state:
+      //   active                  → yellow border @ 1.0, yellow text
+      //   equipped (not active)   → yellow border @ 0.55, light-yellow text
+      //   empty + not active      → purple border @ 0.35, purple text
+      // No suffix dot — the highlight is enough, and "EFFECT •" was
+      // overflowing the narrow tab width.
+      const strokeColor = isActive || equipped ? 0xffd34d : 0xc0a0e6;
+      const strokeAlpha = isActive ? 1 : equipped ? 0.55 : 0.35;
+      const textColor = isActive ? '#ffd34d' : equipped ? '#fff0aa' : '#c0a0e6';
       const bg = this.add
         .rectangle(x, 0, tabW, tabH, isActive ? 0x2c1856 : 0x0b041a, isActive ? 1 : 0.6)
         .setOrigin(0, 0)
-        .setStrokeStyle(2, isActive ? 0xffd34d : 0xc0a0e6, isActive ? 1 : 0.35)
+        .setStrokeStyle(2, strokeColor, strokeAlpha)
         .setInteractive({ useHandCursor: true });
       const text = this.add
-        .text(x + tabW / 2, tabH / 2, equipped ? `${tab.label} •` : tab.label, {
+        .text(x + tabW / 2, tabH / 2, tab.label, {
           fontFamily: 'Pixeloid Sans, sans-serif',
           fontStyle: 'bold',
           fontSize: '11px',
-          color: isActive ? '#ffd34d' : '#c0a0e6',
+          color: textColor,
         })
         .setOrigin(0.5);
       this.slotTabsContainer.add([bg, text]);
