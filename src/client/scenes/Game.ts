@@ -1971,12 +1971,19 @@ export class Game extends Scene {
     // fuzzball is treated harshly — should grade as miss.
     const enterMaxHitDistance = 60;
     const exitMaxHitDistance = 30;
+    // Slides (single, double, slide-and-return) get a wider exit window —
+    // the tap is the START of a multi-step gesture, so a slightly late
+    // tap still has time to drag through. Symmetric 60 above / 60 below
+    // vs taps + holds' 60 / 30. Pairs with the wider auto-miss line in
+    // checkMisses so the engagement and auto-miss windows line up.
+    const slideExitMaxHitDistance = 60;
 
     let grade: 'perfect' | 'great' | 'miss' = 'miss';
     if (note) {
       const dySigned = note.y - targetY;
       const absDy = Math.abs(dySigned);
-      const greatWindow = dySigned <= 0 ? enterMaxHitDistance : exitMaxHitDistance;
+      const exitWin = note.isSlide ? slideExitMaxHitDistance : exitMaxHitDistance;
+      const greatWindow = dySigned <= 0 ? enterMaxHitDistance : exitWin;
       if (absDy <= perfectDistance) grade = 'perfect';
       else if (absDy <= greatWindow) grade = 'great';
     }
@@ -2066,6 +2073,13 @@ export class Game extends Scene {
     // ~30 px past the target (more than half the ball outside the fuzz
     // circle), even though the entry-side great window stays at 60 px.
     const missY = targetY + 30;
+    // Slides (single, double, slide-and-return) get a wider auto-miss
+    // line — the gesture takes longer than a tap, so the player needs a
+    // little more fall room to engage it before it auto-misses. Same
+    // 60-px below-target threshold for both 1-lane and 2-lane variants
+    // so they feel equally forgiving. Once engaged, slideActive bypasses
+    // the check entirely (see below).
+    const slideMissY = targetY + 60;
     let anyMissed = false;
     for (let i = 0; i < this.notes.length; i++) {
       const n = this.notes[i]!;
@@ -2079,7 +2093,8 @@ export class Game extends Scene {
       // line (off-screen) since the gesture takes longer than a tap.
       // Released slides fall through to the normal miss check.
       if (n.isSlide && n.slideActive) continue;
-      if (n.y > missY) {
+      const noteMissY = n.isSlide ? slideMissY : missY;
+      if (n.y > noteMissY) {
         this.score.registerHit('miss');
         // Same miss-buzz as a tap-but-missed grade so the player feels
         // a consistent "you lost that note" signal whether they tapped
