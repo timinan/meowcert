@@ -52,16 +52,16 @@
     "backdropKey": "theme-saloon-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 84,
-    "bgScale": 1
+    "bgShiftUp": 71,
+    "bgScale": 1.19
   },
   "cathedral": {
     "displayName": "Cathedral",
     "backdropKey": "theme-cathedral-bg",
     "musicKey": "theme-default-music",
     "rarity": "legendary",
-    "bgShiftUp": 63,
-    "bgScale": 1.23
+    "bgShiftUp": -64,
+    "bgScale": 1.71
   },
   "candybakery": {
     "displayName": "Candyland Bakery",
@@ -156,7 +156,7 @@
     "backdropKey": "theme-mushroomvillage-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 37,
+    "bgShiftUp": 40,
     "bgScale": 1.15
   }
 }
