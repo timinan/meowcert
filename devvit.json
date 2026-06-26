@@ -28,6 +28,13 @@
         "location": "subreddit",
         "forUserType": "moderator",
         "endpoint": "/internal/menu/example-form"
+      },
+      {
+        "label": "Clean up legacy posts",
+        "description": "Remove all non-🎵 posts in this subreddit (test posts + scaffolds)",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/menu/cleanup-legacy"
       }
     ]
   },
