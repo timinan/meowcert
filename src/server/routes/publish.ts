@@ -109,27 +109,30 @@ publish.post('/chart', async (c) => {
 
     // Seed the leaderboard with the creator's rehearsal score so
     // visitors land on a non-empty board (Tim: "should at least have
-    // 1 play and score from the creator"). submitLeaderboardScore
-    // gates on summary.passed — we only seed if the rehearsal passed.
-    if (creatorScore !== undefined && creatorAccuracy !== undefined) {
-      const passed = creatorAccuracy >= 0.75;
-      if (passed) {
-        const { tier, baseReward } = classifyScore(creatorAccuracy, passed);
-        await submitLeaderboardScore(redis, {
-          visitor: username,
-          owner: username,
-          postId: post.id,
-          score: creatorScore,
-          totalNotes: 0,
-          notesHit: 0,
-          maxCombo: 0,
-          accuracy: creatorAccuracy,
-          passed,
-          tier,
-          baseReward,
-        });
-        console.info(`[publish] seeded creator leaderboard entry: ${username} → ${creatorScore}`);
-      }
+    // 1 play and score from the creator"). The 75% accuracy gate
+    // visitors face does NOT apply to the creator's own seed — even a
+    // sloppy rehearsal on a hard chart should count as the opening
+    // score, otherwise visitors land on an empty board with no
+    // benchmark. Force passed:true so submitLeaderboardScore lets it
+    // through.
+    if (creatorScore !== undefined && creatorAccuracy !== undefined && creatorScore > 0) {
+      const { tier, baseReward } = classifyScore(creatorAccuracy, true);
+      await submitLeaderboardScore(redis, {
+        visitor: username,
+        owner: username,
+        postId: post.id,
+        score: creatorScore,
+        totalNotes: 0,
+        notesHit: 0,
+        maxCombo: 0,
+        accuracy: creatorAccuracy,
+        passed: true,
+        tier,
+        baseReward,
+      });
+      console.info(`[publish] seeded creator leaderboard entry: ${username} → ${creatorScore} (acc=${creatorAccuracy.toFixed(2)})`);
+    } else {
+      console.info(`[publish] skipped creator seed — score=${creatorScore} acc=${creatorAccuracy}`);
     }
 
     // Use post.permalink for the URL — post.id is a T3 string with a

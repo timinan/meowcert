@@ -15,7 +15,7 @@ export class PublishedModal {
 
   constructor(private scene: Scene) {}
 
-  open(args: { url: string; postId?: string; onClose?: () => void }): void {
+  open(args: { url: string; onClose?: () => void }): void {
     this.close();
     const { width, height } = this.scene.scale;
     const cx = width / 2;
@@ -114,23 +114,15 @@ export class PublishedModal {
     openBg.on('pointerover', () => openBg.setFillStyle(0xffe680, 1));
     openBg.on('pointerout', () => openBg.setFillStyle(0xffd34d, 1));
     openBg.on('pointerdown', () => {
-      // Try navigating by post-id (thing-id) first — navigateTo
-      // accepts 'postId' / 'thing' / 'url' forms. The post thing-id
-      // is what Reddit's router recognizes most reliably for in-app
-      // navigation; URLs sometimes route to the subreddit when the
-      // permalink format doesn't exactly match Reddit's expectation.
-      // Falls back to the constructed URL if no postId was passed.
-      const target = args.postId ?? args.url;
-      console.info('[PublishedModal] OPEN POST tapped — navigating to:', target);
+      // Navigate by canonical permalink URL — the same fix Tim landed in
+      // f4d9bbf. The post thing-id (e.g. `t3_xxxxx`) routes Reddit's
+      // in-app navigator to the subreddit instead of the post; the
+      // permalink (/r/<sub>/comments/xxxxx/<slug>) opens cleanly.
+      console.info('[PublishedModal] OPEN POST tapped — navigating to:', args.url);
       try {
-        navigateTo(target);
-        console.info('[PublishedModal] navigateTo returned without throwing');
+        navigateTo(args.url);
       } catch (err) {
         console.error('[PublishedModal] navigateTo threw:', err);
-        // Last-resort fallback: try the other form
-        if (args.postId && target !== args.url) {
-          try { navigateTo(args.url); } catch { /* ignore */ }
-        }
       }
     });
 
