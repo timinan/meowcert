@@ -133,11 +133,12 @@ export class Preloader extends Scene {
       console.warn('[preloader] fetchState failed; starting with no state', e);
     }
 
-    // Visitor entry detection — if Devvit's current postId maps to a
-    // different owner than the current user, this is a VISIT (someone
-    // opened a posted show that isn't theirs). Land on VisitPost to
-    // show the splash + tap-to-play, NOT Decorate. Owners visiting
-    // their own post URL still go to Decorate (their normal home).
+    // Visitor entry — if Devvit gave us a postId AND that post has an
+    // owner mapping (i.e. it's a published Meowcert show), land on
+    // VisitPost so the user sees the show's splash. Owners viewing
+    // their own posts also see VisitPost (useful for previewing how
+    // visitors land); the splash's content adapts internally to
+    // suppress visitor-only UI when isOwner is true.
     // Fire-and-forget: any failure (no post context, no owner mapping,
     // network error) falls through to the normal Welcome/Decorate path.
     let visitPostId: string | null = null;
@@ -145,8 +146,13 @@ export class Preloader extends Scene {
       const init = await fetch('/api/init').then((r) => r.ok ? r.json() : null) as { postId?: string } | null;
       if (init?.postId) {
         const v = await fetch(`/api/visit?postId=${encodeURIComponent(init.postId)}`)
-          .then((r) => r.ok ? r.json() : null) as { isOwner?: boolean } | null;
-        if (v && v.isOwner === false) {
+          .then((r) => r.ok ? r.json() : null) as { ownerUsername?: string } | null;
+        // Owner-mapping presence is the gate (not isOwner) — if /api/visit
+        // returns a 404 (post never published) we skip VisitPost; if it
+        // returns a real owner, render the splash regardless of who's
+        // viewing. Owner-visits-own-post still lands here so the player
+        // can preview their show; the post-share / play paths still work.
+        if (v?.ownerUsername) {
           visitPostId = init.postId;
         }
       }

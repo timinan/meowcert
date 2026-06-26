@@ -11,6 +11,7 @@ import { fetchVisit, type VisitData } from '@/services/visit-client';
 import { loadChart } from '@/services/state-client';
 import { fetchLeaderboard } from '@/services/social-client';
 import type { LeaderboardEntry } from '@/../shared/social-loop';
+import { requestExpandedMode } from '@devvit/web/client';
 
 /**
  * Visitor splash for a posted show. Boot routing lands here when a
@@ -369,7 +370,20 @@ export class VisitPost extends Scene {
     }).setOrigin(0.5);
     this.playBtnBg.on('pointerover', () => this.playBtnBg.setFillStyle(0xffe680, 1));
     this.playBtnBg.on('pointerout', () => this.playBtnBg.setFillStyle(0xffd34d, 1));
-    this.playBtnBg.on('pointerdown', () => this.onPlayClicked());
+    this.playBtnBg.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      // requestExpandedMode needs a trusted DOM gesture to ask Reddit
+      // for fullscreen modal mode. Phaser stores the underlying native
+      // event on pointer.event. Catches if the call throws (e.g. when
+      // already expanded — Devvit throws in that case). Routing to the
+      // round happens regardless.
+      try {
+        const evt = (pointer as { event?: Event }).event;
+        if (evt) requestExpandedMode(evt as MouseEvent, 'default');
+      } catch (err) {
+        console.warn('[VisitPost] requestExpandedMode threw:', err);
+      }
+      this.onPlayClicked();
+    });
   }
 
   private buildBuildLink(): void {
