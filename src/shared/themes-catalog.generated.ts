@@ -12,8 +12,8 @@ export const BACKGROUND_CATALOG = {
   underwater: { id: "underwater", displayName: "Under Water", backdropKey: "theme-underwater-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 60, bgScale: 1.22 },
   saloon: { id: "saloon", displayName: "Saloon", backdropKey: "theme-saloon-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 71, bgScale: 1.19 },
   cathedral: { id: "cathedral", displayName: "Cathedral", backdropKey: "theme-cathedral-bg", musicKey: "theme-default-music", rarity: "legendary" as const, bgShiftUp: -64, bgScale: 1.71 },
-  candybakery: { id: "candybakery", displayName: "Candyland Bakery", backdropKey: "theme-candybakery-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 53, bgScale: 1.13 },
-  hauntedmansion: { id: "hauntedmansion", displayName: "Haunted Mansion", backdropKey: "theme-hauntedmansion-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 62, bgScale: 1.01 },
+  candybakery: { id: "candybakery", displayName: "Candyland Bakery", backdropKey: "theme-candybakery-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 14, bgScale: 1.13 },
+  hauntedmansion: { id: "hauntedmansion", displayName: "Haunted Mansion", backdropKey: "theme-hauntedmansion-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 9, bgScale: 1.09 },
   treehouse: { id: "treehouse", displayName: "Tree House", backdropKey: "theme-treehouse-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 55, bgScale: 1 },
   japanesegarden: { id: "japanesegarden", displayName: "Japanese Garden", backdropKey: "theme-japanesegarden-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 19, bgScale: 1.07 },
   wizardlab: { id: "wizardlab", displayName: "Wizard's Lab", backdropKey: "theme-wizardlab-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 15, bgScale: 1.11 },
@@ -24,6 +24,7 @@ export const BACKGROUND_CATALOG = {
   subwaystation: { id: "subwaystation", displayName: "Subway Station", backdropKey: "theme-subwaystation-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 46, bgScale: 1.18 },
   carnival: { id: "carnival", displayName: "Carnival", backdropKey: "theme-carnival-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 38, bgScale: 1.16 },
   mushroomvillage: { id: "mushroomvillage", displayName: "Mushroom Village", backdropKey: "theme-mushroomvillage-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 40, bgScale: 1.15 },
+  sushishop: { id: "sushishop", displayName: "Sushi Shop", backdropKey: "theme-sushishop-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 13, bgScale: 1.1 },
 } as const;
 
 // Legacy alias — keep so existing THEME_CATALOG consumers compile without a rename sweep.
@@ -49,4 +50,5 @@ export const GENERATED_THEME_CATALOG = [
   BACKGROUND_CATALOG.subwaystation,
   BACKGROUND_CATALOG.carnival,
   BACKGROUND_CATALOG.mushroomvillage,
+  BACKGROUND_CATALOG.sushishop,
 ] as const;

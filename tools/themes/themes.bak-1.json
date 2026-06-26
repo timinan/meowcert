@@ -61,14 +61,14 @@
     "musicKey": "theme-default-music",
     "rarity": "legendary",
     "bgShiftUp": -64,
-    "bgScale": 1.7
+    "bgScale": 1.71
   },
   "candybakery": {
     "displayName": "Candyland Bakery",
     "backdropKey": "theme-candybakery-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 53,
+    "bgShiftUp": 14,
     "bgScale": 1.13
   },
   "hauntedmansion": {
@@ -76,8 +76,8 @@
     "backdropKey": "theme-hauntedmansion-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 62,
-    "bgScale": 1.01
+    "bgShiftUp": 7,
+    "bgScale": 1.09
   },
   "treehouse": {
     "displayName": "Tree House",
@@ -158,5 +158,13 @@
     "rarity": "rare",
     "bgShiftUp": 40,
     "bgScale": 1.15
+  },
+  "sushishop": {
+    "displayName": "Sushi Shop",
+    "backdropKey": "theme-sushishop-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 13,
+    "bgScale": 1.1
   }
 }
