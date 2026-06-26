@@ -307,23 +307,38 @@ export class ChartEditor extends Scene {
   }
 
   /** Header banner sits just below the TopHud and displays the picked
-   *  song's name so the author always sees what they're charting. Same
-   *  dark-purple chrome as the bottom strip for visual continuity. */
+   *  song's name so the author always sees what they're charting. Solid
+   *  dark fill (no alpha) so it reads as its own band — translucent
+   *  strip blended into the TopHud strip above, making them look like
+   *  one big banner. 2-line word wrap fits long display names like
+   *  "Mahalia - I Wish I Missed My Ex (Lyrics)" cleanly without
+   *  bleeding outside the banner. */
   private buildHeaderBanner(): void {
     const { width } = this.scale;
     const bannerY = TopHud.HEIGHT;
     const strip = this.add
-      .rectangle(0, bannerY, width, HEADER_BANNER_H, 0x0b041a, 0.78)
+      .rectangle(0, bannerY, width, HEADER_BANNER_H, 0x1a0a2e, 1)
       .setOrigin(0, 0);
-    this.root.add(strip);
+    // Thin yellow seam at the BOTTOM of the banner so the banner-to-grid
+    // boundary reads as a clean step (matches the TopHud's bottom border).
+    const seam = this.add
+      .rectangle(0, bannerY + HEADER_BANNER_H - 1, width, 1, 0xc0a0e6, 0.35)
+      .setOrigin(0, 0);
+    this.root.add([strip, seam]);
     this.headerBannerText = this.add
       .text(width / 2, bannerY + HEADER_BANNER_H / 2, this.songDisplayName(), {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
-        fontSize: '12px',
+        fontSize: '13px',
         color: '#ffd34d',
+        stroke: '#0b041a',
+        strokeThickness: 3,
         align: 'center',
         wordWrap: { width: width - 24 },
+        // 2 lines max so a 4-line song name doesn't push the grid down.
+        // Long names get truncated by the wrap; the SongPicker already
+        // ellipsizes anyway so this is a soft fallback.
+        maxLines: 2,
       })
       .setOrigin(0.5);
     this.root.add(this.headerBannerText);
@@ -447,6 +462,21 @@ export class ChartEditor extends Scene {
         },
       ],
     });
+
+    // "Put on a Show" title in the TopHud area — mirrors Decorate's
+    // SET STAGE label so each scene's role reads at a glance. Depth
+    // 2010 sits above the TopHud's translucent strip (2000) but below
+    // the drawer scrim (2100). Black 3-px stroke so the yellow text
+    // pops against whatever bg shows through the strip.
+    const { width } = this.scale;
+    this.add.text(width / 2, TopHud.HEIGHT / 2, 'PUT ON A SHOW', {
+      fontFamily: '"Courier New", monospace',
+      fontStyle: 'bold',
+      fontSize: '11px',
+      color: '#ffd34d',
+      stroke: '#0b041a',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(2010);
   }
 
   private buildPageNav(): void {
@@ -1307,7 +1337,7 @@ export class ChartEditor extends Scene {
 
 // Layout constants — referenced from computeGrid + buildPageNav +
 // buildBottomBar so the page-nav row and bottom strip stack cleanly.
-const HEADER_BANNER_H = 26;
+const HEADER_BANNER_H = 42;
 const PAGE_NAV_ROW_H = 36;
 const BOTTOM_STRIP_H = 72;
 // Editor shows TWO pages of cells at once stacked vertically (16 rows
