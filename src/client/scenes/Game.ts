@@ -1888,7 +1888,6 @@ export class Game extends Scene {
       if (!this.publishedModal) this.publishedModal = new PublishedModal(this);
       this.publishedModal.open({
         url: result.url,
-        permalink: result.permalink,
         onClose: () => {
           // After the player closes the confirmation, route back to
           // the editor at the page they were rehearsing — same UX

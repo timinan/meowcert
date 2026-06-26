@@ -15,7 +15,7 @@ export class PublishedModal {
 
   constructor(private scene: Scene) {}
 
-  open(args: { url: string; permalink?: string; onClose?: () => void }): void {
+  open(args: { url: string; onClose?: () => void }): void {
     this.close();
     const { width, height } = this.scene.scale;
     const cx = width / 2;
@@ -114,17 +114,16 @@ export class PublishedModal {
     openBg.on('pointerover', () => openBg.setFillStyle(0xffe680, 1));
     openBg.on('pointerout', () => openBg.setFillStyle(0xffd34d, 1));
     openBg.on('pointerdown', () => {
-      // Reverted to the EXACT call shape from f4d9bbf — plain string
-      // navigation. Today's 1c8f90e tried `{url, permalink}` resolver
-      // form which Tim flagged as the regression. Logging the target
-      // so the next failure tells us what's being sent.
-      console.info('[PublishedModal] OPEN POST tapped — args.url:', args.url, 'args.permalink:', args.permalink);
-      try {
-        navigateTo(args.url);
-        console.info('[PublishedModal] navigateTo returned without throwing');
-      } catch (err) {
+      // navigateTo is Devvit's official escape hatch out of the webview
+      // sandbox — window.open is silently blocked because the webview
+      // runs in an iframe Reddit owns. navigateTo posts a message to
+      // the parent Reddit frame which then navigates the user.
+      try { navigateTo(args.url); } catch (err) {
         console.error('[PublishedModal] navigateTo threw:', err);
       }
+      // Do NOT close + onClose here — once Reddit navigates away, the
+      // webview tears itself down. Leaving the modal up means if the
+      // navigation gets blocked the player still sees the URL.
     });
 
     this.container.add([doneBg, doneTxt, openBg, openTxt]);
