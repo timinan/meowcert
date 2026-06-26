@@ -20,6 +20,11 @@ export interface UserSettings {
   effectAlphaMul: number;  // 0.0 .. 1.5
   musicVolume: number;     // 0 .. 1
   muted: boolean;
+  /** Show in-grid page-break labels in the chart editor + falling
+   *  page-boundary lines during rehearsal. Toggled from the editor's
+   *  bottom-bar PAGES button; persists across sessions + scenes so
+   *  rehearsal mirrors what the author chose. */
+  showPageMarkers: boolean;
 }
 
 const DEFAULTS: UserSettings = {
@@ -27,6 +32,7 @@ const DEFAULTS: UserSettings = {
   effectAlphaMul: 1.0,
   musicVolume: 0.85,
   muted: false,
+  showPageMarkers: true,
 };
 
 function loadFromStorage(): UserSettings {

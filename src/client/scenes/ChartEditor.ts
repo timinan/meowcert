@@ -20,6 +20,7 @@ import { TemplateOrScratchModal, type StartMode } from '@/ui/template-or-scratch
 import { DifficultyPickerModal } from '@/ui/difficulty-picker-modal';
 import { Balance } from '@/constants/balance';
 import { resolveLaneTintsFromSeatedCats } from '@/constants/cat-colors';
+import { getUserSettings, setUserSettings } from '@/systems/user-settings';
 
 /**
  * Chart editor — 3-lane × 32-step beat sequencer paged in 8-row windows.
@@ -94,10 +95,16 @@ export class ChartEditor extends Scene {
   private downPageBtn!: GameObjects.Container;
   private pageLabel!: GameObjects.Text;
   /** Visibility of the in-grid page-break dividers + 'PAGE N' chip
-   *  labels. Toggled by the page-markers chip in the page nav row —
-   *  lets the author hide them for a cleaner editing canvas. */
-  private showPageMarkers = true;
-  private pageMarkersBtn: GameObjects.Container | undefined;
+   *  labels. Backed by user-settings so the choice persists across
+   *  scenes — rehearsal mirrors the editor's setting so a "clean" chart
+   *  in the editor falls clean during playback too. */
+  private get showPageMarkers(): boolean {
+    return getUserSettings().showPageMarkers;
+  }
+  /** Bottom-bar PAGES toggle — kept on the scene so the toggle handler
+   *  can re-style its label/stroke in place when the setting flips. */
+  private pageMarkersBtnBg: GameObjects.Rectangle | undefined;
+  private pageMarkersBtnText: GameObjects.Text | undefined;
 
   // Header banner — sits between TopHud and the grid, displays the
   // picked song's name so the author always sees what they're charting.
@@ -504,73 +511,8 @@ export class ChartEditor extends Scene {
       .setOrigin(0.5);
     this.downPageBtn = this.makeArrow(centerX + chipSpacing, navY, '▶', () => this.onNextPage());
 
-    // Page-markers toggle — small chip on the right edge of the page
-    // nav row. Yellow border when markers are visible, dim when hidden.
-    // Lets the author hide the PAGE 1 / PAGE 2 chip-labels + horizontal
-    // dividers when they want a cleaner editing canvas.
-    this.pageMarkersBtn = this.makeToggle(
-      width - 28,
-      navY,
-      '⊞',
-      this.showPageMarkers,
-      () => {
-        this.showPageMarkers = !this.showPageMarkers;
-        this.refreshPageMarkersVisibility();
-        this.pageMarkersBtn = this.replaceToggle(this.pageMarkersBtn, width - 28, navY, '⊞', this.showPageMarkers, () => {
-          // Identical handler closed-over; re-bound on replace.
-          this.showPageMarkers = !this.showPageMarkers;
-          this.refreshPageMarkersVisibility();
-          this.pageMarkersBtn?.destroy();
-          this.buildPageNav();
-        });
-      },
-    );
-
-    this.root.add([this.upPageBtn, this.pageLabel, this.downPageBtn, this.pageMarkersBtn]);
+    this.root.add([this.upPageBtn, this.pageLabel, this.downPageBtn]);
     this.refreshPageLabel();
-  }
-
-  /** Toggle chip — same chrome as makeArrow but the stroke + glyph
-   *  colors reflect on/off state. on = yellow border + yellow glyph,
-   *  off = dim purple border + dim purple glyph. */
-  private makeToggle(
-    x: number,
-    y: number,
-    label: string,
-    on: boolean,
-    onTap: () => void,
-  ): GameObjects.Container {
-    const c = this.add.container(x, y);
-    const stroke = on ? 0xffd34d : 0xc0a0e6;
-    const strokeAlpha = on ? 0.9 : 0.35;
-    const color = on ? '#ffd34d' : '#c0a0e6';
-    const bg = this.add
-      .rectangle(0, 0, 36, 28, 0x2c1856, 1)
-      .setStrokeStyle(1, stroke, strokeAlpha)
-      .setInteractive({ useHandCursor: true });
-    const text = this.add
-      .text(0, 0, label, {
-        fontFamily: 'Pixeloid Sans, sans-serif',
-        fontStyle: 'bold',
-        fontSize: '14px',
-        color,
-      })
-      .setOrigin(0.5);
-    c.add([bg, text]);
-    bg.on('pointerdown', onTap);
-    return c;
-  }
-
-  /** Helper for the toggle's pointerdown re-render — destroys old, builds
-   *  fresh with flipped state. Quicker than re-creating the whole page nav. */
-  private replaceToggle(
-    old: GameObjects.Container | undefined,
-    x: number, y: number, label: string, on: boolean, onTap: () => void,
-  ): GameObjects.Container {
-    old?.destroy();
-    const t = this.makeToggle(x, y, label, on, onTap);
-    this.root.add(t);
-    return t;
   }
 
   private refreshPageMarkersVisibility(): void {
@@ -693,23 +635,28 @@ export class ChartEditor extends Scene {
       .setOrigin(0, 0);
     this.root.add(strip);
 
-    const barCenterY = stripY + BOTTOM_STRIP_H / 2;
-    const btnH = 40;
-
-    // Three buttons: CLEAR / BACK TO TOP / REHEARSE. Song name lives in
-    // the header banner now; song re-pick happens via the entry flow.
+    // 2×2 grid: top row [CLEAR, BACK TO TOP] + bottom row [PAGES, REHEARSE].
+    // Same pagination footer convention used elsewhere in the app — menu
+    // items above, page nav directly above this strip. PAGES toggle lives
+    // here (not in the page-nav row) so the bottom strip becomes the
+    // single home for editor actions, and the page-nav row stays minimal.
     const sideMargin = 10;
-    const gap = 6;
-    const btnW = (width - sideMargin * 2 - gap * 2) / 3;
-    const startX = sideMargin + btnW / 2;
+    const colGap = 6;
+    const rowGap = 6;
+    const btnH = 30;
+    const btnW = (width - sideMargin * 2 - colGap) / 2;
+    const leftX = sideMargin + btnW / 2;
+    const rightX = sideMargin + btnW + colGap + btnW / 2;
+    const topRowY = stripY + 6 + btnH / 2;
+    const botRowY = topRowY + btnH + rowGap;
 
-    // CLEAR
+    // ── Row 1: CLEAR | BACK TO TOP ────────────────────────────────────
     const clearBg = this.add
-      .rectangle(startX, barCenterY, btnW, btnH, 0x2c1856, 1)
+      .rectangle(leftX, topRowY, btnW, btnH, 0x2c1856, 1)
       .setStrokeStyle(1, 0xc678ff, 0.7)
       .setInteractive({ useHandCursor: true });
     const clearText = this.add
-      .text(startX, barCenterY, 'CLEAR', {
+      .text(leftX, topRowY, 'CLEAR', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
         fontSize: '12px',
@@ -719,42 +666,75 @@ export class ChartEditor extends Scene {
     clearBg.on('pointerdown', () => this.onClearTap());
     this.root.add([clearBg, clearText]);
 
-    // BACK TO TOP — jumps scrollOffset back to page 1 so the author can
-    // get out of deep pagination without spamming the prev arrow.
-    const backX = startX + btnW + gap;
     const backBg = this.add
-      .rectangle(backX, barCenterY, btnW, btnH, 0x2c1856, 1)
+      .rectangle(rightX, topRowY, btnW, btnH, 0x2c1856, 1)
       .setStrokeStyle(1, 0xc678ff, 0.7)
       .setInteractive({ useHandCursor: true });
     const backText = this.add
-      .text(backX, barCenterY, 'BACK TO TOP', {
+      .text(rightX, topRowY, 'BACK TO TOP', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
         fontSize: '11px',
         color: '#c0a0e6',
-        align: 'center',
-        wordWrap: { width: btnW - 8 },
       })
       .setOrigin(0.5);
     backBg.on('pointerdown', () => this.onBackToTopTap());
     this.root.add([backBg, backText]);
 
-    // TRY — primary action. Big yellow button. Saves the chart then
-    // jumps to Game in test mode for an instant playthrough.
-    const tryX = backX + btnW + gap;
-    this.tryBtnBg = this.add
-      .rectangle(tryX, barCenterY, btnW, btnH, 0xffd34d, 1)
+    // ── Row 2: PAGES toggle | REHEARSE ────────────────────────────────
+    this.pageMarkersBtnBg = this.add
+      .rectangle(leftX, botRowY, btnW, btnH, 0x2c1856, 1)
       .setInteractive({ useHandCursor: true });
-    this.tryBtnText = this.add
-      .text(tryX, barCenterY, 'REHEARSE', {
+    this.pageMarkersBtnText = this.add
+      .text(leftX, botRowY, '', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
-        fontSize: '14px',
+        fontSize: '12px',
+        color: '#c0a0e6',
+      })
+      .setOrigin(0.5);
+    this.applyPageMarkersBtnStyle(this.pageMarkersBtnBg, this.pageMarkersBtnText, this.showPageMarkers);
+    this.pageMarkersBtnBg.on('pointerdown', () => {
+      const next = !this.showPageMarkers;
+      setUserSettings({ showPageMarkers: next });
+      this.applyPageMarkersBtnStyle(this.pageMarkersBtnBg!, this.pageMarkersBtnText!, next);
+      this.refreshPageMarkersVisibility();
+    });
+    this.root.add([this.pageMarkersBtnBg, this.pageMarkersBtnText]);
+
+    // REHEARSE — primary action. Big yellow button. Saves the chart then
+    // jumps to Game in test mode for an instant playthrough.
+    this.tryBtnBg = this.add
+      .rectangle(rightX, botRowY, btnW, btnH, 0xffd34d, 1)
+      .setInteractive({ useHandCursor: true });
+    this.tryBtnText = this.add
+      .text(rightX, botRowY, 'REHEARSE', {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontStyle: 'bold',
+        fontSize: '13px',
         color: '#1a0a2e',
       })
       .setOrigin(0.5);
     this.tryBtnBg.on('pointerdown', () => void this.onTryTap());
     this.root.add([this.tryBtnBg, this.tryBtnText]);
+  }
+
+  /** Style PAGES toggle to match its on/off state. Yellow stroke + label
+   *  when ON (markers visible), dim purple when OFF. */
+  private applyPageMarkersBtnStyle(
+    bg: GameObjects.Rectangle,
+    text: GameObjects.Text,
+    on: boolean,
+  ): void {
+    if (on) {
+      bg.setStrokeStyle(1, 0xffd34d, 0.9);
+      text.setText('PAGES: ON');
+      text.setColor('#ffd34d');
+    } else {
+      bg.setStrokeStyle(1, 0xc0a0e6, 0.4);
+      text.setText('PAGES: OFF');
+      text.setColor('#c0a0e6');
+    }
   }
 
   // ─── Interactions ───────────────────────────────────────────────────────
@@ -1417,7 +1397,9 @@ export class ChartEditor extends Scene {
 // buildBottomBar so the page-nav row and bottom strip stack cleanly.
 const HEADER_BANNER_H = 42;
 const PAGE_NAV_ROW_H = 36;
-const BOTTOM_STRIP_H = 72;
+// 6 (top pad) + 30 (row 1) + 6 (row gap) + 30 (row 2) + 6 (bottom pad).
+// Two-row strip houses CLEAR / BACK TO TOP / PAGES toggle / REHEARSE.
+const BOTTOM_STRIP_H = 78;
 // Editor shows TWO pages of cells at once stacked vertically (16 rows
 // = 2 * CHART_PAGE_SIZE) so the author can see the next page coming and
 // space notes against the page break — Tim's "page 3 at top, page 4 at

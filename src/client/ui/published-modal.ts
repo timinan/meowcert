@@ -15,7 +15,7 @@ export class PublishedModal {
 
   constructor(private scene: Scene) {}
 
-  open(args: { url: string; onClose?: () => void }): void {
+  open(args: { url: string; postId?: string; onClose?: () => void }): void {
     this.close();
     const { width, height } = this.scene.scale;
     const cx = width / 2;
@@ -114,20 +114,24 @@ export class PublishedModal {
     openBg.on('pointerover', () => openBg.setFillStyle(0xffe680, 1));
     openBg.on('pointerout', () => openBg.setFillStyle(0xffd34d, 1));
     openBg.on('pointerdown', () => {
-      console.info('[PublishedModal] OPEN POST tapped — url=', args.url);
-      // navigateTo is Devvit's official escape hatch out of the webview
-      // sandbox — window.open is silently blocked because the webview
-      // runs in an iframe Reddit owns. navigateTo posts a message to
-      // the parent Reddit frame which then navigates the user.
+      // Try navigating by post-id (thing-id) first — navigateTo
+      // accepts 'postId' / 'thing' / 'url' forms. The post thing-id
+      // is what Reddit's router recognizes most reliably for in-app
+      // navigation; URLs sometimes route to the subreddit when the
+      // permalink format doesn't exactly match Reddit's expectation.
+      // Falls back to the constructed URL if no postId was passed.
+      const target = args.postId ?? args.url;
+      console.info('[PublishedModal] OPEN POST tapped — navigating to:', target);
       try {
-        navigateTo(args.url);
+        navigateTo(target);
         console.info('[PublishedModal] navigateTo returned without throwing');
       } catch (err) {
         console.error('[PublishedModal] navigateTo threw:', err);
+        // Last-resort fallback: try the other form
+        if (args.postId && target !== args.url) {
+          try { navigateTo(args.url); } catch { /* ignore */ }
+        }
       }
-      // Do NOT close + onClose here — once Reddit navigates away, the
-      // webview tears itself down. Leaving the modal up means if the
-      // navigation gets blocked the player still sees the URL.
     });
 
     this.container.add([doneBg, doneTxt, openBg, openTxt]);

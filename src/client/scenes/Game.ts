@@ -25,6 +25,7 @@ import { CommentComposeModal } from '@/ui/comment-compose-modal';
 import { PublishedModal } from '@/ui/published-modal';
 import { publishChart } from '@/services/publish-client';
 import { CAT_EFFECT_BY_ID, isEffectCosmeticId } from '@/effects/cat-effects';
+import { getUserSettings } from '@/systems/user-settings';
 import { submitPlay } from '@/services/social-client';
 import { getBest, recordRun, type BestStats, type StatKey } from '@/services/rehearsal-best';
 import {
@@ -300,9 +301,12 @@ export class Game extends Scene {
   /** Spawn page-boundary lines at SPAWN time so they fall with the
    *  notes and visually mark where the next page begins. Test mode
    *  only — rehearsing from the drawer doesn't get markers since the
-   *  player didn't author the chart. */
+   *  player didn't author the chart. Also gated on the user-settings
+   *  showPageMarkers flag, so toggling PAGES off in the editor also
+   *  hides the falling page lines during the very next rehearsal. */
   private tickPageTracking(): void {
     if (!this.testMode) return;
+    if (!getUserSettings().showPageMarkers) return;
     if (!this.playChart || this.playMsPerStep <= 0) return;
     const elapsedMs = this.time.now - this.startTimeMs;
     const spawnStep = Math.floor(elapsedMs / this.playMsPerStep);
@@ -1860,6 +1864,7 @@ export class Game extends Scene {
       if (!this.publishedModal) this.publishedModal = new PublishedModal(this);
       this.publishedModal.open({
         url: result.url,
+        postId: result.postId,
         onClose: () => {
           // After the player closes the confirmation, route back to
           // the editor at the page they were rehearsing — same UX
