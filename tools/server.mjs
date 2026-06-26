@@ -1159,7 +1159,7 @@ const server = http.createServer(async (req, res) => {
       const slug = req.url.replace(/^\/music-reclip\//, '').split('?')[0];
       try {
         const q = new URL(req.url, 'http://localhost').searchParams;
-        const startS = Math.max(0, parseFloat(q.get('startS') || '0'));
+        const rawStartS = Math.max(0, parseFloat(q.get('startS') || '0'));
         const durS = parseFloat(q.get('durS') || String(CLIP_DURATION_S));
         if (!Number.isFinite(durS) || durS < 5 || durS > 180) {
           throw new Error(`bad durS: ${durS}`);
@@ -1167,6 +1167,19 @@ const server = http.createServer(async (req, res) => {
         const srcPath = path.join(MUSIC_SOURCES_DIR, `${slug}.src`);
         try { await fs.access(srcPath); } catch {
           throw new Error(`no source preserved for ${slug} — re-upload the original mp3 to use the editor`);
+        }
+        // Clamp startS so it can't land past the end of the source —
+        // ffmpeg silently produces a near-empty mp3 when atrim starts
+        // beyond duration, which used to ship a broken playable through
+        // the catalog (Tim's "songs can't be played" report). Cap at
+        // max(0, sourceDur - durS) so we always get a full window.
+        const sourceDur = await probeDurationSeconds(srcPath);
+        const maxStart = Math.max(0, sourceDur - durS);
+        const startS = Math.min(rawStartS, maxStart);
+        if (startS !== rawStartS) {
+          console.warn(
+            `[reclip:${slug}] requested startS=${rawStartS}s clamped to ${startS}s (source ${sourceDur.toFixed(1)}s, window ${durS}s)`,
+          );
         }
         const outPath = path.join(MUSIC_UPLOAD_DIR, `${slug}.mp3`);
         await reclipFromSource(srcPath, outPath, startS, durS);
