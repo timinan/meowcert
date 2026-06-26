@@ -14,7 +14,7 @@
  */
 
 export type PublishResult =
-  | { ok: true; postId: string; url: string }
+  | { ok: true; postId: string; url: string; permalink: string }
   | { ok: false; reason: string };
 
 export async function publishChart(opts: {
@@ -36,11 +36,11 @@ export async function publishChart(opts: {
         creatorAccuracy: opts.creatorAccuracy ?? null,
       }),
     });
-    const data = (await res.json()) as { ok?: boolean; reason?: string; postId?: string; url?: string };
+    const data = (await res.json()) as { ok?: boolean; reason?: string; postId?: string; url?: string; permalink?: string };
     if (!res.ok || data.ok !== true || !data.postId || !data.url) {
       return { ok: false, reason: data.reason ?? `HTTP ${res.status}` };
     }
-    return { ok: true, postId: data.postId, url: data.url };
+    return { ok: true, postId: data.postId, url: data.url, permalink: data.permalink ?? '' };
   } catch (err) {
     console.error('[publishChart] threw:', err);
     return { ok: false, reason: 'network error' };

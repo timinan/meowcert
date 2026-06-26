@@ -15,7 +15,7 @@ export class PublishedModal {
 
   constructor(private scene: Scene) {}
 
-  open(args: { url: string; onClose?: () => void }): void {
+  open(args: { url: string; permalink?: string; onClose?: () => void }): void {
     this.close();
     const { width, height } = this.scene.scale;
     const cx = width / 2;
@@ -114,13 +114,18 @@ export class PublishedModal {
     openBg.on('pointerover', () => openBg.setFillStyle(0xffe680, 1));
     openBg.on('pointerout', () => openBg.setFillStyle(0xffd34d, 1));
     openBg.on('pointerdown', () => {
-      // Navigate by canonical permalink URL — the same fix Tim landed in
-      // f4d9bbf. The post thing-id (e.g. `t3_xxxxx`) routes Reddit's
-      // in-app navigator to the subreddit instead of the post; the
-      // permalink (/r/<sub>/comments/xxxxx/<slug>) opens cleanly.
-      console.info('[PublishedModal] OPEN POST tapped — navigating to:', args.url);
+      // Hand navigateTo a `{ url, permalink }` shape when we have both
+      // — Devvit's resolver uses a path-equality heuristic to pick the
+      // form Reddit's mobile deep-link router routes to the POST (not
+      // the subreddit landing it falls back to when only the raw URL
+      // string is passed for a freshly-created post that hasn't fully
+      // indexed yet). Falls back to plain url string if permalink
+      // wasn't provided (older callers).
+      const target: string | { url: string; permalink: string } =
+        args.permalink ? { url: args.url, permalink: args.permalink } : args.url;
+      console.info('[PublishedModal] OPEN POST tapped — navigating to:', target);
       try {
-        navigateTo(args.url);
+        navigateTo(target);
       } catch (err) {
         console.error('[PublishedModal] navigateTo threw:', err);
       }

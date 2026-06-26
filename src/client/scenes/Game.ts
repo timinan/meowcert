@@ -270,12 +270,20 @@ export class Game extends Scene {
       // moment the scene boots.
       await this.initChartPlayer();
       void this.beginRound();
+    } else if (this.playerState?.chart?.steps?.some((s) => s.lanes.length > 0)) {
+      // Drawer REHEARSE path with an authored chart: rehearse THAT chart
+      // instead of forcing a song-pick. The picker is the fresh-entry
+      // fallback; once you've authored something, REHEARSE should
+      // practice your own set. initChartPlayer's priority chain reads
+      // playerState.chart, attaches music to its audioKey, and runs.
+      await this.initChartPlayer();
+      void this.beginRound();
     } else {
-      // Fresh Rehearse entry: two-step picker. SongPicker (vibe → song
-      // list → preview + select) → DifficultyPicker (easy/normal/hard
-      // → START) → generate a chart at that song + difficulty, set
-      // chart.audioKey so MusicSystem locks to the picked backing,
-      // attach + begin the round.
+      // Fresh Rehearse entry with no authored chart yet: two-step picker.
+      // SongPicker (vibe → song list → preview + select) →
+      // DifficultyPicker (easy/normal/hard → START) → generate a chart
+      // at that song + difficulty, set chart.audioKey so MusicSystem
+      // locks to the picked backing, attach + begin the round.
       this.showSongPicker();
     }
   }
@@ -1864,6 +1872,7 @@ export class Game extends Scene {
       if (!this.publishedModal) this.publishedModal = new PublishedModal(this);
       this.publishedModal.open({
         url: result.url,
+        permalink: result.permalink,
         onClose: () => {
           // After the player closes the confirmation, route back to
           // the editor at the page they were rehearsing — same UX
