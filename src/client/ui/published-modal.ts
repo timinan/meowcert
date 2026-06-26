@@ -114,18 +114,14 @@ export class PublishedModal {
     openBg.on('pointerover', () => openBg.setFillStyle(0xffe680, 1));
     openBg.on('pointerout', () => openBg.setFillStyle(0xffd34d, 1));
     openBg.on('pointerdown', () => {
-      // Hand navigateTo a `{ url, permalink }` shape when we have both
-      // — Devvit's resolver uses a path-equality heuristic to pick the
-      // form Reddit's mobile deep-link router routes to the POST (not
-      // the subreddit landing it falls back to when only the raw URL
-      // string is passed for a freshly-created post that hasn't fully
-      // indexed yet). Falls back to plain url string if permalink
-      // wasn't provided (older callers).
-      const target: string | { url: string; permalink: string } =
-        args.permalink ? { url: args.url, permalink: args.permalink } : args.url;
-      console.info('[PublishedModal] OPEN POST tapped — navigating to:', target);
+      // Reverted to the EXACT call shape from f4d9bbf — plain string
+      // navigation. Today's 1c8f90e tried `{url, permalink}` resolver
+      // form which Tim flagged as the regression. Logging the target
+      // so the next failure tells us what's being sent.
+      console.info('[PublishedModal] OPEN POST tapped — args.url:', args.url, 'args.permalink:', args.permalink);
       try {
-        navigateTo(target);
+        navigateTo(args.url);
+        console.info('[PublishedModal] navigateTo returned without throwing');
       } catch (err) {
         console.error('[PublishedModal] navigateTo threw:', err);
       }

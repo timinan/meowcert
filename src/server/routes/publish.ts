@@ -150,21 +150,15 @@ publish.post('/chart', async (c) => {
       console.info(`[publish] skipped creator seed — score=${creatorScore} acc=${creatorAccuracy}`);
     }
 
-    // Hand back BOTH post.url (Devvit's canonical full URL) and the
-    // permalink path so the client can pass `{ url, permalink }` to
-    // navigateTo — that's the shape Devvit's resolver heuristic
-    // recognizes and routes to the post itself rather than the
-    // subreddit landing (recurring Tim bug: "view post just goes to
-    // subreddit"). Constructing the URL manually as
-    // `https://reddit.com${permalink}` was correct in shape but the
-    // Reddit mobile deep-link router still resolved a freshly-created
-    // post to the subreddit, presumably because indexing hadn't
-    // propagated. The post object's url is what Devvit uses internally
-    // and navigateTo's path-equality heuristic picks the right form.
-    const url = post.url;
-    const permalink = post.permalink;
-    console.info('[publish] returning ok with url:', url, 'permalink:', permalink);
-    return c.json({ ok: true, postId: post.id, url, permalink });
+    // Reverted to the EXACT shape from f4d9bbf (the version Tim
+    // confirmed worked yesterday): plain `https://reddit.com${permalink}`
+    // string. Today's 1c8f90e tried Devvit's `{url, permalink}` resolver
+    // form using post.url — Tim flagged that as a regression. Sticking
+    // to the known-good behavior + logging both fields so the next
+    // failure has enough signal to diagnose without guessing.
+    const url = `https://reddit.com${post.permalink}`;
+    console.info('[publish] returning ok url:', url, 'post.url:', post.url, 'post.permalink:', post.permalink);
+    return c.json({ ok: true, postId: post.id, url, permalink: post.permalink });
   } catch (err) {
     console.error('[publish] failed to create post:', err);
     const msg = err instanceof Error ? err.message : String(err);
