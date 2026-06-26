@@ -1775,7 +1775,11 @@ export class Game extends Scene {
   }
 
   private onPostFromTestClicked = (): void => {
-    if (this.publishBusy) return;
+    console.info('[Game] PUT ON A SHOW tapped');
+    if (this.publishBusy) {
+      console.info('[Game] publish already in flight, ignoring');
+      return;
+    }
     this.publishBusy = true;
     // Flash the right button so the player sees the click registered
     // while the network round-trip happens (Reddit's submitCustomPost
@@ -1784,13 +1788,18 @@ export class Game extends Scene {
     const origLabel = this.summaryRightText.text;
     this.summaryRightText.setText('POSTING…');
     this.summaryRightBg.setFillStyle(0xc0a0e6, 1);
+    console.info('[Game] hitting /api/publish/chart');
     void publishChart().then((result) => {
       this.publishBusy = false;
+      console.info('[Game] publishChart result:', result);
       if (!result.ok) {
         console.warn('[Game] publishChart failed:', result.reason);
-        this.summaryRightText.setText('TRY AGAIN');
+        // Surface the actual reason so Tim can see what broke without
+        // opening DevTools. Truncated to fit the button width.
+        const errLabel = `× ${result.reason}`.slice(0, 18);
+        this.summaryRightText.setText(errLabel);
         this.summaryRightBg.setFillStyle(0xff6b6b, 1);
-        this.time.delayedCall(1500, () => {
+        this.time.delayedCall(3000, () => {
           if (!this.scene.isActive()) return;
           this.summaryRightText.setText(origLabel);
           this.summaryRightBg.setFillStyle(0xffd34d, 1);
@@ -1812,6 +1821,11 @@ export class Game extends Scene {
           });
         },
       });
+    }).catch((err: unknown) => {
+      this.publishBusy = false;
+      console.error('[Game] publishChart threw:', err);
+      this.summaryRightText.setText('× THREW');
+      this.summaryRightBg.setFillStyle(0xff6b6b, 1);
     });
   };
 

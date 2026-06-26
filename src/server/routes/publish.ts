@@ -16,8 +16,10 @@ import { setPostOwner } from '../core/social';
 export const publish = new Hono();
 
 publish.post('/chart', async (c) => {
+  console.info('[publish] POST /chart received');
   try {
     const username = (await reddit.getCurrentUsername()) ?? 'anonymous';
+    console.info('[publish] username:', username);
     if (username === 'anonymous') {
       return c.json({ ok: false, reason: 'sign in to post a show' }, 401);
     }
@@ -25,6 +27,7 @@ publish.post('/chart', async (c) => {
     const state = await loadOrInit(redis, username);
     const chart = state.chart;
     const hasNotes = chart?.steps?.some((s) => s.lanes.length > 0);
+    console.info('[publish] chart present:', !!chart, 'has notes:', hasNotes);
     if (!chart || !hasNotes) {
       return c.json(
         { ok: false, reason: 'save a chart with at least one note before posting' },
@@ -34,9 +37,11 @@ publish.post('/chart', async (c) => {
 
     // Devvit creates the post + returns its id. Title carries the
     // author's name so the feed reads as "playing alice's show".
+    console.info('[publish] calling reddit.submitCustomPost...');
     const post = await reddit.submitCustomPost({
       title: `🎵 ${username}'s show`,
     });
+    console.info('[publish] post created, id:', post.id);
 
     // Wire the post → owner mapping immediately so submitPlay /
     // leaderboard / inbox endpoints can route to the right author the
@@ -47,9 +52,11 @@ publish.post('/chart', async (c) => {
     const url = subreddit
       ? `https://reddit.com/r/${subreddit}/comments/${post.id}`
       : `https://reddit.com/comments/${post.id}`;
+    console.info('[publish] returning ok with url:', url);
     return c.json({ ok: true, postId: post.id, url });
   } catch (err) {
     console.error('[publish] failed to create post:', err);
-    return c.json({ ok: false, reason: 'reddit rejected the post' }, 500);
+    const msg = err instanceof Error ? err.message : String(err);
+    return c.json({ ok: false, reason: `reddit error: ${msg.slice(0, 80)}` }, 500);
   }
 });
