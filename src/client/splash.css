@@ -7,14 +7,14 @@
 
 .splash {
   display: flex;
-  align-items: center;
-  justify-content: center;
   flex-direction: column;
+  align-items: center;
   min-height: 100vh;
-  padding: 20px 16px;
-  gap: 14px;
+  padding: 0;
+  gap: 0;
   color: #ffffff;
-  /* Meowcert dark stage chrome — same palette as in-game scenes. */
+  /* Match the in-game Meowcert dark chrome — same gradient family the
+     scenes use, so the splash and the loaded game feel continuous. */
   background:
     repeating-linear-gradient(
       0deg,
@@ -23,39 +23,28 @@
       transparent 1px,
       transparent 3px
     ),
-    radial-gradient(ellipse at top, #4d2d8c 0%, #2c1856 45%, #1a0a2e 90%);
+    radial-gradient(ellipse at top, #2c1856 0%, #1a0a2e 60%, #0b041a 100%);
 }
 
-/* "Stage" block — pixel-art marquee + cat row + footlights. Static
-   HTML mimicking the in-game stage so the inline preview reads as a
-   show, not a generic landing card. */
+/* === Cat stage (captured screenshot fills here) ============= */
 .stage {
   width: 100%;
-  max-width: 320px;
+  max-width: 380px;
+  aspect-ratio: 320 / 180;
+  background-size: cover;
+  background-position: center;
+  background-color: #1a0a2e;
+  border-bottom: 2px solid rgba(255, 211, 77, 0.45);
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 14px;
-  padding: 22px 12px 18px;
-  background:
-    linear-gradient(180deg, rgba(255, 211, 77, 0.08) 0%, rgba(11, 4, 26, 0.55) 100%),
-    repeating-linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.025) 0px,
-      rgba(255, 255, 255, 0.025) 2px,
-      transparent 2px,
-      transparent 6px
-    ),
-    #1a0a2e;
-  border: 2px solid rgba(255, 211, 77, 0.4);
-  border-radius: 10px;
-  box-shadow:
-    inset 0 0 24px rgba(0, 0, 0, 0.4),
-    0 8px 24px rgba(0, 0, 0, 0.5);
+  justify-content: center;
   position: relative;
+  overflow: hidden;
 }
-
-.marquee {
+.marquee-fallback {
+  /* Visible only when no captured image has loaded yet — branded
+     placeholder so the splash isn't blank on first paint. Hidden via
+     splash.ts once the bg image lands. */
   font-size: 28px;
   font-weight: 900;
   letter-spacing: 3px;
@@ -66,57 +55,81 @@
     2px 2px 0 #0b041a;
 }
 
-.cat-row {
+/* === Info panel (mirrors VisitPost's lower band) ============== */
+.info {
+  width: 100%;
+  max-width: 380px;
+  padding: 14px 18px 12px;
   display: flex;
-  gap: 18px;
-  font-size: 56px;
-  line-height: 1;
-  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.5));
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: rgba(26, 10, 46, 0.85);
+  border-bottom: 1px solid rgba(192, 160, 230, 0.2);
 }
 
-/* Stagger the bob so the three cats feel alive without dancing in
-   lockstep — same trick the game uses on seated cats. */
-.cat { display: inline-block; animation: bob 2.4s ease-in-out infinite; }
-.cat-a { animation-delay: 0s; }
-.cat-b { animation-delay: 0.2s; }
-.cat-c { animation-delay: 0.4s; }
-@keyframes bob {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-5px); }
+.author {
+  font-size: 15px;
+  font-weight: 900;
+  color: #ffd34d;
+  letter-spacing: 0.5px;
+  text-align: center;
 }
 
-.lights {
-  display: flex;
-  gap: 6px;
-  margin-top: 2px;
-}
-.lights span {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #ffd34d;
-  box-shadow: 0 0 8px #ffd34d;
-  animation: flicker 1.8s ease-in-out infinite;
-}
-.lights span:nth-child(2) { background: #ff6bbf; box-shadow: 0 0 8px #ff6bbf; animation-delay: 0.3s; }
-.lights span:nth-child(3) { background: #4dd0ff; box-shadow: 0 0 8px #4dd0ff; animation-delay: 0.6s; }
-.lights span:nth-child(4) { background: #ff6bbf; box-shadow: 0 0 8px #ff6bbf; animation-delay: 0.9s; }
-.lights span:nth-child(5) { background: #ffd34d; box-shadow: 0 0 8px #ffd34d; animation-delay: 1.2s; }
-@keyframes flicker {
-  0%, 100% { opacity: 1; }
-  50%      { opacity: 0.55; }
+.song {
+  font-size: 11px;
+  color: #c0a0e6;
+  margin-bottom: 4px;
+  text-align: center;
 }
 
+.stats {
+  font-size: 11px;
+  color: #ffffff;
+  margin-bottom: 4px;
+}
+
+.lb-header {
+  width: 100%;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #c0a0e6;
+  text-align: left;
+  margin-top: 4px;
+}
+
+.lb {
+  width: 100%;
+  list-style: none;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.lb li {
+  color: #ffffff;
+  font-family: "Courier New", Menlo, monospace;
+}
+
+.your-best {
+  margin-top: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #4dffb4;
+  min-height: 14px;
+}
+
+/* === Play button ============================================== */
 .play-button {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   background: #ffd34d;
   color: #1a0a2e;
   border: 2px solid #0b041a;
   border-radius: 999px;
-  padding: 14px 32px;
+  padding: 14px 36px;
   font-family: "Courier New", Menlo, monospace;
   font-size: 17px;
   font-weight: 900;
@@ -126,7 +139,7 @@
     0 4px 0 0 #b07e00,
     0 10px 22px rgba(255, 211, 77, 0.3);
   transition: transform 80ms ease, box-shadow 80ms ease, background 80ms ease;
-  margin-top: 6px;
+  margin: 14px auto 18px;
 }
 .play-button:hover  { background: #ffe680; }
 .play-button:active {
@@ -135,10 +148,4 @@
     0 2px 0 0 #b07e00,
     0 5px 12px rgba(255, 211, 77, 0.25);
 }
-.play-arrow { font-size: 18px; }
-
-.hint {
-  font-size: 11px;
-  color: #c0a0e6;
-  opacity: 0.75;
-}
+.play-arrow { font-size: 19px; }

@@ -10,22 +10,33 @@
     <title>Meowcert</title>
   </head>
   <body class="splash">
-    <div class="stage" aria-hidden="true">
-      <div class="marquee">MEOWCERT</div>
-      <div class="cat-row">
-        <span class="cat cat-a">🐱</span>
-        <span class="cat cat-b">😺</span>
-        <span class="cat cat-c">🐱</span>
-      </div>
-      <div class="lights">
-        <span></span><span></span><span></span><span></span><span></span>
-      </div>
+    <!-- Cat-stage band — owner's captured screenshot fills this once
+         the preview fetch resolves. Until then, the marquee fallback
+         keeps the splash branded instead of blank. -->
+    <div class="stage" id="stage">
+      <div class="marquee-fallback" id="marquee-fallback">MEOWCERT</div>
     </div>
+
+    <!-- Info panel — mirrors the VisitPost in-game info layout:
+         author / song / play count / top 3 leaderboard / your best. -->
+    <div class="info">
+      <div class="author" id="author">Loading…</div>
+      <div class="song" id="song">— song —</div>
+      <div class="stats" id="stats"></div>
+      <div class="lb-header">TOP SCORES</div>
+      <ol class="lb">
+        <li id="lb-1">1. —</li>
+        <li id="lb-2">2. —</li>
+        <li id="lb-3">3. —</li>
+      </ol>
+      <div class="your-best" id="your-best"></div>
+    </div>
+
     <button class="play-button" id="start-button">
       <span class="play-arrow">▶</span>
       <span class="play-text">TAP TO PLAY</span>
     </button>
-    <p class="hint">a rhythm show — tap the notes to the beat</p>
+
     <script type="module" src="splash.ts" defer></script>
   </body>
 </html>

@@ -10,6 +10,7 @@ import { chart } from './chart';
 import { social } from './social';
 import { publish } from './publish';
 import { visit } from './visit';
+import { preview } from './preview';
 
 type ErrorResponse = {
   status: 'error';
@@ -37,6 +38,12 @@ api.route('/publish', publish);
 // (seated cats + bg + per-cat cosmetics) so the VisitPost scene can
 // render the owner's stage as the splash backdrop.
 api.route('/visit', visit);
+
+// Preview-image endpoints — POST /api/preview-image stores the
+// caller's cat-stage snapshot, GET /api/preview-image?postId=X returns
+// the post owner's stored image + chart metadata so splash.html can
+// render the owner's actual stage as the feed-preview backdrop.
+api.route('/preview-image', preview);
 
 api.get('/init', async (c) => {
   const { postId } = context;
