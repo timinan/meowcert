@@ -82,4 +82,10 @@ export const BACKING_CATALOG: Record<string, BackingTrack> = {
   "celestial-drift": { id: "celestial-drift", displayName: "Celestial Drift", speedLabel: "fast", vibe: "upbeat", bpm: 130, audioKey: "backing-celestial-drift", loopDurationMs: 65000, clipStartS: 53 },
   "cocktail-hour-1": { id: "cocktail-hour-1", displayName: "Cocktail Hour (1)", speedLabel: "fast", vibe: "upbeat", bpm: 130, audioKey: "backing-cocktail-hour-1", loopDurationMs: 65000, clipStartS: 46 },
   "cocktail-hour": { id: "cocktail-hour", displayName: "Cocktail Hour", speedLabel: "fast", vibe: "upbeat", bpm: 130, audioKey: "backing-cocktail-hour", loopDurationMs: 65000, clipStartS: 35 },
+  "bounce-bloom-1-2": { id: "bounce-bloom-1-2", displayName: "Bounce & Bloom (1)", speedLabel: "fast", vibe: "upbeat", bpm: 130, audioKey: "backing-bounce-bloom-1-2", loopDurationMs: 65000, clipStartS: 0 },
+  "bounce-bloom": { id: "bounce-bloom", displayName: "Bounce & Bloom", speedLabel: "fast", vibe: "upbeat", bpm: 130, audioKey: "backing-bounce-bloom", loopDurationMs: 65000, clipStartS: 535 },
+  "neon-pulse-4": { id: "neon-pulse-4", displayName: "Neon Pulse (4)", speedLabel: "fast", vibe: "upbeat", bpm: 130, audioKey: "backing-neon-pulse-4", loopDurationMs: 65000, clipStartS: 758 },
+  "neon-pulse-3": { id: "neon-pulse-3", displayName: "Neon Pulse (3)", speedLabel: "fast", vibe: "upbeat", bpm: 130, audioKey: "backing-neon-pulse-3", loopDurationMs: 65000, clipStartS: 0 },
+  "dance-of-the-neon-shadows-1": { id: "dance-of-the-neon-shadows-1", displayName: "Dance of the Neon Shadows (1)", speedLabel: "fast", vibe: "upbeat", bpm: 130, audioKey: "backing-dance-of-the-neon-shadows-1", loopDurationMs: 65000, clipStartS: 437 },
+  "dance-of-the-neon-shadows": { id: "dance-of-the-neon-shadows", displayName: "Dance of the Neon Shadows", speedLabel: "fast", vibe: "upbeat", bpm: 130, audioKey: "backing-dance-of-the-neon-shadows", loopDurationMs: 65000, clipStartS: 807 },
 };

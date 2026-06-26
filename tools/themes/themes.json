@@ -4,7 +4,7 @@
     "backdropKey": "theme-stage-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": -24,
+    "bgShiftUp": -18,
     "bgScale": 1.29
   },
   "cattemple": {
@@ -12,7 +12,7 @@
     "backdropKey": "theme-cattemple-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 49,
+    "bgShiftUp": 51,
     "bgScale": 1.13
   },
   "pumpkinpatch": {
@@ -52,8 +52,8 @@
     "backdropKey": "theme-saloon-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 71,
-    "bgScale": 1.19
+    "bgShiftUp": -15,
+    "bgScale": 1.23
   },
   "cathedral": {
     "displayName": "Cathedral",
@@ -92,15 +92,15 @@
     "backdropKey": "theme-japanesegarden-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 19,
-    "bgScale": 1.07
+    "bgShiftUp": 24,
+    "bgScale": 1.09
   },
   "wizardlab": {
     "displayName": "Wizard's Lab",
     "backdropKey": "theme-wizardlab-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 15,
+    "bgShiftUp": 18,
     "bgScale": 1.11
   },
   "dojo": {
@@ -140,7 +140,7 @@
     "backdropKey": "theme-subwaystation-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 46,
+    "bgShiftUp": 49,
     "bgScale": 1.18
   },
   "carnival": {
@@ -220,8 +220,8 @@
     "backdropKey": "theme-basketballcourt-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": -56,
-    "bgScale": 1.43
+    "bgShiftUp": -100,
+    "bgScale": 1.73
   },
   "candyfactory": {
     "displayName": "Candy Factory",
@@ -260,7 +260,7 @@
     "backdropKey": "theme-meowstage-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": -35,
+    "bgShiftUp": -27,
     "bgScale": 1.4
   },
   "countryfarm": {
