@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <link rel="stylesheet" type="text/css" href="splash.css" />
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, width=device-width, height=device-height, user-scalable=0"
+    />
+    <title>Meowcert</title>
+  </head>
+  <body class="splash">
+    <div class="stage" aria-hidden="true">
+      <div class="marquee">MEOWCERT</div>
+      <div class="cat-row">
+        <span class="cat cat-a">🐱</span>
+        <span class="cat cat-b">😺</span>
+        <span class="cat cat-c">🐱</span>
+      </div>
+      <div class="lights">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+    </div>
+    <button class="play-button" id="start-button">
+      <span class="play-arrow">▶</span>
+      <span class="play-text">TAP TO PLAY</span>
+    </button>
+    <p class="hint">a rhythm show — tap the notes to the beat</p>
+    <script type="module" src="splash.ts" defer></script>
+  </body>
+</html>
