@@ -18,11 +18,13 @@
     </div>
 
     <!-- Info panel — mirrors the VisitPost in-game info layout:
-         author / song / play count / top 3 leaderboard / your best. -->
-    <div class="info">
-      <div class="author" id="author">Loading…</div>
-      <div class="song" id="song">— song —</div>
-      <div class="stats" id="stats"></div>
+         author / song / play count / top 3 leaderboard / your best.
+         Hidden by default; splash.ts shows it only once the per-post
+         visit fetch returns a real ownerUsername. Scaffold / unmapped
+         posts skip it so the splash collapses to MEOWCERT + PLAY only. -->
+    <div class="info" id="info" style="display: none;">
+      <div class="author" id="author"></div>
+      <div class="song" id="song"></div>
       <div class="lb-header">TOP SCORES</div>
       <ol class="lb">
         <li id="lb-1">1. —</li>

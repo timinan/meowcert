@@ -1918,11 +1918,13 @@ export class Game extends Scene {
       const x = 0;
       const y = TopHud.HEIGHT * scaleY;
       const w = this.scale.width;
-      // Crop ~30 px shy of LANE_TOP_Y so the combo-text band that sits
-      // just above the lanes is excluded — even on a frame where the
-      // text was mid-tween in/out and our setAlpha(0) hadn't taken
-      // effect visually yet.
-      const h = (L.LANE_TOP_Y - 30 - TopHud.HEIGHT) * scaleY;
+      // Capture down to LANE_TOP_Y — the full cat-stage band including
+      // the bottom edge of the stage. We already hide comboText via
+      // setAlpha(0) so the 'thank you' text won't show in the frame
+      // (was previously cropping 30 px shy as belt-and-suspenders;
+      // the alpha hide is enough on its own and Tim wants the
+      // taller image to fill more splash whitespace).
+      const h = (L.LANE_TOP_Y - TopHud.HEIGHT) * scaleY;
       try {
         renderer.snapshotArea(x, y, w, h, (img) => {
           if (!(img instanceof HTMLImageElement)) {

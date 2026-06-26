@@ -336,7 +336,8 @@ export class VisitPost extends Scene {
       const entry = this.leaderboardTop[i];
       if (entry) {
         const rank = `${i + 1}.`.padEnd(3);
-        const name = entry.username.length > 18 ? entry.username.slice(0, 16) + '…' : entry.username;
+        const u = entry.visitor;
+        const name = u.length > 18 ? u.slice(0, 16) + '…' : u;
         const score = entry.score.toLocaleString().padStart(7);
         this.leaderboardRows[i]!.setText(`${rank}${name.padEnd(20)}${score}`);
       } else {

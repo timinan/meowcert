@@ -33,7 +33,9 @@
 .stage {
   width: 100%;
   max-width: 380px;
-  aspect-ratio: 320 / 152;
+  /* Match the captured image aspect (320 wide × (LANE_TOP_Y - TopHud)
+     = 320 × 182 design pixels). Wider band fills the splash better. */
+  aspect-ratio: 320 / 182;
   background-size: cover;
   background-position: center;
   background-color: #1a0a2e;

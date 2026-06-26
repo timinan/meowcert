@@ -15,9 +15,9 @@ import { context, requestExpandedMode } from '@devvit/web/client';
 
 const stage = document.getElementById('stage') as HTMLDivElement | null;
 const marqueeFallback = document.getElementById('marquee-fallback') as HTMLDivElement | null;
+const infoPanel = document.getElementById('info') as HTMLDivElement | null;
 const authorEl = document.getElementById('author') as HTMLDivElement | null;
 const songEl = document.getElementById('song') as HTMLDivElement | null;
-const statsEl = document.getElementById('stats') as HTMLDivElement | null;
 const lbEls = [
   document.getElementById('lb-1') as HTMLLIElement | null,
   document.getElementById('lb-2') as HTMLLIElement | null,
@@ -51,7 +51,7 @@ interface VisitData {
 }
 
 interface LeaderboardData {
-  top?: Array<{ username: string; score: number }>;
+  top?: Array<{ visitor: string; score: number; accuracy?: number; playedAt?: number }>;
   yourRank?: number | null;
   yourScore?: number | null;
 }
@@ -70,6 +70,13 @@ function renderVisit(d: VisitData): void {
     if (d.song.difficulty) parts.push(d.song.difficulty);
     songEl.textContent = `🎶 ${parts.join(' · ')}`;
   }
+  // Only show the info panel once we have a real owner — scaffold /
+  // unmapped posts (like the original 'Meowcert' moderator-test post)
+  // get just the MEOWCERT marquee + PLAY button, no half-filled
+  // 'Created by u/—' / empty leaderboard noise.
+  if (d.ownerUsername && infoPanel) {
+    infoPanel.style.display = '';
+  }
 }
 
 function renderLeaderboard(d: LeaderboardData): void {
@@ -83,7 +90,10 @@ function renderLeaderboard(d: LeaderboardData): void {
       li.textContent = `${i + 1}. —`;
       continue;
     }
-    const name = e.username.length > 16 ? e.username.slice(0, 14) + '…' : e.username;
+    // Backend field is `visitor` (the username string), not `username`
+    // — this was the missing-score bug.
+    const u = e.visitor;
+    const name = u.length > 16 ? u.slice(0, 14) + '…' : u;
     li.textContent = `${i + 1}. ${name.padEnd(18)} ${e.score.toLocaleString()}`;
   }
   if (yourBestEl && d.yourRank != null && d.yourScore != null) {

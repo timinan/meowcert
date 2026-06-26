@@ -93,6 +93,11 @@ export class ChartEditor extends Scene {
   private upPageBtn!: GameObjects.Container;
   private downPageBtn!: GameObjects.Container;
   private pageLabel!: GameObjects.Text;
+  /** Visibility of the in-grid page-break dividers + 'PAGE N' chip
+   *  labels. Toggled by the page-markers chip in the page nav row —
+   *  lets the author hide them for a cleaner editing canvas. */
+  private showPageMarkers = true;
+  private pageMarkersBtn: GameObjects.Container | undefined;
 
   // Header banner — sits between TopHud and the grid, displays the
   // picked song's name so the author always sees what they're charting.
@@ -499,8 +504,81 @@ export class ChartEditor extends Scene {
       .setOrigin(0.5);
     this.downPageBtn = this.makeArrow(centerX + chipSpacing, navY, '▶', () => this.onNextPage());
 
-    this.root.add([this.upPageBtn, this.pageLabel, this.downPageBtn]);
+    // Page-markers toggle — small chip on the right edge of the page
+    // nav row. Yellow border when markers are visible, dim when hidden.
+    // Lets the author hide the PAGE 1 / PAGE 2 chip-labels + horizontal
+    // dividers when they want a cleaner editing canvas.
+    this.pageMarkersBtn = this.makeToggle(
+      width - 28,
+      navY,
+      '⊞',
+      this.showPageMarkers,
+      () => {
+        this.showPageMarkers = !this.showPageMarkers;
+        this.refreshPageMarkersVisibility();
+        this.pageMarkersBtn = this.replaceToggle(this.pageMarkersBtn, width - 28, navY, '⊞', this.showPageMarkers, () => {
+          // Identical handler closed-over; re-bound on replace.
+          this.showPageMarkers = !this.showPageMarkers;
+          this.refreshPageMarkersVisibility();
+          this.pageMarkersBtn?.destroy();
+          this.buildPageNav();
+        });
+      },
+    );
+
+    this.root.add([this.upPageBtn, this.pageLabel, this.downPageBtn, this.pageMarkersBtn]);
     this.refreshPageLabel();
+  }
+
+  /** Toggle chip — same chrome as makeArrow but the stroke + glyph
+   *  colors reflect on/off state. on = yellow border + yellow glyph,
+   *  off = dim purple border + dim purple glyph. */
+  private makeToggle(
+    x: number,
+    y: number,
+    label: string,
+    on: boolean,
+    onTap: () => void,
+  ): GameObjects.Container {
+    const c = this.add.container(x, y);
+    const stroke = on ? 0xffd34d : 0xc0a0e6;
+    const strokeAlpha = on ? 0.9 : 0.35;
+    const color = on ? '#ffd34d' : '#c0a0e6';
+    const bg = this.add
+      .rectangle(0, 0, 36, 28, 0x2c1856, 1)
+      .setStrokeStyle(1, stroke, strokeAlpha)
+      .setInteractive({ useHandCursor: true });
+    const text = this.add
+      .text(0, 0, label, {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontStyle: 'bold',
+        fontSize: '14px',
+        color,
+      })
+      .setOrigin(0.5);
+    c.add([bg, text]);
+    bg.on('pointerdown', onTap);
+    return c;
+  }
+
+  /** Helper for the toggle's pointerdown re-render — destroys old, builds
+   *  fresh with flipped state. Quicker than re-creating the whole page nav. */
+  private replaceToggle(
+    old: GameObjects.Container | undefined,
+    x: number, y: number, label: string, on: boolean, onTap: () => void,
+  ): GameObjects.Container {
+    old?.destroy();
+    const t = this.makeToggle(x, y, label, on, onTap);
+    this.root.add(t);
+    return t;
+  }
+
+  private refreshPageMarkersVisibility(): void {
+    const v = this.showPageMarkers;
+    this.pageBreakTopLine?.setVisible(v);
+    this.pageBreakMidLine?.setVisible(v);
+    this.pageBreakTopLabel?.setVisible(v);
+    this.pageBreakMidLabel?.setVisible(v);
   }
 
   /** Pager arrow matching SongPickerModal/DressingRoom: 36×28 dark-purple
