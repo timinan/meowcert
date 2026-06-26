@@ -1,4 +1,5 @@
 import { GameObjects, Scene } from 'phaser';
+import { navigateTo } from '@devvit/web/client';
 
 /**
  * Tiny confirmation modal shown after a successful PUT ON A SHOW —
@@ -113,12 +114,16 @@ export class PublishedModal {
     openBg.on('pointerover', () => openBg.setFillStyle(0xffe680, 1));
     openBg.on('pointerout', () => openBg.setFillStyle(0xffd34d, 1));
     openBg.on('pointerdown', () => {
-      // Open in a new tab — Devvit's webview allows it for Reddit
-      // permalinks. If popups are blocked, the URL is still in the
-      // copy-to-clipboard surface below for fallback.
-      try { window.open(args.url, '_blank'); } catch { /* ignore */ }
-      this.close();
-      args.onClose?.();
+      // navigateTo is Devvit's official escape hatch out of the webview
+      // sandbox — window.open is silently blocked because the webview
+      // runs in an iframe Reddit owns. navigateTo posts a message to
+      // the parent Reddit frame which then navigates the user.
+      try { navigateTo(args.url); } catch (err) {
+        console.error('[PublishedModal] navigateTo threw:', err);
+      }
+      // Do NOT close + onClose here — once Reddit navigates away, the
+      // webview tears itself down. Leaving the modal up means if the
+      // navigation gets blocked the player still sees the URL.
     });
 
     this.container.add([doneBg, doneTxt, openBg, openTxt]);
