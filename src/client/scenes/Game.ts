@@ -1882,8 +1882,14 @@ export class Game extends Scene {
   /** Snapshot the cat-stage band of the canvas (below the TopHud,
    *  above the lane area) as a JPEG data URL. Used at publish time to
    *  capture the celebration animation of the cats for the post's
-   *  feed-preview backdrop. Resolves to null on snapshot failure so
-   *  publishing proceeds without an image. */
+   *  feed-preview backdrop.
+   *
+   *  Hides the floating "← EDITOR" chip + the "thank you for coming"
+   *  combo text BEFORE the snapshot so the captured image is just
+   *  cats + bg — no in-game UI overlay leaks. Restores visibility
+   *  afterward. Crop height is also tightened so the combo-text band
+   *  (which sits just above the lane area) is excluded even when
+   *  text is mid-tween. */
   private captureStagePreview(): Promise<string | null> {
     return new Promise((resolve) => {
       const renderer = this.game.renderer as Phaser.Renderer.WebGL.WebGLRenderer | undefined;
@@ -1891,14 +1897,36 @@ export class Game extends Scene {
         resolve(null);
         return;
       }
+      // Hide UI overlays. Track originals so we can restore after.
+      const chipOriginalVisibles: boolean[] = [];
+      for (const g of this.backToChartChip) {
+        const v = (g as { visible?: boolean }).visible ?? true;
+        chipOriginalVisibles.push(v);
+        (g as { setVisible?: (b: boolean) => void }).setVisible?.(false);
+      }
+      const comboOriginalAlpha = this.comboText?.alpha ?? 0;
+      this.comboText?.setAlpha(0);
+
+      const restore = (): void => {
+        this.backToChartChip.forEach((g, i) => {
+          (g as { setVisible?: (b: boolean) => void }).setVisible?.(chipOriginalVisibles[i] ?? true);
+        });
+        this.comboText?.setAlpha(comboOriginalAlpha);
+      };
+
       const scaleY = this.scale.height / L.DESIGN_H;
       const x = 0;
       const y = TopHud.HEIGHT * scaleY;
       const w = this.scale.width;
-      const h = (L.LANE_TOP_Y - TopHud.HEIGHT) * scaleY;
+      // Crop ~30 px shy of LANE_TOP_Y so the combo-text band that sits
+      // just above the lanes is excluded — even on a frame where the
+      // text was mid-tween in/out and our setAlpha(0) hadn't taken
+      // effect visually yet.
+      const h = (L.LANE_TOP_Y - 30 - TopHud.HEIGHT) * scaleY;
       try {
         renderer.snapshotArea(x, y, w, h, (img) => {
           if (!(img instanceof HTMLImageElement)) {
+            restore();
             resolve(null);
             return;
           }
@@ -1910,11 +1938,14 @@ export class Game extends Scene {
               canvas.width = targetW;
               canvas.height = targetH;
               const ctx = canvas.getContext('2d');
-              if (!ctx) { resolve(null); return; }
+              if (!ctx) { restore(); resolve(null); return; }
               ctx.drawImage(img, 0, 0, targetW, targetH);
-              resolve(canvas.toDataURL('image/jpeg', 0.7));
+              const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+              restore();
+              resolve(dataUrl);
             } catch (err) {
               console.warn('[Game] preview capture encode failed:', err);
+              restore();
               resolve(null);
             }
           };
@@ -1923,6 +1954,7 @@ export class Game extends Scene {
         });
       } catch (err) {
         console.warn('[Game] snapshotArea threw:', err);
+        restore();
         resolve(null);
       }
     });

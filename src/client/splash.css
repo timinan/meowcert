@@ -1,8 +1,21 @@
+@font-face {
+  font-family: "Pixeloid Sans";
+  src: url("/assets/fonts/PixeloidSans.otf") format("opentype");
+  font-weight: 400;
+  font-display: block;
+}
+@font-face {
+  font-family: "Pixeloid Sans";
+  src: url("/assets/fonts/PixeloidSans-Bold.otf") format("opentype");
+  font-weight: 700;
+  font-display: block;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: "Courier New", Menlo, monospace;
+  font-family: "Pixeloid Sans", "Courier New", Menlo, monospace;
 }
 
 .splash {
@@ -13,28 +26,17 @@
   padding: 0;
   gap: 0;
   color: #ffffff;
-  /* Match the in-game Meowcert dark chrome — same gradient family the
-     scenes use, so the splash and the loaded game feel continuous. */
-  background:
-    repeating-linear-gradient(
-      0deg,
-      rgba(255, 255, 255, 0.02) 0px,
-      rgba(255, 255, 255, 0.02) 1px,
-      transparent 1px,
-      transparent 3px
-    ),
-    radial-gradient(ellipse at top, #2c1856 0%, #1a0a2e 60%, #0b041a 100%);
+  background: #0b041a;
 }
 
 /* === Cat stage (captured screenshot fills here) ============= */
 .stage {
   width: 100%;
   max-width: 380px;
-  aspect-ratio: 320 / 180;
+  aspect-ratio: 320 / 152;
   background-size: cover;
   background-position: center;
   background-color: #1a0a2e;
-  border-bottom: 2px solid rgba(255, 211, 77, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -42,110 +44,93 @@
   overflow: hidden;
 }
 .marquee-fallback {
-  /* Visible only when no captured image has loaded yet — branded
-     placeholder so the splash isn't blank on first paint. Hidden via
-     splash.ts once the bg image lands. */
   font-size: 28px;
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: 3px;
   color: #ffd34d;
-  text-shadow:
-    0 0 18px rgba(255, 211, 77, 0.7),
-    0 0 6px rgba(255, 100, 200, 0.6),
-    2px 2px 0 #0b041a;
+  text-shadow: 2px 2px 0 #0b041a;
 }
 
-/* === Info panel (mirrors VisitPost's lower band) ============== */
+/* === Info panel — matches the in-game dark-purple box with yellow
+       stroke (same chrome as the chart editor / settings modals). ====== */
 .info {
-  width: 100%;
-  max-width: 380px;
-  padding: 14px 18px 12px;
+  width: calc(100% - 16px);
+  max-width: 364px;
+  margin: 10px 0 0;
+  padding: 12px 14px 10px;
+  background: #1a0a2e;
+  border: 2px solid #ffd34d;
+  border-radius: 0;  /* in-game boxes are squared, no rounded corners */
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  background: rgba(26, 10, 46, 0.85);
-  border-bottom: 1px solid rgba(192, 160, 230, 0.2);
+  gap: 2px;
 }
 
 .author {
-  font-size: 15px;
-  font-weight: 900;
+  font-size: 14px;
+  font-weight: 700;
   color: #ffd34d;
-  letter-spacing: 0.5px;
   text-align: center;
 }
 
 .song {
-  font-size: 11px;
+  font-size: 10px;
+  font-weight: 400;
   color: #c0a0e6;
-  margin-bottom: 4px;
   text-align: center;
-}
-
-.stats {
-  font-size: 11px;
-  color: #ffffff;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .lb-header {
-  width: 100%;
   font-size: 9px;
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: 1px;
   color: #c0a0e6;
   text-align: left;
   margin-top: 4px;
+  border-top: 1px solid rgba(192, 160, 230, 0.25);
+  padding-top: 6px;
 }
 
 .lb {
-  width: 100%;
   list-style: none;
   font-size: 11px;
   font-weight: 700;
-  line-height: 1.6;
-}
-
-.lb li {
+  line-height: 1.5;
   color: #ffffff;
-  font-family: "Courier New", Menlo, monospace;
+  margin-top: 2px;
 }
 
 .your-best {
-  margin-top: 6px;
   font-size: 10px;
   font-weight: 700;
   color: #4dffb4;
+  text-align: center;
+  margin-top: 4px;
   min-height: 14px;
 }
 
-/* === Play button ============================================== */
+/* === Play button — flat in-game-style yellow rect, no rounded corners,
+       no drop shadow, simple dark text. Matches the REHEARSE / PUT ON
+       A SHOW buttons inside the game. ============================== */
 .play-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  width: calc(100% - 16px);
+  max-width: 364px;
+  padding: 14px 18px;
   background: #ffd34d;
   color: #1a0a2e;
-  border: 2px solid #0b041a;
-  border-radius: 999px;
-  padding: 14px 36px;
-  font-family: "Courier New", Menlo, monospace;
-  font-size: 17px;
-  font-weight: 900;
+  border: 2px solid #ffd34d;
+  border-radius: 0;
+  font-family: "Pixeloid Sans", "Courier New", Menlo, monospace;
+  font-size: 16px;
+  font-weight: 700;
   letter-spacing: 1px;
   cursor: pointer;
-  box-shadow:
-    0 4px 0 0 #b07e00,
-    0 10px 22px rgba(255, 211, 77, 0.3);
-  transition: transform 80ms ease, box-shadow 80ms ease, background 80ms ease;
-  margin: 14px auto 18px;
+  margin: 8px 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
-.play-button:hover  { background: #ffe680; }
-.play-button:active {
-  transform: translateY(2px);
-  box-shadow:
-    0 2px 0 0 #b07e00,
-    0 5px 12px rgba(255, 211, 77, 0.25);
-}
-.play-arrow { font-size: 19px; }
+.play-button:active { background: #ffe680; }
+.play-arrow { font-size: 16px; }
