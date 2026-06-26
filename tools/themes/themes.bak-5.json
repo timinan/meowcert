@@ -4,8 +4,8 @@
     "backdropKey": "theme-stage-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 55,
-    "bgScale": 1.19
+    "bgShiftUp": -24,
+    "bgScale": 1.29
   },
   "cattemple": {
     "displayName": "Cat Temple",
@@ -76,8 +76,8 @@
     "backdropKey": "theme-hauntedmansion-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 7,
-    "bgScale": 1.1
+    "bgShiftUp": 9,
+    "bgScale": 1.09
   },
   "treehouse": {
     "displayName": "Tree House",
@@ -148,7 +148,7 @@
     "backdropKey": "theme-carnival-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 38,
+    "bgShiftUp": 43,
     "bgScale": 1.16
   },
   "mushroomvillage": {
@@ -166,5 +166,117 @@
     "rarity": "rare",
     "bgShiftUp": 13,
     "bgScale": 1.1
+  },
+  "soccerstadium": {
+    "displayName": "Soccer Stadium",
+    "backdropKey": "theme-soccerstadium-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": -20,
+    "bgScale": 1.2
+  },
+  "snowlodge": {
+    "displayName": "Snow Lodge",
+    "backdropKey": "theme-snowlodge-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 9,
+    "bgScale": 1.08
+  },
+  "beachbar": {
+    "displayName": "Beach Bar",
+    "backdropKey": "theme-beachbar-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": -21,
+    "bgScale": 1.21
+  },
+  "cyberpunkalley": {
+    "displayName": "Cyberpunk Alley",
+    "backdropKey": "theme-cyberpunkalley-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": -17,
+    "bgScale": 1.31
+  },
+  "cityskyline": {
+    "displayName": "City Skyline",
+    "backdropKey": "theme-cityskyline-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": -5,
+    "bgScale": 1.15
+  },
+  "divebar": {
+    "displayName": "Dive Bar",
+    "backdropKey": "theme-divebar-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": -9,
+    "bgScale": 1.26
+  },
+  "basketballcourt": {
+    "displayName": "Basketball Court",
+    "backdropKey": "theme-basketballcourt-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": -56,
+    "bgScale": 1.43
+  },
+  "candyfactory": {
+    "displayName": "Candy Factory",
+    "backdropKey": "theme-candyfactory-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": -19,
+    "bgScale": 1.2
+  },
+  "robotfactory": {
+    "displayName": "Robot Factory",
+    "backdropKey": "theme-robotfactory-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 27,
+    "bgScale": 1.12
+  },
+  "pitstop": {
+    "displayName": "Pitstop",
+    "backdropKey": "theme-pitstop-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 12,
+    "bgScale": 1.17
+  },
+  "greenhouse": {
+    "displayName": "Greenhouse",
+    "backdropKey": "theme-greenhouse-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": -1,
+    "bgScale": 1.09
+  },
+  "meowstage": {
+    "displayName": "Meow Stage",
+    "backdropKey": "theme-meowstage-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": -35,
+    "bgScale": 1.4
+  },
+  "countryfarm": {
+    "displayName": "Country Farm",
+    "backdropKey": "theme-countryfarm-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": -47,
+    "bgScale": 1.33
+  },
+  "desertpalace": {
+    "displayName": "Desert Palace",
+    "backdropKey": "theme-desertpalace-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 34,
+    "bgScale": 1
   }
 }

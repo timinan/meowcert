@@ -8,6 +8,7 @@ import type {
 import { state } from './state';
 import { chart } from './chart';
 import { social } from './social';
+import { publish } from './publish';
 
 type ErrorResponse = {
   status: 'error';
@@ -26,6 +27,10 @@ api.route('/chart', chart);
 // Phase 6 social-loop routes: /api/social/play, /leaderboard, /inbox,
 // /gift, /post-owner. See routes/social.ts for the full surface.
 api.route('/social', social);
+
+// Publish flow — POST /api/publish/chart turns the author's saved chart
+// into a live Reddit post + wires post-owner mapping in one call.
+api.route('/publish', publish);
 
 api.get('/init', async (c) => {
   const { postId } = context;

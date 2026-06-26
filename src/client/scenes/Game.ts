@@ -22,6 +22,8 @@ import { SongPickerModal, type SongPickerResult } from '@/ui/song-picker-modal';
 import { DifficultyPickerModal } from '@/ui/difficulty-picker-modal';
 import { SettingsModal } from '@/ui/settings-modal';
 import { CommentComposeModal } from '@/ui/comment-compose-modal';
+import { PublishedModal } from '@/ui/published-modal';
+import { publishChart } from '@/services/publish-client';
 import { CAT_EFFECT_BY_ID, isEffectCosmeticId } from '@/effects/cat-effects';
 import { submitPlay } from '@/services/social-client';
 import { getBest, recordRun, type BestStats, type StatKey } from '@/services/rehearsal-best';
@@ -101,6 +103,10 @@ export class Game extends Scene {
   private generateModal: GenerateModal | null = null;
   private settingsModal: SettingsModal | null = null;
   private commentModal: CommentComposeModal | null = null;
+  private publishedModal: PublishedModal | null = null;
+  /** Locks the PUT ON A SHOW button while a publish request is in flight
+   *  so a double-tap doesn't fire two reddit.submitCustomPost calls. */
+  private publishBusy = false;
   /** Chart step the round should START playing from. Editor rehearse
    *  sets this to its current page so the author lands on the section
    *  they were authoring. Plain Rehearse always uses 0. */
@@ -1769,11 +1775,43 @@ export class Game extends Scene {
   }
 
   private onPostFromTestClicked = (): void => {
-    console.info('[Game] Post (test mode) clicked. Score:', this.score.get());
-    this.scene.start(SceneKeys.ChartEditor, {
-      playerState: this.playerState,
-      initialPage: this.currentPlayPage(),
-      resume: true,
+    if (this.publishBusy) return;
+    this.publishBusy = true;
+    // Flash the right button so the player sees the click registered
+    // while the network round-trip happens (Reddit's submitCustomPost
+    // can take 1-2 s). On success the PublishedModal shows the link;
+    // on failure we briefly recolor the button to indicate the error.
+    const origLabel = this.summaryRightText.text;
+    this.summaryRightText.setText('POSTING…');
+    this.summaryRightBg.setFillStyle(0xc0a0e6, 1);
+    void publishChart().then((result) => {
+      this.publishBusy = false;
+      if (!result.ok) {
+        console.warn('[Game] publishChart failed:', result.reason);
+        this.summaryRightText.setText('TRY AGAIN');
+        this.summaryRightBg.setFillStyle(0xff6b6b, 1);
+        this.time.delayedCall(1500, () => {
+          if (!this.scene.isActive()) return;
+          this.summaryRightText.setText(origLabel);
+          this.summaryRightBg.setFillStyle(0xffd34d, 1);
+        });
+        return;
+      }
+      // Success — show the confirmation modal with the post URL.
+      if (!this.publishedModal) this.publishedModal = new PublishedModal(this);
+      this.publishedModal.open({
+        url: result.url,
+        onClose: () => {
+          // After the player closes the confirmation, route back to
+          // the editor at the page they were rehearsing — same UX
+          // beat as ← Editor so they can keep iterating.
+          this.scene.start(SceneKeys.ChartEditor, {
+            playerState: this.playerState,
+            initialPage: this.currentPlayPage(),
+            resume: true,
+          });
+        },
+      });
     });
   };
 
@@ -2592,6 +2630,10 @@ export class Game extends Scene {
     tearDown('comment-modal', () => {
       this.commentModal?.destroy();
       this.commentModal = null;
+    });
+    tearDown('published-modal', () => {
+      this.publishedModal?.destroy();
+      this.publishedModal = null;
     });
     tearDown('song-picker', () => {
       this.songPicker?.destroy();

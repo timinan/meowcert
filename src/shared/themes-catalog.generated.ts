@@ -4,7 +4,7 @@
 
 
 export const BACKGROUND_CATALOG = {
-  stage: { id: "stage", displayName: "Meow Live", backdropKey: "theme-stage-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 55, bgScale: 1.19 },
+  stage: { id: "stage", displayName: "Meow Live", backdropKey: "theme-stage-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: -24, bgScale: 1.29 },
   cattemple: { id: "cattemple", displayName: "Cat Temple", backdropKey: "theme-cattemple-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 49, bgScale: 1.13 },
   pumpkinpatch: { id: "pumpkinpatch", displayName: "Pumpkin Patch", backdropKey: "theme-pumpkinpatch-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: -13, bgScale: 1.19 },
   icecave: { id: "icecave", displayName: "Ice Cave", backdropKey: "theme-icecave-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 65, bgScale: 1.24 },
@@ -22,9 +22,23 @@ export const BACKGROUND_CATALOG = {
   piratecove: { id: "piratecove", displayName: "Pirate's Cove", backdropKey: "theme-piratecove-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 15, bgScale: 1.09 },
   ramenshop: { id: "ramenshop", displayName: "Ramen Shop", backdropKey: "theme-ramenshop-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 59, bgScale: 1.22 },
   subwaystation: { id: "subwaystation", displayName: "Subway Station", backdropKey: "theme-subwaystation-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 46, bgScale: 1.18 },
-  carnival: { id: "carnival", displayName: "Carnival", backdropKey: "theme-carnival-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 38, bgScale: 1.16 },
+  carnival: { id: "carnival", displayName: "Carnival", backdropKey: "theme-carnival-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 43, bgScale: 1.16 },
   mushroomvillage: { id: "mushroomvillage", displayName: "Mushroom Village", backdropKey: "theme-mushroomvillage-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 40, bgScale: 1.15 },
   sushishop: { id: "sushishop", displayName: "Sushi Shop", backdropKey: "theme-sushishop-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 13, bgScale: 1.1 },
+  soccerstadium: { id: "soccerstadium", displayName: "Soccer Stadium", backdropKey: "theme-soccerstadium-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: -20, bgScale: 1.2 },
+  snowlodge: { id: "snowlodge", displayName: "Snow Lodge", backdropKey: "theme-snowlodge-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 9, bgScale: 1.08 },
+  beachbar: { id: "beachbar", displayName: "Beach Bar", backdropKey: "theme-beachbar-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: -21, bgScale: 1.21 },
+  cyberpunkalley: { id: "cyberpunkalley", displayName: "Cyberpunk Alley", backdropKey: "theme-cyberpunkalley-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: -17, bgScale: 1.31 },
+  cityskyline: { id: "cityskyline", displayName: "City Skyline", backdropKey: "theme-cityskyline-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: -5, bgScale: 1.15 },
+  divebar: { id: "divebar", displayName: "Dive Bar", backdropKey: "theme-divebar-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: -9, bgScale: 1.26 },
+  basketballcourt: { id: "basketballcourt", displayName: "Basketball Court", backdropKey: "theme-basketballcourt-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: -56, bgScale: 1.43 },
+  candyfactory: { id: "candyfactory", displayName: "Candy Factory", backdropKey: "theme-candyfactory-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: -19, bgScale: 1.2 },
+  robotfactory: { id: "robotfactory", displayName: "Robot Factory", backdropKey: "theme-robotfactory-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 27, bgScale: 1.12 },
+  pitstop: { id: "pitstop", displayName: "Pitstop", backdropKey: "theme-pitstop-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 12, bgScale: 1.17 },
+  greenhouse: { id: "greenhouse", displayName: "Greenhouse", backdropKey: "theme-greenhouse-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: -1, bgScale: 1.09 },
+  meowstage: { id: "meowstage", displayName: "Meow Stage", backdropKey: "theme-meowstage-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: -35, bgScale: 1.4 },
+  countryfarm: { id: "countryfarm", displayName: "Country Farm", backdropKey: "theme-countryfarm-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: -47, bgScale: 1.33 },
+  desertpalace: { id: "desertpalace", displayName: "Desert Palace", backdropKey: "theme-desertpalace-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 10, bgScale: 1.27 },
 } as const;
 
 // Legacy alias — keep so existing THEME_CATALOG consumers compile without a rename sweep.
@@ -51,4 +65,18 @@ export const GENERATED_THEME_CATALOG = [
   BACKGROUND_CATALOG.carnival,
   BACKGROUND_CATALOG.mushroomvillage,
   BACKGROUND_CATALOG.sushishop,
+  BACKGROUND_CATALOG.soccerstadium,
+  BACKGROUND_CATALOG.snowlodge,
+  BACKGROUND_CATALOG.beachbar,
+  BACKGROUND_CATALOG.cyberpunkalley,
+  BACKGROUND_CATALOG.cityskyline,
+  BACKGROUND_CATALOG.divebar,
+  BACKGROUND_CATALOG.basketballcourt,
+  BACKGROUND_CATALOG.candyfactory,
+  BACKGROUND_CATALOG.robotfactory,
+  BACKGROUND_CATALOG.pitstop,
+  BACKGROUND_CATALOG.greenhouse,
+  BACKGROUND_CATALOG.meowstage,
+  BACKGROUND_CATALOG.countryfarm,
+  BACKGROUND_CATALOG.desertpalace,
 ] as const;
