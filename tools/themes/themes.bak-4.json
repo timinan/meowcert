@@ -220,7 +220,7 @@
     "backdropKey": "theme-basketballcourt-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": -56,
+    "bgShiftUp": -100,
     "bgScale": 1.73
   },
   "candyfactory": {
@@ -260,7 +260,7 @@
     "backdropKey": "theme-meowstage-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": -35,
+    "bgShiftUp": -25,
     "bgScale": 1.4
   },
   "countryfarm": {

@@ -28,7 +28,7 @@ export const BACKGROUND_CATALOG = {
   soccerstadium: { id: "soccerstadium", displayName: "Soccer Stadium", backdropKey: "theme-soccerstadium-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: -20, bgScale: 1.2 },
   snowlodge: { id: "snowlodge", displayName: "Snow Lodge", backdropKey: "theme-snowlodge-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 9, bgScale: 1.08 },
   beachbar: { id: "beachbar", displayName: "Beach Bar", backdropKey: "theme-beachbar-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: -21, bgScale: 1.21 },
-  cyberpunkalley: { id: "cyberpunkalley", displayName: "Cyberpunk Alley", backdropKey: "theme-cyberpunkalley-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: -17, bgScale: 1.31 },
+  cyberpunkalley: { id: "cyberpunkalley", displayName: "Cyberpunk Alley", backdropKey: "theme-cyberpunkalley-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: -47, bgScale: 1.56 },
   cityskyline: { id: "cityskyline", displayName: "City Skyline", backdropKey: "theme-cityskyline-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: -5, bgScale: 1.15 },
   divebar: { id: "divebar", displayName: "Dive Bar", backdropKey: "theme-divebar-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: -9, bgScale: 1.26 },
   basketballcourt: { id: "basketballcourt", displayName: "Basketball Court", backdropKey: "theme-basketballcourt-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: -100, bgScale: 1.73 },

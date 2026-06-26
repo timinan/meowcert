@@ -196,8 +196,8 @@
     "backdropKey": "theme-cyberpunkalley-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": -17,
-    "bgScale": 1.31
+    "bgShiftUp": -47,
+    "bgScale": 1.56
   },
   "cityskyline": {
     "displayName": "City Skyline",

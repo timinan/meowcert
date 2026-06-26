@@ -197,7 +197,7 @@
     "musicKey": "theme-default-music",
     "rarity": "rare",
     "bgShiftUp": -17,
-    "bgScale": 1.31
+    "bgScale": 1.56
   },
   "cityskyline": {
     "displayName": "City Skyline",
@@ -260,7 +260,7 @@
     "backdropKey": "theme-meowstage-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": -26,
+    "bgShiftUp": -27,
     "bgScale": 1.4
   },
   "countryfarm": {

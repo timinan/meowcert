@@ -306,19 +306,22 @@ export class DressingRoom extends Scene {
       const x = startX + i * (tabW + gap);
       const isActive = this.activeSlot === tab.key;
       const equipped = equippedSlots[tab.key];
-      // Border + text color signal both active state AND equipped state:
-      //   active                  → yellow border @ 1.0, yellow text
-      //   equipped (not active)   → yellow border @ 0.55, light-yellow text
-      //   empty + not active      → purple border @ 0.35, purple text
-      // No suffix dot — the highlight is enough, and "EFFECT •" was
-      // overflowing the narrow tab width.
-      const strokeColor = isActive || equipped ? 0xffd34d : 0xc0a0e6;
-      const strokeAlpha = isActive ? 1 : equipped ? 0.55 : 0.35;
-      const textColor = isActive ? '#ffd34d' : equipped ? '#fff0aa' : '#c0a0e6';
+      // Tim flagged that all four tabs were reading as "lit" when only
+      // one was selected — the previous alpha gradient (1.0 / 0.55 /
+      // 0.35) was too subtle. Now:
+      //   active                  → yellow border + filled bg
+      //   equipped (not active)   → small yellow dot indicator on the
+      //                              right edge, dim purple border
+      //   empty + not active      → dim purple border, no dot
+      // The dot is unambiguous (only present for equipped non-active)
+      // and the border is uniformly dim — no false yellow.
+      const strokeColor = isActive ? 0xffd34d : 0xc0a0e6;
+      const strokeAlpha = isActive ? 1 : 0.25;
+      const textColor = isActive ? '#ffd34d' : '#c0a0e6';
       const bg = this.add
-        .rectangle(x, 0, tabW, tabH, isActive ? 0x2c1856 : 0x0b041a, isActive ? 1 : 0.6)
+        .rectangle(x, 0, tabW, tabH, isActive ? 0x4d2d8c : 0x0b041a, isActive ? 1 : 0.55)
         .setOrigin(0, 0)
-        .setStrokeStyle(2, strokeColor, strokeAlpha)
+        .setStrokeStyle(isActive ? 2 : 1, strokeColor, strokeAlpha)
         .setInteractive({ useHandCursor: true });
       const text = this.add
         .text(x + tabW / 2, tabH / 2, tab.label, {
@@ -329,6 +332,13 @@ export class DressingRoom extends Scene {
         })
         .setOrigin(0.5);
       this.slotTabsContainer.add([bg, text]);
+      // Tiny yellow dot on equipped non-active tabs — signals "you've
+      // got something in this slot" without making the tab look active.
+      if (equipped && !isActive) {
+        const dot = this.add
+          .circle(x + tabW - 6, 6, 3, 0xffd34d, 1);
+        this.slotTabsContainer.add(dot);
+      }
       bg.on('pointerdown', () => {
         this.activeSlot = tab.key;
         this.page = 0;
@@ -406,9 +416,17 @@ export class DressingRoom extends Scene {
       const x = gridStartX + col * (cellSize + gap) + cellSize / 2;
       const y = row * (cellSize + gap) + cellSize / 2;
       const isEquipped = equippedInstanceId === cosItem.id;
+      // Tim's call: non-selected cells looked too "lit" — purple-alpha-0.3
+      // strokes still read as bright on the dark bg. Drop non-selected
+      // to a much thinner barely-there stroke; bump selected to 3 px
+      // for a clear pop.
       const bg = this.add
         .rectangle(x, y, cellSize, cellSize, 0x0b041a, 0.6)
-        .setStrokeStyle(2, isEquipped ? 0xffd34d : 0xc0a0e6, isEquipped ? 1 : 0.3)
+        .setStrokeStyle(
+          isEquipped ? 3 : 1,
+          isEquipped ? 0xffd34d : 0xc0a0e6,
+          isEquipped ? 1 : 0.15,
+        )
         .setInteractive({ useHandCursor: true });
       this.gridContainer.add(bg);
 
@@ -517,6 +535,22 @@ export class DressingRoom extends Scene {
     const slots = this.playerState.equippedCosmetics[this.catInstanceId]!;
     const equippedTypes = this.playerState.equippedCosmeticTypes;
 
+    // Cross-slot bug diagnostics (Tim reported: equipping a necklace
+    // changed the cat's hat to a different one). Snapshot all slot
+    // contents + their resolved cosmetic types BEFORE the mutation,
+    // and the same after the server round-trip, so we can see exactly
+    // where the rogue HEAD swap is coming from.
+    const snapshotSlots = (label: string): void => {
+      const summary: Record<string, string> = {};
+      for (const [k, instId] of Object.entries(slots)) {
+        if (!instId) continue;
+        const type = equippedTypes[instId] ?? '(missing)';
+        summary[k] = `${instId} → ${type}`;
+      }
+      console.info(`[DressingRoom] ${label} slot=${slot} cos=${cosItem?.id ?? 'null'}`, summary);
+    };
+    snapshotSlots('BEFORE');
+
     // Snapshot previous state for rollback.
     const previousInstanceId = slots[slot];
     const snapshotOwnedCosmetics = [...this.playerState.ownedCosmetics];
@@ -580,6 +614,17 @@ export class DressingRoom extends Scene {
         this.renderGrid();
       } else {
         Object.assign(this.playerState, result.state);
+        // Re-snapshot after server response — if HEAD changed here,
+        // the server's response is the source of the cross-slot bug.
+        snapshotSlots('AFTER SERVER');
+        // Re-render so the visual matches the server-truth state
+        // (previously we skipped this and only updated visuals from
+        // the optimistic mutation, so any server-truth diff went
+        // unseen until the next interaction).
+        this.renderEquippedCosmetics();
+        this.updateWearingLabel();
+        this.renderSlotTabs();
+        this.renderGrid();
       }
     } catch (e) {
       console.warn('[DressingRoom] equip failed:', e);

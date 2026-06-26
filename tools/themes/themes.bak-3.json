@@ -260,7 +260,7 @@
     "backdropKey": "theme-meowstage-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": -35,
+    "bgShiftUp": -27,
     "bgScale": 1.4
   },
   "countryfarm": {
