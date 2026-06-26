@@ -150,15 +150,12 @@ publish.post('/chart', async (c) => {
       console.info(`[publish] skipped creator seed — score=${creatorScore} acc=${creatorAccuracy}`);
     }
 
-    // Use Devvit's canonical post.url. The constructed
-    // `https://reddit.com${permalink}` form is MISSING the `www.`
-    // subdomain that Reddit's mobile deep-link router uses to identify
-    // a real post URL — without it the app falls back to the
-    // subreddit landing. Diagnostic log from publish v0.0.1.2086
-    // confirmed: post.url = `https://www.reddit.com/r/...`,
-    // constructed = `https://reddit.com/r/...`. Switching to post.url.
-    const url = post.url;
-    console.info('[publish] returning ok url:', url, 'post.permalink:', post.permalink);
+    // Bare `https://reddit.com${permalink}` form — what Tim confirmed
+    // is working in `c2ab08d`. My theory that `www.` mattered was a
+    // mis-read of the diagnostic; reverted. Logging both forms so we
+    // keep diagnostics handy without the URL form changing.
+    const url = `https://reddit.com${post.permalink}`;
+    console.info('[publish] returning ok url:', url, 'post.url:', post.url, 'post.permalink:', post.permalink);
     return c.json({ ok: true, postId: post.id, url, permalink: post.permalink });
   } catch (err) {
     console.error('[publish] failed to create post:', err);
