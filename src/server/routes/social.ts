@@ -121,10 +121,20 @@ social.post('/play', async (c) => {
 
 social.get('/leaderboard', async (c) => {
   const postId = c.req.query('postId');
-  if (!postId) return c.json({ ok: false, reason: 'postId required' }, 400);
+  if (!postId) {
+    console.info('[social/lb] missing postId');
+    return c.json({ ok: false, reason: 'postId required' }, 400);
+  }
   const visitor = await currentUsername();
-  const result = await fetchLeaderboard(r, postId, visitor === 'anonymous' ? null : visitor);
-  return c.json({ ok: true, ...result });
+  console.info(`[social/lb] GET postId=${postId} visitor=${visitor}`);
+  try {
+    const result = await fetchLeaderboard(r, postId, visitor === 'anonymous' ? null : visitor);
+    console.info(`[social/lb] returning top=${result.top.length} yourRank=${result.yourRank ?? '-'}`);
+    return c.json({ ok: true, ...result });
+  } catch (err) {
+    console.error(`[social/lb] fetch threw for ${postId}:`, err);
+    return c.json({ ok: false, reason: 'fetch failed' }, 500);
+  }
 });
 
 social.get('/inbox', async (c) => {

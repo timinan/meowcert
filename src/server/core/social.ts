@@ -34,7 +34,7 @@ export interface SocialRedis extends RedisLike {
   // leaderboard fetch on visitor reads, even after the creator-seed was
   // written successfully. Treat the score embedded in the result as the
   // source of truth instead of doing a second zScore round-trip per row.
-  zRange(key: string, start: number, stop: number, opts?: { reverse?: boolean; by?: 'score' | 'rank' }): Promise<Array<{ member: string; score: number }>>;
+  zRange(key: string, start: number, stop: number, opts: { reverse?: boolean; by: 'score' | 'lex' | 'rank' }): Promise<Array<{ member: string; score: number }>>;
   zScore(key: string, member: string): Promise<number | null | undefined>;
   zCard(key: string): Promise<number>;
   zRevRank?(key: string, member: string): Promise<number | null | undefined>;
@@ -89,7 +89,11 @@ export async function fetchLeaderboard(
   // Get top entries sorted descending by score. zRange returns
   // {member, score}[] in Devvit — score is right there, no per-row
   // zScore round-trip needed.
-  const rows = await redis.zRange(LB_KEY(postId), 0, LEADERBOARD_TOP_N - 1, { reverse: true });
+  // by:'rank' is REQUIRED by Devvit's ZRangeOptions — without it Redis
+  // doesn't know whether to interpret start/stop as rank index, lex
+  // string, or score number, and we silently get empty back. Treats the
+  // start/stop pair as 0-indexed rank with reverse:true → highest first.
+  const rows = await redis.zRange(LB_KEY(postId), 0, LEADERBOARD_TOP_N - 1, { reverse: true, by: 'rank' });
   const meta = await redis.hGetAll(LB_META_KEY(postId));
   const top: LeaderboardEntry[] = [];
   for (const { member, score } of rows) {
@@ -124,7 +128,7 @@ export async function fetchLeaderboard(
         // Fallback: count members with strictly higher scores → that's the rank above.
         // Bounded by zCard so this stays O(N).
         const total = await redis.zCard(LB_KEY(postId));
-        const above = await redis.zRange(LB_KEY(postId), 0, total - 1, { reverse: true });
+        const above = await redis.zRange(LB_KEY(postId), 0, total - 1, { reverse: true, by: 'rank' });
         const idx = above.findIndex((r) => r.member === visitor);
         yourRank = idx >= 0 ? idx + 1 : null;
       }

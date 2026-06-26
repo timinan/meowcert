@@ -1918,23 +1918,21 @@ export class Game extends Scene {
       const comboOriginalAlpha = this.comboText?.alpha ?? 0;
       this.comboText?.setAlpha(0);
 
-      // Pose every seated cat into 'meow' for the snapshot. Need to
-      // stopCelebration() FIRST — when publish is hit, cats are in the
-      // end-round celebration loop, which has an ANIMATION_COMPLETE
-      // listener that bridges back to idle and advances to the next
-      // step. Without stopping it, the meow pose lands for a few ms
-      // then gets overridden by bridge-to-idle before the 120 ms
-      // snapshot delay fires (Tim: "doesnt seem to be doing the meow
-      // like you said"). setAnimation is a no-op when the breed has
-      // no frames for the requested anim, so this gracefully degrades
-      // for cats without a meow set.
-      console.info('[Game] snapshot: posing', this.cats.length, 'cats into meow');
+      // Freeze every seated cat on the MIDDLE frame of the meow cycle
+      // for the snapshot. setAnimation('meow') alone wasn't enough —
+      // meow is a looping animation, so the 120 ms snapshot delay
+      // landed on whatever frame the loop happened to be on (often the
+      // closed-mouth or eyes-down frame, which reads as "lick" /
+      // "idle" instead of "performing"). freezeMeowFrame() snaps the
+      // sprite via setFrame() and stops the anim so the captured pose
+      // is deterministically the mouth-open expressive frame.
+      // Gracefully no-ops for breeds with no meow atlas frames.
+      console.info('[Game] snapshot: freezing', this.cats.length, 'cats on meow frame');
       const restoreCatAnims: Array<() => void> = [];
       for (let i = 0; i < this.cats.length; i++) {
         const cat = this.cats[i]!;
         const prevAnim = cat.model.animation;
-        cat.stopCelebration();
-        cat.setAnimation('meow');
+        cat.freezeMeowFrame();
         restoreCatAnims.push(() => cat.setAnimation(prevAnim));
 
         // Light the cat's equipped effect by firing a burst at the
@@ -2903,6 +2901,12 @@ export class Game extends Scene {
    *  block above. */
   private openSettings(): void {
     if (!this.settingsModal) this.settingsModal = new SettingsModal(this);
+    this.settingsModal.open();
+  }
+}
+
+
+ngsModal = new SettingsModal(this);
     this.settingsModal.open();
   }
 }

@@ -376,6 +376,35 @@ export class Cat {
     });
   }
 
+  /** Snap the sprite to a specific frame of the meow animation and stop
+   *  any running anim so the cat HOLDS that frame. Used by the publish
+   *  snapshot path — looping meow + 120 ms snapshot delay lands on an
+   *  arbitrary frame (often the closed-mouth or eyes-down frame) which
+   *  doesn't read as "performing." Picking the middle frame of meow
+   *  reliably captures mouth-open, eyes-open. Returns true if a frame
+   *  was set, false if the breed has no meow frames in the atlas.
+   */
+  freezeMeowFrame(): boolean {
+    this.cancelRevert();
+    this.stopCelebration();
+    const renderBreed = Cat.renderBreed(this.model.breed);
+    const atlas = this.scene.textures.get(AssetKeys.Atlas.Cats);
+    const prefix = `${renderBreed}_meow_`;
+    // Get all meow frame names (already sliced down by MEOW_FRAME_SHIFT
+    // during ensureAnimation, but raw atlas still has all). Pick the
+    // middle-of-cycle frame so we get max mouth-open expressiveness.
+    const frameNames = atlas.getFrameNames()
+      .filter((n) => n.startsWith(prefix))
+      .sort();
+    if (frameNames.length === 0) return false;
+    const midIdx = Math.floor((frameNames.length + MEOW_FRAME_SHIFT) / 2);
+    const targetFrame = frameNames[Math.min(midIdx, frameNames.length - 1)]!;
+    this.sprite.anims.stop();
+    this.sprite.setFrame(targetFrame);
+    this.model.animation = 'meow';
+    return true;
+  }
+
   /** Tear down the celebration loop — clears the recurring pulse timer,
    *  rips the ANIMATION_COMPLETE listener that drives bridgeToNextStep,
    *  flips celebrating off. Use this when something else needs to take
