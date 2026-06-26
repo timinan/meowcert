@@ -21,7 +21,18 @@ visit.get('/', async (c) => {
   const postId = c.req.query('postId');
   if (!postId) return c.json({ error: 'missing postId' }, 400);
 
-  const ownerUsername = await redis.get(`meowcert:post-owner:${postId}`);
+  // Legacy fallback: posts created before the pspsps→meowcert rename
+  // have their owner mapping under the old prefix. Check both so
+  // pre-rename test posts on the dev sub still route to VisitPost.
+  let ownerUsername = await redis.get(`meowcert:post-owner:${postId}`);
+  if (!ownerUsername) {
+    ownerUsername = await redis.get(`pspsps:post-owner:${postId}`);
+    if (ownerUsername) {
+      // Migrate the legacy key forward on read so subsequent visits
+      // hit the new prefix directly (idempotent on subsequent reads).
+      await redis.set(`meowcert:post-owner:${postId}`, ownerUsername);
+    }
+  }
   if (!ownerUsername) {
     return c.json({ error: 'post has no owner mapping' }, 404);
   }
