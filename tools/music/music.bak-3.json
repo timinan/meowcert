@@ -825,5 +825,85 @@
     "loopDurationMs": 65000,
     "clipStartS": 758,
     "addedAt": 1782447403319
+  },
+  "neon-pulse-3": {
+    "id": "neon-pulse-3",
+    "displayName": "Neon Pulse (3)",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 65000,
+    "clipStartS": 0,
+    "addedAt": 1782447403698
+  },
+  "dance-of-the-neon-shadows-1": {
+    "id": "dance-of-the-neon-shadows-1",
+    "displayName": "Dance of the Neon Shadows (1)",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 65000,
+    "clipStartS": 437,
+    "addedAt": 1782447405127
+  },
+  "dance-of-the-neon-shadows": {
+    "id": "dance-of-the-neon-shadows",
+    "displayName": "Dance of the Neon Shadows",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 65000,
+    "clipStartS": 807,
+    "addedAt": 1782447407177
+  },
+  "floating-in-the-air": {
+    "id": "floating-in-the-air",
+    "displayName": "Floating in the Air",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 65000,
+    "clipStartS": 422,
+    "addedAt": 1782450165165
+  },
+  "bounce-bloom-2-2": {
+    "id": "bounce-bloom-2-2",
+    "displayName": "Bounce & Bloom (2)",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 65000,
+    "clipStartS": 0,
+    "addedAt": 1782450165620
+  },
+  "sunny-afternoon": {
+    "id": "sunny-afternoon",
+    "displayName": "Sunny Afternoon",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 65000,
+    "clipStartS": 242,
+    "addedAt": 1782450166885
+  },
+  "neon-pulse-6": {
+    "id": "neon-pulse-6",
+    "displayName": "Neon Pulse (6)",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 65000,
+    "clipStartS": 587,
+    "addedAt": 1782450168432
+  },
+  "neon-pulse-5": {
+    "id": "neon-pulse-5",
+    "displayName": "Neon Pulse (5)",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 65000,
+    "clipStartS": 459,
+    "addedAt": 1782450169693
   }
 }

@@ -53,6 +53,16 @@ export class Game extends Scene {
   // routes both buttons back to the editor, and the TopHud drawer adds a
   // "← EDITOR" entry for mid-round bail.
   private testMode = false;
+  /** True when the player landed here from a VisitPost splash (someone
+   *  else's posted show). Re-enables Post Comment + finalizePlay path
+   *  that's otherwise dormant in plain drawer rehearsal. */
+  private visitorMode = false;
+  /** Owner of the post being visited — used as the chart's authorId
+   *  when the player submits a play. Empty string in non-visitor flows. */
+  private visitOwnerUsername = '';
+  /** Reddit postId of the post being visited — used to scope the
+   *  leaderboard + inbox events server-side. */
+  private visitPostId = '';
   private bg!: BackgroundManager;
   private cats: Cat[] = [];
   /** Name labels rendered below each seated cat (matches Decorate preview). */
@@ -181,9 +191,15 @@ export class Game extends Scene {
     playerState?: PlayerState | null;
     testMode?: boolean;
     startStep?: number;
+    visitorMode?: boolean;
+    visitOwnerUsername?: string;
+    visitPostId?: string;
   }): void {
     this.playerState = data?.playerState ?? null;
     this.testMode = data?.testMode === true;
+    this.visitorMode = data?.visitorMode === true;
+    this.visitOwnerUsername = data?.visitOwnerUsername ?? '';
+    this.visitPostId = data?.visitPostId ?? '';
     // Editor passes its current scrollOffset here so rehearsal starts
     // at the author's working page (chart + music both seek). Defaults
     // to 0 = start at the top.
@@ -628,7 +644,14 @@ export class Game extends Scene {
     // In test mode the right button hides entirely when the author
     // rehearsed below Balance.passAccuracyPct — they get auto-routed
     // back to the editor via the left button instead.
-    const rightLabel = this.testMode ? 'PUT ON A SHOW' : 'Change Song';
+    // Right button label by mode:
+    //   testMode (editor rehearsal) → 'PUT ON A SHOW' (publish flow)
+    //   visitorMode (playing someone else's post) → 'Post Comment'
+    //     (re-enables the dormant social-loop submit path)
+    //   drawer rehearsal → 'Change Song' (back to song picker)
+    const rightLabel = this.testMode
+      ? 'PUT ON A SHOW'
+      : this.visitorMode ? 'Post Comment' : 'Change Song';
     const rightBg = this.add.rectangle(
       cx + btnW / 2 + btnGap / 2, btnY, btnW, btnH, 0xffd34d, 1,
     ).setInteractive({ useHandCursor: true });
@@ -647,6 +670,7 @@ export class Game extends Scene {
     rightBg.on('pointerout', () => rightBg.setFillStyle(0xffd34d, 1));
     rightBg.on('pointerdown', () => {
       if (this.testMode) this.onPostFromTestClicked();
+      else if (this.visitorMode) this.onPostCommentClicked();
       else this.onChangeSongClicked();
     });
     this.summaryRightBg = rightBg;
@@ -1693,8 +1717,16 @@ export class Game extends Scene {
    *  Used by the comment modal preview + submit pipeline. */
   private buildPlaySummary(): PlaySummary {
     const visitor = this.playerState?.username ?? 'anon';
-    const owner = this.playChart?.authorId ?? visitor;
-    const postId = (this.registry.get('postId') as string | undefined) ?? 'preview';
+    // Visitor mode: owner + postId came from the VisitPost splash (the
+    // post the player tapped into). Falling back to chart.authorId
+    // covers the legacy paths where the splash never ran (test mode,
+    // drawer rehearsal which doesn't reach this code anyway).
+    const owner = this.visitorMode && this.visitOwnerUsername
+      ? this.visitOwnerUsername
+      : this.playChart?.authorId ?? visitor;
+    const postId = this.visitorMode && this.visitPostId
+      ? this.visitPostId
+      : (this.registry.get('postId') as string | undefined) ?? 'preview';
     const totalNotes = this.score.getJudged();
     const notesHit = this.score.getLanded();
     const accuracyPct = this.score.getAccuracy();

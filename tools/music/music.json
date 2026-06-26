@@ -855,5 +855,55 @@
     "loopDurationMs": 65000,
     "clipStartS": 807,
     "addedAt": 1782447407177
+  },
+  "floating-in-the-air": {
+    "id": "floating-in-the-air",
+    "displayName": "Floating in the Air",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 65000,
+    "clipStartS": 422,
+    "addedAt": 1782450165165
+  },
+  "bounce-bloom-2-2": {
+    "id": "bounce-bloom-2-2",
+    "displayName": "Bounce & Bloom (2)",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 65000,
+    "clipStartS": 0,
+    "addedAt": 1782450165620
+  },
+  "sunny-afternoon": {
+    "id": "sunny-afternoon",
+    "displayName": "Sunny Afternoon",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 65000,
+    "clipStartS": 242,
+    "addedAt": 1782450166885
+  },
+  "neon-pulse-6": {
+    "id": "neon-pulse-6",
+    "displayName": "Neon Pulse (6)",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 65000,
+    "clipStartS": 587,
+    "addedAt": 1782450168432
+  },
+  "neon-pulse-5": {
+    "id": "neon-pulse-5",
+    "displayName": "Neon Pulse (5)",
+    "speedLabel": "fast",
+    "vibe": "upbeat",
+    "bpm": 130,
+    "loopDurationMs": 65000,
+    "clipStartS": 459,
+    "addedAt": 1782450169693
   }
 }

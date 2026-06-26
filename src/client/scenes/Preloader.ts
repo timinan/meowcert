@@ -133,6 +133,32 @@ export class Preloader extends Scene {
       console.warn('[preloader] fetchState failed; starting with no state', e);
     }
 
+    // Visitor entry detection — if Devvit's current postId maps to a
+    // different owner than the current user, this is a VISIT (someone
+    // opened a posted show that isn't theirs). Land on VisitPost to
+    // show the splash + tap-to-play, NOT Decorate. Owners visiting
+    // their own post URL still go to Decorate (their normal home).
+    // Fire-and-forget: any failure (no post context, no owner mapping,
+    // network error) falls through to the normal Welcome/Decorate path.
+    let visitPostId: string | null = null;
+    try {
+      const init = await fetch('/api/init').then((r) => r.ok ? r.json() : null) as { postId?: string } | null;
+      if (init?.postId) {
+        const v = await fetch(`/api/visit?postId=${encodeURIComponent(init.postId)}`)
+          .then((r) => r.ok ? r.json() : null) as { isOwner?: boolean } | null;
+        if (v && v.isOwner === false) {
+          visitPostId = init.postId;
+        }
+      }
+    } catch (e) {
+      console.warn('[preloader] visit detection failed; falling back to home flow', e);
+    }
+
+    if (visitPostId) {
+      this.scene.start(SceneKeys.VisitPost, { postId: visitPostId, playerState });
+      return;
+    }
+
     const goToWelcome = playerState !== null && !playerState.onboardingDone;
     if (goToWelcome) {
       this.scene.start(SceneKeys.Welcome, { playerState });

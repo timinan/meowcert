@@ -9,6 +9,7 @@ import { state } from './state';
 import { chart } from './chart';
 import { social } from './social';
 import { publish } from './publish';
+import { visit } from './visit';
 
 type ErrorResponse = {
   status: 'error';
@@ -31,6 +32,11 @@ api.route('/social', social);
 // Publish flow — POST /api/publish/chart turns the author's saved chart
 // into a live Reddit post + wires post-owner mapping in one call.
 api.route('/publish', publish);
+
+// Visitor splash — GET /api/visit?postId=X returns the owner's stage
+// (seated cats + bg + per-cat cosmetics) so the VisitPost scene can
+// render the owner's stage as the splash backdrop.
+api.route('/visit', visit);
 
 api.get('/init', async (c) => {
   const { postId } = context;

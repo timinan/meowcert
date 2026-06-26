@@ -9,6 +9,7 @@ export const SceneKeys = {
   DressingRoom: 'DressingRoom',
   ChartEditor: 'ChartEditor',
   VisitShows: 'VisitShows',
+  VisitPost: 'VisitPost',
 } as const;
 
 export type SceneKey = (typeof SceneKeys)[keyof typeof SceneKeys];
