@@ -92,6 +92,26 @@
   margin-top: 4px;
   border-top: 1px solid rgba(192, 160, 230, 0.25);
   padding-top: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.lb-stats {
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  color: #8a72b2;
+  text-transform: none;
+}
+
+.lb-updated {
+  font-size: 8px;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  color: #6f5a93;
+  text-align: right;
+  margin-top: 2px;
+  min-height: 10px;
 }
 
 .lb {

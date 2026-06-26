@@ -25,13 +25,20 @@
     <div class="info" id="info" style="display: none;">
       <div class="author" id="author"></div>
       <div class="song" id="song"></div>
-      <div class="lb-header">TOP SCORES</div>
+      <div class="lb-header">
+        TOP SCORES
+        <span class="lb-stats" id="lb-stats"></span>
+      </div>
       <ol class="lb">
         <li id="lb-1">1. —</li>
         <li id="lb-2">2. —</li>
         <li id="lb-3">3. —</li>
       </ol>
       <div class="your-best" id="your-best"></div>
+      <!-- "Updated 7s ago" — splash.ts polls /api/social/leaderboard
+           every 10 s and tick-updates this line every second so it's
+           visible that the data is live. -->
+      <div class="lb-updated" id="lb-updated"></div>
     </div>
 
     <button class="play-button" id="start-button">

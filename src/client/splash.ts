@@ -9,9 +9,15 @@ import { context, requestExpandedMode } from '@devvit/web/client';
  *   - bottom:   TAP TO PLAY button → requestExpandedMode('game') →
  *               fullscreen modal loads game.html → Phaser → VisitPost
  *
- * Single fetch on load (/api/preview-image + /api/social/leaderboard
- * fired in parallel) — feed scroll stays fast.
+ * Per-post fetch on load (/api/preview-image + /api/social/leaderboard
+ * fired in parallel). After the first load, the leaderboard re-polls
+ * every LB_POLL_MS so the splash stays honest as other visitors play;
+ * the "Updated Xs ago" stamp ticks every second so the player can SEE
+ * the data is live (Tim: "will the leaderboard even update in real
+ * time because if it doesnt update then it defeats the whole purpose").
  */
+
+const LB_POLL_MS = 10_000;
 
 const stage = document.getElementById('stage') as HTMLDivElement | null;
 const marqueeFallback = document.getElementById('marquee-fallback') as HTMLDivElement | null;
@@ -24,6 +30,8 @@ const lbEls = [
   document.getElementById('lb-3') as HTMLLIElement | null,
 ];
 const yourBestEl = document.getElementById('your-best') as HTMLDivElement | null;
+const statsEl = document.getElementById('lb-stats') as HTMLSpanElement | null;
+const updatedEl = document.getElementById('lb-updated') as HTMLDivElement | null;
 const startButton = document.getElementById('start-button') as HTMLButtonElement | null;
 
 startButton?.addEventListener('click', (e) => {
@@ -32,17 +40,6 @@ startButton?.addEventListener('click', (e) => {
 });
 
 const postId = context.postId;
-if (postId) {
-  void Promise.all([
-    fetch(`/api/preview-image?postId=${encodeURIComponent(postId)}`).then((r) => r.ok ? r.json() : null),
-    fetch(`/api/social/leaderboard?postId=${encodeURIComponent(postId)}`).then((r) => r.ok ? r.json() : null),
-  ]).then(([visit, lb]) => {
-    if (visit) renderVisit(visit as VisitData);
-    if (lb) renderLeaderboard(lb as LeaderboardData);
-  }).catch((err) => {
-    console.warn('[splash] data fetch failed:', err);
-  });
-}
 
 interface VisitData {
   ownerUsername?: string;
@@ -54,6 +51,39 @@ interface LeaderboardData {
   top?: Array<{ visitor: string; score: number; accuracy?: number; playedAt?: number }>;
   yourRank?: number | null;
   yourScore?: number | null;
+}
+
+/** Wall-clock of the last successful leaderboard load — used to render
+ *  the "Updated Xs ago" stamp. null until the first poll lands. */
+let lastUpdatedAt: number | null = null;
+
+if (postId) {
+  // Visit data only needs to fetch once — owner / song / preview image
+  // don't change after publish. Leaderboard re-polls on a timer.
+  void fetch(`/api/preview-image?postId=${encodeURIComponent(postId)}`)
+    .then((r) => r.ok ? r.json() : null)
+    .then((visit) => { if (visit) renderVisit(visit as VisitData); })
+    .catch((err) => { console.warn('[splash] preview-image fetch failed:', err); });
+
+  void loadLeaderboard();
+  setInterval(() => { void loadLeaderboard(); }, LB_POLL_MS);
+  // Tick the "Updated Xs ago" stamp every second so the player can see
+  // the freshness of the number, not just the poll cadence.
+  setInterval(renderUpdatedStamp, 1000);
+}
+
+async function loadLeaderboard(): Promise<void> {
+  if (!postId) return;
+  try {
+    const r = await fetch(`/api/social/leaderboard?postId=${encodeURIComponent(postId)}`);
+    if (!r.ok) return;
+    const lb = (await r.json()) as LeaderboardData;
+    renderLeaderboard(lb);
+    lastUpdatedAt = Date.now();
+    renderUpdatedStamp();
+  } catch (err) {
+    console.warn('[splash] leaderboard fetch failed:', err);
+  }
 }
 
 function renderVisit(d: VisitData): void {
@@ -81,7 +111,9 @@ function renderVisit(d: VisitData): void {
 
 function renderLeaderboard(d: LeaderboardData): void {
   const top = d.top ?? [];
-  if (statsEl) statsEl.textContent = `${top.length} plays`;
+  if (statsEl) {
+    statsEl.textContent = top.length === 1 ? '1 play' : `${top.length} plays`;
+  }
   for (let i = 0; i < 3; i++) {
     const li = lbEls[i];
     if (!li) continue;
@@ -99,4 +131,16 @@ function renderLeaderboard(d: LeaderboardData): void {
   if (yourBestEl && d.yourRank != null && d.yourScore != null) {
     yourBestEl.textContent = `Your best: #${d.yourRank} · ${d.yourScore.toLocaleString()}`;
   }
+}
+
+function renderUpdatedStamp(): void {
+  if (!updatedEl) return;
+  if (lastUpdatedAt == null) {
+    updatedEl.textContent = '';
+    return;
+  }
+  const ageS = Math.max(0, Math.round((Date.now() - lastUpdatedAt) / 1000));
+  if (ageS < 2) updatedEl.textContent = 'Updated just now';
+  else if (ageS < 60) updatedEl.textContent = `Updated ${ageS}s ago`;
+  else updatedEl.textContent = `Updated ${Math.floor(ageS / 60)}m ago`;
 }

@@ -1885,15 +1885,22 @@ export class Game extends Scene {
 
   /** Snapshot the cat-stage band of the canvas (below the TopHud,
    *  above the lane area) as a JPEG data URL. Used at publish time to
-   *  capture the celebration animation of the cats for the post's
-   *  feed-preview backdrop.
+   *  capture the cats for the post's feed-preview backdrop.
    *
-   *  Hides the floating "← EDITOR" chip + the "thank you for coming"
-   *  combo text BEFORE the snapshot so the captured image is just
-   *  cats + bg — no in-game UI overlay leaks. Restores visibility
-   *  afterward. Crop height is also tightened so the combo-text band
-   *  (which sits just above the lane area) is excluded even when
-   *  text is mid-tween. */
+   *  Programmatic compose, not a frozen moment from the round:
+   *  - each seated cat is posed into 'meow' so the snapshot reads as
+   *    "performing" rather than whatever idle frame the round happened
+   *    to land on
+   *  - lanes that have an equipped effect get a burst fired at the
+   *    cat's sprite so the splash thumbnail shows the cosmetic doing
+   *    its thing (sparkle / glow / emoji burst)
+   *  - the floating "← EDITOR" chip + the "thank you for coming"
+   *    combo text are hidden so no in-round UI bleeds into the image
+   *  - we wait two animation frames after posing + bursting so the
+   *    anim swap renders and the burst particles have time to draw
+   *  - animations restored after the snapshot so the visible scene is
+   *    unchanged
+   */
   private captureStagePreview(): Promise<string | null> {
     return new Promise((resolve) => {
       const renderer = this.game.renderer as Phaser.Renderer.WebGL.WebGLRenderer | undefined;
@@ -1911,11 +1918,38 @@ export class Game extends Scene {
       const comboOriginalAlpha = this.comboText?.alpha ?? 0;
       this.comboText?.setAlpha(0);
 
+      // Pose every seated cat into 'meow' for the snapshot. setAnimation
+      // is a no-op when the breed has no frames for the requested anim,
+      // so this gracefully degrades for cats without a meow set. Track
+      // the previous animation so we can restore — the visible scene
+      // post-publish should be unchanged.
+      const restoreCatAnims: Array<() => void> = [];
+      for (let i = 0; i < this.cats.length; i++) {
+        const cat = this.cats[i]!;
+        const prevAnim = cat.model.animation;
+        cat.setAnimation('meow');
+        restoreCatAnims.push(() => cat.setAnimation(prevAnim));
+
+        // Light the cat's equipped effect by firing a burst at the
+        // sprite. Bursts are self-cleaning (own their tweens + destroy
+        // on completion) so we don't need to track them for cleanup.
+        const effectId = this.laneEffects[i];
+        if (effectId) {
+          const effect = CAT_EFFECT_BY_ID[effectId];
+          // Scale 0.7 reads at cat-size without overwhelming the frame.
+          // The hit-time burst uses 1.0 (fuzzball-scale); we want a
+          // gentler aura here since the cat sprite is much larger than
+          // a fuzzball.
+          effect?.burst(this, cat.sprite, 0.7);
+        }
+      }
+
       const restore = (): void => {
         this.backToChartChip.forEach((g, i) => {
           (g as { setVisible?: (b: boolean) => void }).setVisible?.(chipOriginalVisibles[i] ?? true);
         });
         this.comboText?.setAlpha(comboOriginalAlpha);
+        for (const fn of restoreCatAnims) fn();
       };
 
       const scaleY = this.scale.height / L.DESIGN_H;
@@ -1929,8 +1963,16 @@ export class Game extends Scene {
       // the alpha hide is enough on its own and Tim wants the
       // taller image to fill more splash whitespace).
       const h = (L.LANE_TOP_Y - TopHud.HEIGHT) * scaleY;
-      try {
-        renderer.snapshotArea(x, y, w, h, (img) => {
+      // Wait long enough for: anim-swap frame, burst particle spawn,
+      // and at least one peak of the burst tween before snapshotting.
+      // Two rAFs alone weren't enough — bursts stagger their spawns to
+      // avoid clumping (~30 ms total). 120 ms lands the snapshot near
+      // the peak of the burst when particles are at max opacity and
+      // mid-radial-throw.
+      const SNAPSHOT_DELAY_MS = 120;
+      this.time.delayedCall(SNAPSHOT_DELAY_MS, () => {
+        try {
+          renderer.snapshotArea(x, y, w, h, (img) => {
           if (!(img instanceof HTMLImageElement)) {
             restore();
             resolve(null);
