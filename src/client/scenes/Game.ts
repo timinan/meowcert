@@ -137,6 +137,27 @@ export class Game extends Scene {
   private generateModal: GenerateModal | null = null;
   private settingsModal: SettingsModal | null = null;
   private commentModal: CommentComposeModal | null = null;
+  /** Page-2 view of the summary panel — toggled when the player taps
+   *  Post Comment. Page 1 = score/stats/Play-Again+Post-Comment.
+   *  Page 2 = textarea + POST/SKIP. Both pages live INSIDE the same
+   *  summary container so the panel/scrim/backdrop and the button row
+   *  positions never shift. Replaces the floating CommentComposeModal
+   *  that kept hitting layout-math bugs with POST disappearing. */
+  private summaryActivePage: 'summary' | 'comment' = 'summary';
+  /** Elements belonging to each summary page. Both pushed during
+   *  buildSummaryOverlay; setSummaryPage flips visibility on each. */
+  private summaryPage1Elements: Phaser.GameObjects.GameObject[] = [];
+  private summaryPage2Elements: Phaser.GameObjects.GameObject[] = [];
+  /** HTML textarea overlay for page 2's comment input. Created when
+   *  switching to 'comment', torn down on switch away or scene shutdown.
+   *  Phaser can't do text input natively. */
+  private commentInputOverlay: HTMLTextAreaElement | null = null;
+  /** Free-text body of the in-progress comment. Stays empty in page 1. */
+  private commentBody = '';
+  /** Closure that re-positions the textarea overlay on viewport
+   *  resize / scroll. Stashed so the resize handler can be removed
+   *  cleanly on teardown. */
+  private commentOverlayResizeHandler: (() => void) | null = null;
   private publishedModal: PublishedModal | null = null;
   /** Locks the PUT ON A SHOW button while a publish request is in flight
    *  so a double-tap doesn't fire two reddit.submitCustomPost calls. */
@@ -867,6 +888,99 @@ export class Game extends Scene {
       })
       .setOrigin(0.5, 1);
     container.add(this.summaryGateText);
+
+    // Track all Page-1 (summary view) elements so setSummaryPage can
+    // toggle them as a unit. Title + score + stats + buttons + gate
+    // message — everything that paints the "round results" view.
+    this.summaryPage1Elements = [
+      this.summaryTitleText, divider, scoreLabel, this.summaryScoreText,
+      this.summaryAccuracyText, this.summaryComboText,
+      this.summaryHitsText, this.summaryMissesText,
+      leftBg, leftText, rightBg, rightText,
+      this.summaryBestDivider, this.summaryBestLabel,
+      this.summaryBestAccuracyText, this.summaryBestComboText,
+      this.summaryBestHitsText, this.summaryBestMissesText,
+      this.summaryBestScoreBig, this.summaryGateText,
+    ];
+    // Stat labels (ACCURACY / MAX COMBO / HITS / MISSES) — push the
+    // ones we built in the for-loop above. They have no field refs,
+    // so we walk the container children list for them via tag.
+    for (const label of container.list) {
+      if (
+        label instanceof Phaser.GameObjects.Text &&
+        statLabels.includes(label.text) &&
+        !this.summaryPage1Elements.includes(label)
+      ) {
+        this.summaryPage1Elements.push(label);
+      }
+    }
+
+    // ─── Page 2: Comment input ─────────────────────────────────────────
+    // Lives INSIDE the same panel. Built hidden; setSummaryPage('comment')
+    // makes them visible and hides Page 1. Replaces the floating
+    // CommentComposeModal — POST/SKIP buttons sit at the EXACT same Y
+    // (btnY = cy + 100) as Page 1's Play Again / Post Comment so we
+    // inherit the known-good button position.
+    const taBoxX = cx - panelW / 2 + 16;
+    const taBoxY = cy - 80;
+    const taBoxW = panelW - 32;
+    const taBoxH = 80;
+    const taBoxRect = this.add
+      .rectangle(taBoxX + taBoxW / 2, taBoxY + taBoxH / 2, taBoxW, taBoxH, 0x3a2070, 1)
+      .setStrokeStyle(2, 0xffd34d, 0.7)
+      .setVisible(false);
+    container.add(taBoxRect);
+    const taLabel = this.add
+      .text(taBoxX + 8, taBoxY + 6, 'SAY SOMETHING (optional)', {
+        ...fontBase,
+        fontStyle: 'bold',
+        fontSize: '8px',
+        color: '#c0a0e6',
+      })
+      .setOrigin(0, 0)
+      .setVisible(false);
+    container.add(taLabel);
+
+    // POST · 2× and SKIP · 1× — same X/Y as Page 1's button row so they
+    // inherit the layout we know works on every device tested today.
+    const postBg = this.add
+      .rectangle(cx + btnW / 2 + btnGap / 2, btnY, btnW, btnH, 0xffd34d, 1)
+      .setInteractive({ useHandCursor: true })
+      .setVisible(false);
+    const postText = this.add
+      .text(cx + btnW / 2 + btnGap / 2, btnY, 'POST · 2×', {
+        ...fontBase,
+        fontStyle: 'bold',
+        fontSize: '13px',
+        color: '#1a0a2e',
+      })
+      .setOrigin(0.5)
+      .setVisible(false);
+    postBg.on('pointerover', () => postBg.setFillStyle(0xffe680, 1));
+    postBg.on('pointerout', () => postBg.setFillStyle(0xffd34d, 1));
+    postBg.on('pointerdown', () => this.onCommentPagePost());
+    container.add([postBg, postText]);
+
+    const skipBg = this.add
+      .rectangle(cx - btnW / 2 - btnGap / 2, btnY, btnW, btnH, 0x2c1856, 1)
+      .setStrokeStyle(1, 0xc0a0e6, 0.5)
+      .setInteractive({ useHandCursor: true })
+      .setVisible(false);
+    const skipText = this.add
+      .text(cx - btnW / 2 - btnGap / 2, btnY, 'SKIP · 1×', {
+        ...fontBase,
+        fontStyle: 'bold',
+        fontSize: '13px',
+        color: '#c0a0e6',
+      })
+      .setOrigin(0.5)
+      .setVisible(false);
+    skipBg.on('pointerover', () => skipBg.setFillStyle(0x3d2566, 1));
+    skipBg.on('pointerout', () => skipBg.setFillStyle(0x2c1856, 1));
+    skipBg.on('pointerdown', () => this.onCommentPageSkip());
+    container.add([skipBg, skipText]);
+
+    this.summaryPage2Elements = [taBoxRect, taLabel, postBg, postText, skipBg, skipText];
 
     this.summary = container;
   }
@@ -1854,25 +1968,145 @@ export class Game extends Scene {
   };
 
   private onPostCommentClicked = (): void => {
-    // Open the social-loop comment composer. Player gets one screen
-    // to add free-text + optional gift, then POST (=2x reward) or
-    // SKIP (=base reward). Both paths call submitPlay() to record the
-    // run on the leaderboard + inbox + earn coins. Owner defaults to
-    // the chart's authorId; for self-rehearse the server rejects
-    // self-gifting and self-inboxing but the comment flow still runs
-    // through the same UI for now (visitor-mode entry comes next).
-    const summary = this.buildPlaySummary();
-    if (!this.commentModal) this.commentModal = new CommentComposeModal(this);
-    this.commentModal.open({
-      summary,
-      onPost: (commentBody: string, gift: GiftPayload | undefined) => {
-        void this.finalizePlay(summary, commentBody, gift);
-      },
-      onSkip: () => {
-        void this.finalizePlay(summary, undefined, undefined);
-      },
-    });
+    // Page-2 swap on the SAME summary panel (replaces the prior
+    // floating CommentComposeModal — see the summaryActivePage doc
+    // on the field). Just toggles visibility + mounts the HTML
+    // textarea overlay; no new modal lifecycle.
+    this.setSummaryPage('comment');
   };
+
+  private onCommentPagePost = (): void => {
+    // POST · 2× — submits with the comment body + 2x reward via the
+    // normal finalizePlay path. Skip the gift payload for now (v1 of
+    // the page-2 refactor; gift sub-panel comes back in a follow-up
+    // commit if Tim wants it).
+    const summary = this.buildPlaySummary();
+    const body = this.commentBody.trim().length > 0 ? this.commentBody : undefined;
+    this.unmountCommentInputOverlay();
+    void this.finalizePlay(summary, body, undefined);
+  };
+
+  private onCommentPageSkip = (): void => {
+    // SKIP · 1× — submits without comment, base reward.
+    const summary = this.buildPlaySummary();
+    this.unmountCommentInputOverlay();
+    void this.finalizePlay(summary, undefined, undefined);
+  };
+
+  /** Toggle the summary panel between page 1 (round results) and
+   *  page 2 (comment input). Both pages share the same panel + button
+   *  positions — no floating modal, no layout-math drift. */
+  private setSummaryPage(page: 'summary' | 'comment'): void {
+    if (this.summaryActivePage === page) return;
+    this.summaryActivePage = page;
+    for (const el of this.summaryPage1Elements) {
+      (el as Phaser.GameObjects.GameObject & { setVisible: (v: boolean) => unknown }).setVisible(page === 'summary');
+    }
+    for (const el of this.summaryPage2Elements) {
+      (el as Phaser.GameObjects.GameObject & { setVisible: (v: boolean) => unknown }).setVisible(page === 'comment');
+    }
+    // Title swap — reuse the same Text object across both pages so we
+    // don't have a per-page title duplicated. Always visible.
+    this.summaryTitleText.setVisible(true);
+    if (page === 'comment') {
+      this.summaryTitleText.setText('POST YOUR SCORE');
+      this.summaryTitleText.setColor('#ffd34d');
+      this.mountCommentInputOverlay();
+    } else {
+      // Restore page-1 title — showSummary() sets it to SHOW COMPLETE!
+      // or SHOW FAILED based on pass; we don't know which, so leave it
+      // alone (the close path tears down the whole summary anyway).
+    }
+  }
+
+  /** Build the HTML textarea overlay positioned over the page-2
+   *  textarea container rect. iOS Safari + Reddit webview need a real
+   *  DOM input — Phaser can't do text. Lives outside the canvas as a
+   *  `position: fixed` element anchored to the canvas's rect. */
+  private mountCommentInputOverlay(): void {
+    if (this.commentInputOverlay) return;
+    this.commentBody = '';
+    const ta = document.createElement('textarea');
+    ta.className = 'meowcert-comment-overlay-input';
+    ta.placeholder = 'tap to leave a comment…';
+    ta.style.position = 'fixed';
+    ta.style.background = 'transparent';
+    ta.style.color = '#ffffff';
+    ta.style.border = 'none';
+    ta.style.outline = 'none';
+    ta.style.resize = 'none';
+    ta.style.fontFamily = '"Pixeloid Sans", sans-serif';
+    // 16px is the iOS Safari auto-zoom threshold — anything smaller
+    // and the viewport zooms on focus + locks (user-scalable=no).
+    ta.style.fontSize = '16px';
+    ta.style.padding = '2px 4px';
+    ta.style.boxSizing = 'border-box';
+    ta.style.zIndex = '9999';
+    ta.rows = 3;
+    ta.wrap = 'soft';
+    ta.maxLength = 240;
+    document.body.appendChild(ta);
+
+    const onTaInput = (): void => {
+      this.commentBody = ta.value;
+    };
+    ta.addEventListener('input', onTaInput);
+
+    const reposition = (): void => {
+      const canvas = this.game.canvas;
+      const rect = canvas.getBoundingClientRect();
+      const sx = rect.width / this.scale.width;
+      const sy = rect.height / this.scale.height;
+      const { width, height } = this.scale;
+      const cx = width / 2;
+      const laneTopY = L.LANE_TOP_Y * (this.scale.height / L.DESIGN_H);
+      const laneBottomY = L.LANE_BOTTOM_Y * (this.scale.height / L.DESIGN_H);
+      const cy = laneTopY + (laneBottomY - laneTopY) / 2;
+      const panelW = Math.min(280, width - 32);
+      const taBoxX = cx - panelW / 2 + 16;
+      const taBoxY = cy - 80;
+      const taBoxW = panelW - 32;
+      const taBoxH = 80;
+      // Inset 20px from top (clear of the label) and 8px from sides
+      // so the typed text doesn't kiss the border.
+      ta.style.left = `${rect.left + (taBoxX + 8) * sx}px`;
+      ta.style.top = `${rect.top + (taBoxY + 20) * sy}px`;
+      ta.style.width = `${(taBoxW - 16) * sx}px`;
+      ta.style.height = `${(taBoxH - 24) * sy}px`;
+    };
+    reposition();
+    this.commentOverlayResizeHandler = reposition;
+    window.addEventListener('resize', reposition);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', reposition);
+      window.visualViewport.addEventListener('scroll', reposition);
+    }
+
+    this.commentInputOverlay = ta;
+  }
+
+  /** Tear down the HTML textarea overlay. Called on POST / SKIP /
+   *  scene shutdown. Idempotent. */
+  private unmountCommentInputOverlay(): void {
+    const ta = this.commentInputOverlay;
+    if (!ta) return;
+    if (this.commentOverlayResizeHandler) {
+      window.removeEventListener('resize', this.commentOverlayResizeHandler);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', this.commentOverlayResizeHandler);
+        window.visualViewport.removeEventListener('scroll', this.commentOverlayResizeHandler);
+      }
+      this.commentOverlayResizeHandler = null;
+    }
+    if (ta.parentElement) ta.parentElement.removeChild(ta);
+    // Belt + suspenders sweep: any leaked overlays with our marker
+    // class also get cleared (matches the legacy CommentComposeModal
+    // cleanup pattern that survived the orphan-rect saga).
+    document.querySelectorAll('textarea.meowcert-comment-overlay-input')
+      .forEach((el) => el.parentElement?.removeChild(el));
+    this.commentInputOverlay = null;
+    this.commentBody = '';
+  }
 
   /** Build the PlaySummary blob from the round's score + chart context.
    *  Used by the comment modal preview + submit pipeline. */
@@ -3003,6 +3237,12 @@ export class Game extends Scene {
     tearDown('summary', () => {
       this.summary?.destroy(true);
       this.summary = null;
+    });
+    tearDown('comment-input-overlay', () => {
+      // Page-2 HTML textarea must be removed from document.body when
+      // the scene tears down — Phaser's container.destroy doesn't
+      // touch DOM elements we attached outside the canvas.
+      this.unmountCommentInputOverlay();
     });
     tearDown('generate-modal', () => {
       this.generateModal?.destroy();
