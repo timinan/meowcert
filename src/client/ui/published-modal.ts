@@ -164,15 +164,43 @@ export class PublishedModal {
     window.addEventListener('resize', onResize);
 
     const onClick = (e: MouseEvent): void => {
-      // Trusted DOM gesture — navigateTo escapes the webview cleanly.
-      // Object form so Devvit's resolver routes to the post (not the
-      // subreddit landing it would infer from a plain reddit.com URL).
+      // Comprehensive logging — we can't repro inside the Reddit webview
+      // from here, so every Discord-question debug needs the full
+      // picture. Logs the click event, the URL/permalink we're sending,
+      // and the resolver's expected output mirroring Devvit's own logic.
       const target = args.permalink
         ? { url: args.url, permalink: args.permalink }
         : args.url;
-      console.info('[PublishedModal] OPEN POST (HTML overlay) tapped — target:', target, 'isTrusted:', e.isTrusted);
+      let resolved: string;
+      if (typeof target === 'string') {
+        resolved = target;
+      } else if (target.permalink === undefined) {
+        resolved = target.url;
+      } else {
+        try {
+          resolved = new URL(target.url).pathname === target.permalink
+            ? target.url
+            : new URL(target.permalink, 'https://www.reddit.com').toString();
+        } catch {
+          resolved = new URL(target.permalink, 'https://www.reddit.com').toString();
+        }
+      }
+      let normalized = '<invalid>';
+      try { normalized = new URL(resolved).toString(); } catch { /* */ }
+      console.info('[PublishedModal] OPEN POST clicked', {
+        isTrusted: e.isTrusted,
+        gesture: 'HTML overlay button click',
+        argsUrl: args.url,
+        argsPermalink: args.permalink,
+        target,
+        resolved,
+        normalized,
+        targetType: typeof target,
+        ua: navigator.userAgent,
+      });
       try {
         navigateTo(target);
+        console.info('[PublishedModal] navigateTo returned without throwing');
       } catch (err) {
         console.error('[PublishedModal] navigateTo threw:', err);
       }

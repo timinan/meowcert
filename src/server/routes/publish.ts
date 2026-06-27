@@ -150,14 +150,23 @@ publish.post('/chart', async (c) => {
       console.info(`[publish] skipped creator seed — score=${creatorScore} acc=${creatorAccuracy}`);
     }
 
-    // Reverted to the EXACT shape from f4d9bbf (the version Tim
-    // confirmed worked yesterday): plain `https://reddit.com${permalink}`
-    // string. Today's 1c8f90e tried Devvit's `{url, permalink}` resolver
-    // form using post.url — Tim flagged that as a regression. Sticking
-    // to the known-good behavior + logging both fields so the next
-    // failure has enough signal to diagnose without guessing.
     const url = `https://reddit.com${post.permalink}`;
-    console.info('[publish] returning ok url:', url, 'post.url:', post.url, 'post.permalink:', post.permalink);
+    // Aggressive logging — Devvit docs say navigateTo requires the app
+    // account to have access to the Reddit content. Posts created with
+    // runAs:'USER' during unapproved playtest may not be accessible to
+    // the app account, which would explain the navigation falling back
+    // to the subreddit. Log every field about the post so Discord
+    // questions have full context.
+    console.info('[publish] returning ok', {
+      postId: post.id,
+      authorName: post.authorName,
+      subredditName: post.subredditName,
+      url,
+      'post.url': post.url,
+      'post.permalink': post.permalink,
+      runAs: 'USER',
+      isPlaytest: true,
+    });
     return c.json({ ok: true, postId: post.id, url, permalink: post.permalink });
   } catch (err) {
     console.error('[publish] failed to create post:', err);
