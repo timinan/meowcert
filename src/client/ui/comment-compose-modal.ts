@@ -152,6 +152,14 @@ export class CommentComposeModal {
     // by reading scene.scale.displaySize directly so the overlay tracks
     // any iframe size change. Re-positioned in updateOverlayPosition().
     const ta = document.createElement('textarea');
+    // Distinctive class so close() can sweep orphans: if for any reason
+    // a previous modal's teardown didn't fire (scene torn down before
+    // close ran, iOS pointer event eaten by the textarea, etc), this
+    // class is the marker close() uses to remove any leaked textareas
+    // from document.body. Tim hit two symptoms — the previous comment
+    // text re-appearing on next open + the text overlay leaking onto
+    // the game canvas after dismiss. Both root-cause to the same leak.
+    ta.className = 'meowcert-comment-overlay-input';
     ta.placeholder = 'nice run! 🐱';
     // position:fixed — iOS Safari scrolls the document up when the
     // keyboard pops up, which made an absolute-positioned textarea
@@ -427,6 +435,20 @@ export class CommentComposeModal {
       this.container = null;
     }
     this.rerender = null;
+    // Reset typed state so a re-open starts blank. open() already does
+    // this, but doing it here too means even cancel-paths that bypass
+    // open's reset stay clean.
+    this.freeText = '';
+    this.giftCoins = 0;
+    this.giftItemInstanceIds = [];
+    this.giftPanelOpen = false;
+    // Belt + suspenders: sweep any leaked textarea overlays out of the
+    // DOM. The tearDown closure above SHOULD be sufficient, but Tim
+    // reported "exiting modal leave the comment here / comment also
+    // shows up in lane" — pointing to a teardown miss. Query by the
+    // distinctive class we put on every overlay we create; remove all.
+    const orphans = document.querySelectorAll('textarea.meowcert-comment-overlay-input');
+    orphans.forEach((el) => el.parentElement?.removeChild(el));
   }
 
   destroy(): void {

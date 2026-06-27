@@ -853,10 +853,13 @@ export class Game extends Scene {
     else this.buildRehearsalControls();
   }
 
-  /** Two stacked floating chips in the top-right during drawer-rehearse
-   *  mode — BACK (exits to Decorate) and RESTART (in-place replay of
-   *  the current chart). Mirrors the testMode "← EDITOR" chip's
-   *  position so the escape-hatch surface is consistent across modes.
+  /** Floating chips in the top-right during drawer-rehearse / visitor-
+   *  play mode. In drawer rehearsal: BACK + RESTART stacked. In visitor
+   *  mode (playing someone else's post, OR the creator playing their
+   *  own post via VisitPost): RESTART only. Tim's rule: "there
+   *  shouldnt be a back button when you are loading someone's chart
+   *  (even for own rehersals just restart)".
+   *
    *  Hidden in testMode (the BACK TO EDITOR chip covers that flow). */
   private buildRehearsalControls(): void {
     const { width } = this.scale;
@@ -867,35 +870,52 @@ export class Game extends Scene {
     const gap = 6;
     const chipCx = width - padX - chipW / 2;
 
-    // BACK chip — light-purple stroke to read as a navigation action.
-    const backCy = padY + chipH / 2;
-    const backBg = this.add
-      .rectangle(chipCx, backCy, chipW, chipH, 0x1a0a2e, 0.95)
-      .setStrokeStyle(2, 0xc678ff, 0.9)
-      .setDepth(60)
-      .setInteractive({ useHandCursor: true });
-    const backTxt = this.add
-      .text(chipCx, backCy, '← BACK', {
-        fontFamily: 'Pixeloid Sans, sans-serif',
-        fontStyle: 'bold',
-        fontSize: '13px',
-        color: '#c678ff',
-      })
-      .setOrigin(0.5)
-      .setDepth(61);
-    backBg.on('pointerover', () => backBg.setFillStyle(0x2c1856, 0.95));
-    backBg.on('pointerout', () => backBg.setFillStyle(0x1a0a2e, 0.95));
-    backBg.on('pointerup', () => {
-      // Re-enter the rehearse pre-round flow at the song selection
-      // step. scene.restart with no replayChart hits create()'s
-      // non-testMode branch which calls showSongPicker — same path
-      // the Change Song button on the summary uses.
-      this.scene.restart({ playerState: this.playerState });
-    });
+    const chips: Phaser.GameObjects.GameObject[] = [];
 
-    // RESTART chip — yellow stroke matches the primary action color
-    // (same in-place replay path Play Again uses on the summary).
-    const restartCy = backCy + chipH + gap;
+    // BACK chip — ONLY in drawer rehearsal (not visitor mode). Visitor
+    // and creator-self-play paths skip this so the visitor doesn't see
+    // a way to exit into their own song picker / state.
+    let nextChipCy = padY + chipH / 2;
+    if (!this.visitorMode) {
+      const backCy = nextChipCy;
+      const backBg = this.add
+        .rectangle(chipCx, backCy, chipW, chipH, 0x1a0a2e, 0.95)
+        .setStrokeStyle(2, 0xc678ff, 0.9)
+        .setDepth(60)
+        .setInteractive({ useHandCursor: true });
+      const backTxt = this.add
+        .text(chipCx, backCy, '← BACK', {
+          fontFamily: 'Pixeloid Sans, sans-serif',
+          fontStyle: 'bold',
+          fontSize: '13px',
+          color: '#c678ff',
+        })
+        .setOrigin(0.5)
+        .setDepth(61);
+      backBg.on('pointerover', () => backBg.setFillStyle(0x2c1856, 0.95));
+      backBg.on('pointerout', () => backBg.setFillStyle(0x1a0a2e, 0.95));
+      backBg.on('pointerup', () => {
+        // Tim's bug: BACK was doing a restart instead of going back to
+        // song selection. Cause: Phaser's scene.restart preserves the
+        // scene's registry, AND we don't clear playerState.chart, so
+        // create()'s gate (hostChart OR playerState.chart) still hits
+        // a chart and runs the round instead of showing the picker.
+        // Clear both first so the gate falls through to showSongPicker.
+        this.registry.set('hostChart', undefined);
+        if (this.playerState?.chart) {
+          this.playerState.chart.steps = this.playerState.chart.steps.map(
+            (s) => ({ ...s, lanes: [] }),
+          );
+        }
+        this.scene.restart({ playerState: this.playerState });
+      });
+      chips.push(backBg, backTxt);
+      nextChipCy = backCy + chipH + gap;
+    }
+
+    // RESTART chip — always shown. In drawer rehearsal sits under BACK;
+    // in visitor mode sits at the top (where BACK would have been).
+    const restartCy = nextChipCy;
     const restartBg = this.add
       .rectangle(chipCx, restartCy, chipW, chipH, 0x1a0a2e, 0.95)
       .setStrokeStyle(2, 0xffd34d, 0.9)
@@ -915,11 +935,9 @@ export class Game extends Scene {
     restartBg.on('pointerup', () => {
       if (this.playChart) this.replayInPlace(this.playChart);
     });
+    chips.push(restartBg, restartTxt);
 
-    // Reuse the existing cleanup array (backToChartChip) since both
-    // overlays live and die on the same scene lifecycle — no need to
-    // add a second tearDown step.
-    this.backToChartChip = [backBg, backTxt, restartBg, restartTxt];
+    this.backToChartChip = chips;
   }
 
   /** Floating "← EDITOR" pill rendered on top of the playfield while in

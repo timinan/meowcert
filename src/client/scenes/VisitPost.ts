@@ -109,14 +109,32 @@ export class VisitPost extends Scene {
 
     this.events.once(Scenes.Events.SHUTDOWN, () => this.cleanup());
 
-    // Fire all three fetches in parallel — visit is the heaviest payload
-    // and gates the visual (bg + cats), chart unlocks PLAY, leaderboard
-    // fills the info panel. Each resolves independently so the visitor
-    // sees data trickle in instead of one big wait.
+    // Fire all four fetches in parallel — visit is the heaviest payload
+    // and gates the visual (bg + cats), per-post chart unlocks PLAY +
+    // music (kicked off immediately so the backing track starts as
+    // soon as possible), leaderboard fills the info panel.
     void this.loadVisit();
     void this.loadLeaderboard();
-    // chart load needs the owner username from visit — chained inside
-    // loadVisit once the username is known. Faster than blocking here.
+    // Per-post chart fetch needs only postId (no owner). Firing it in
+    // parallel with visit instead of chaining off it cuts splash-music
+    // start-time roughly in half. Falls through to loadVisit's
+    // authorUsername-based fallback if no per-post chart exists
+    // (legacy posts only).
+    void this.loadChartFast();
+  }
+
+  /** Per-post chart fetch path. Independent of visit — uses postId
+   *  directly so it doesn't have to wait on the visit endpoint to
+   *  resolve the author. Tim's feedback: "music works but took a
+   *  while to load". This shortens the path. */
+  private async loadChartFast(): Promise<void> {
+    const chart = await this.loadPostChart();
+    if (!this.scene.isActive() || !chart) return;
+    // If visit's chart load already raced ahead, don't clobber.
+    if (this.chart) return;
+    this.chart = chart;
+    this.songText.setText(this.formatSongLine(chart));
+    this.startSplashMusic(chart);
   }
 
   private async loadVisit(): Promise<void> {

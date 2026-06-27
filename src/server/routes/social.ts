@@ -57,8 +57,17 @@ social.post('/play', async (c) => {
   const visitor = await currentUsername();
   const body = (await c.req.json()) as PlayBody;
   if (!body.postId || !body.owner) {
+    console.warn('[social/play] missing postId or owner', { postId: body.postId, owner: body.owner });
     return c.json({ ok: false, reason: 'postId + owner required' }, 400);
   }
+  console.info('[social/play] POST', {
+    visitor,
+    owner: body.owner,
+    postId: body.postId,
+    score: body.score,
+    accuracy: body.accuracy,
+    isOwnerSelfPlay: visitor === body.owner,
+  });
   const { tier, baseReward } = classifyScore(body.accuracy, body.accuracy >= 0.75);
   const passed = tier !== 'fail';
   const summary: PlaySummary = {
