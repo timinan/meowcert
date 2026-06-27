@@ -118,21 +118,22 @@ social.post('/play', async (c) => {
         },
       };
       await pushInboxEvent(r, body.owner, commentEvent);
-      // Best-effort: actually submit the comment to Reddit under the host's
-      // post. Visitor authors it (runAs USER) so it shows their name. If
-      // Reddit's call fails, the play still records + the inbox event still
-      // landed — the player keeps their reward. Playtest caveat: unapproved
-      // apps fall back to the app account unless the actor is the app owner.
-      try {
-        await reddit.submitComment({
-          postId: body.postId,
-          text: body.commentBody,
-          runAs: 'USER',
-        });
-        console.info('[social/play] reddit.submitComment OK', { postId: body.postId, visitor });
-      } catch (err) {
-        console.error('[social/play] reddit.submitComment failed (continuing)', err);
-      }
+    }
+  }
+  // Reddit comment submission — OUTSIDE the self-play skip so the host
+  // can comment on own posts (testing visibility + future use cases like
+  // host welcomes / host responses). Inbox event above is still self-play
+  // skipped because the owner shouldn't see their own runs as inbox items.
+  if (body.commentBody && body.commentBody.trim().length > 0) {
+    try {
+      await reddit.submitComment({
+        postId: body.postId,
+        text: body.commentBody,
+        runAs: 'USER',
+      });
+      console.info('[social/play] reddit.submitComment OK', { postId: body.postId, visitor });
+    } catch (err) {
+      console.error('[social/play] reddit.submitComment failed (continuing)', err);
     }
   }
   return c.json({
