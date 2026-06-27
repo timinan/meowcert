@@ -68,9 +68,15 @@ export class CommentComposeModal {
       .rectangle(0, 0, width, height, 0x0b041a, 0.78)
       .setOrigin(0, 0)
       .setInteractive();
-    scrim.on('pointerdown', (_p: unknown, _x: unknown, _y: unknown, e: Phaser.Types.Input.EventData) =>
-      e.stopPropagation(),
-    );
+    // Scrim tap = close (cancel). Tim's bug: "modal still appearing
+    // after click out x from comment" — the X target was small and
+    // iOS pointerdown was getting eaten by the textarea overlay in
+    // some cases. Making the scrim itself dismiss the modal gives
+    // visitors a giant tap target that always works.
+    scrim.on('pointerdown', () => {
+      this.close();
+      onCancel?.();
+    });
     this.container.add(scrim);
 
     const panel = this.scene.add
@@ -231,12 +237,14 @@ export class CommentComposeModal {
     // closure has something to point at without branching everywhere.
     const previewText = { setText: (_: string): void => {} };
 
-    // Gift toggle row sits immediately under the input. POST + SKIP
-    // sit immediately under the gift chip so they're visible above
-    // the iOS keyboard. The gift sub-panel (slider + presets) renders
-    // BELOW the buttons when opened — it's the secondary path; the
-    // primary "type text + POST" path stays one tap away.
-    const giftToggleY = taContainerY + taContainerH + 14;
+    // Layout order: Input → POST/SKIP (immediately under) → gift chip.
+    // POST/SKIP are the primary action and must stay above the iOS
+    // keyboard fold; the gift chip (a secondary opt-in) can sit
+    // further down where the keyboard would cover it.
+    const btnRowY = taContainerY + taContainerH + 32;       // POST + SKIP center
+    const giftToggleY = btnRowY + 22 + 16;                   // gift chip top
+    // (was: giftToggleY = taContainerY + taContainerH + 14 — kept above
+    //  shape for the gift chip + sub-panel layout below).
     const giftChip = this.scene.add
       .rectangle(panelX + 16 + 70, giftToggleY + 14, 140, 28, 0x2c1856, 1)
       .setStrokeStyle(1, 0xc0a0e6, 0.55)
@@ -355,13 +363,7 @@ export class CommentComposeModal {
       this.rerender?.();
     });
 
-    // POST + SKIP buttons RIGHT under the gift chip — close enough to
-    // the input that they're visible even with iOS keyboard up. Were
-    // at `panelY + panelH - 36` previously (bottom of the panel),
-    // which put them below the keyboard fold. Tim: "where is the
-    // button to even add the comment?". Now they sit at giftToggleY
-    // + 32 (chip height) + 14 (gap) = 46 px below the chip.
-    const btnY = giftToggleY + 46;
+    const btnY = btnRowY;
     const postBg = this.scene.add
       .rectangle(panelX + panelW - 90, btnY, 160, 44, 0xffd34d, 1)
       .setInteractive({ useHandCursor: true });

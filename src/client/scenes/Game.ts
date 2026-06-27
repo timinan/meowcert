@@ -1742,6 +1742,13 @@ export class Game extends Scene {
     // back to its init() value.
     this.score = new ScoreSystem();
     this.roundOver = false;
+    // Reset playSubmitted so the next endRound actually fires the
+    // auto-record. Without this, RESTART / Play Again in visitor mode
+    // would only submit the FIRST run's score — subsequent runs would
+    // silently skip the `if (!playSubmitted)` gate. Tim's bug:
+    // "leaderboard still not adding creater score after planing again
+    // from their own post".
+    this.playSubmitted = false;
     this.startTimeMs = 0;
     this.pendingStart = true;
     this.lastEmittedPageBoundary = 0;
