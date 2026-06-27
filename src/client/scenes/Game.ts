@@ -199,6 +199,18 @@ export class Game extends Scene {
    *  'SHOW FAILED' based on the rehearsal pass gate. */
   private summaryTitleText!: Phaser.GameObjects.Text;
 
+  // Comment compose lives as page-2 of the summary panel. The page-2
+  // sub-container fully overlays page-1 when shown — its own opaque
+  // panel covers the SHOW COMPLETE content, so page-1 doesn't need
+  // per-child hiding. Wired up in stage 3 (Page-2 currently has no
+  // interaction handlers; visual layout only.)
+  private summaryActivePage: 1 | 2 = 1;
+  private summaryPage2: Phaser.GameObjects.Container | null = null;
+  private summaryPage2PostBg!: Phaser.GameObjects.Rectangle;
+  private summaryPage2SkipBg!: Phaser.GameObjects.Rectangle;
+  private summaryPage2BackBg!: Phaser.GameObjects.Rectangle;
+  private summaryPage2TextareaBox!: Phaser.GameObjects.Rectangle;
+
   // Page boundary tracking — cached chart timing so update() can spawn
   // falling page-boundary lines at the right step crossings without
   // touching ChartPlayer internals.
@@ -868,7 +880,119 @@ export class Game extends Scene {
       .setOrigin(0.5, 1);
     container.add(this.summaryGateText);
 
+    // ---- Page 2: comment compose (visual layout only; wired in stage 3) ----
+    // Sub-container of the summary panel that, when visible, fully overlays
+    // page-1. Same panel dimensions/colors as page-1 so the transition
+    // reads as "same surface, different page" rather than a popup.
+    const page2 = this.add.container(0, 0).setVisible(false);
+    const page2Panel = this.add.rectangle(cx, cy, panelW, panelH, 0x1a0a2e, 1);
+    page2Panel.setStrokeStyle(2, 0xc678ff, 0.8);
+    page2.add(page2Panel);
+
+    // BACK chip (top-left of panel, returns to page-1 once wired).
+    const backChipX = cx - panelW / 2 + 28;
+    const backChipY = cy - panelH / 2 + 18;
+    this.summaryPage2BackBg = this.add
+      .rectangle(backChipX, backChipY, 44, 22, 0x2c1856, 1)
+      .setStrokeStyle(1, 0xc0a0e6, 0.5);
+    const backChipText = this.add
+      .text(backChipX, backChipY, '← BACK', {
+        ...fontBase,
+        fontStyle: 'bold',
+        fontSize: '9px',
+        color: '#c0a0e6',
+      })
+      .setOrigin(0.5);
+    page2.add([this.summaryPage2BackBg, backChipText]);
+
+    // Page-2 title — centered, same color as page-1's title.
+    const page2Title = this.add
+      .text(cx, cy - panelH / 2 + 10, 'ADD A COMMENT', {
+        ...fontBase,
+        fontStyle: 'bold',
+        fontSize: '13px',
+        color: '#ffd34d',
+      })
+      .setOrigin(0.5, 0);
+    page2.add(page2Title);
+
+    // Textarea placeholder box. In stage 3 an HTML <textarea> overlay
+    // gets positioned over this rect (same pattern CommentComposeModal
+    // uses). For now it's just a styled rectangle so the layout reads.
+    const taY = cy - 24;
+    const taH = 80;
+    this.summaryPage2TextareaBox = this.add
+      .rectangle(cx, taY, panelW - 32, taH, 0x3a2070, 1)
+      .setOrigin(0.5, 0.5)
+      .setStrokeStyle(2, 0xffd34d, 0.7);
+    page2.add(this.summaryPage2TextareaBox);
+    const taPlaceholder = this.add
+      .text(cx, taY, 'tap to leave a comment…', {
+        ...fontBase,
+        fontSize: '10px',
+        color: '#8b6fb0',
+        align: 'center',
+        wordWrap: { width: panelW - 48 },
+      })
+      .setOrigin(0.5);
+    page2.add(taPlaceholder);
+
+    // Buttons row: POST (yellow primary, left) + SKIP (purple secondary,
+    // right). Same dimensions as the page-1 button row so the page
+    // transition doesn't visually jump.
+    const p2BtnY = cy + 100;
+    const p2BtnW = 110;
+    const p2BtnH = 38;
+    const p2BtnGap = 12;
+    this.summaryPage2PostBg = this.add
+      .rectangle(cx - p2BtnW / 2 - p2BtnGap / 2, p2BtnY, p2BtnW, p2BtnH, 0xffd34d, 1)
+      .setInteractive({ useHandCursor: true });
+    const postText = this.add
+      .text(cx - p2BtnW / 2 - p2BtnGap / 2, p2BtnY, 'POST · 2×', {
+        ...fontBase,
+        fontStyle: 'bold',
+        fontSize: '14px',
+        color: '#1a0a2e',
+      })
+      .setOrigin(0.5);
+    page2.add([this.summaryPage2PostBg, postText]);
+    this.summaryPage2PostBg.on('pointerover', () => this.summaryPage2PostBg.setFillStyle(0xffe680, 1));
+    this.summaryPage2PostBg.on('pointerout', () => this.summaryPage2PostBg.setFillStyle(0xffd34d, 1));
+
+    this.summaryPage2SkipBg = this.add
+      .rectangle(cx + p2BtnW / 2 + p2BtnGap / 2, p2BtnY, p2BtnW, p2BtnH, 0x2c1856, 1)
+      .setStrokeStyle(1, 0xc0a0e6, 0.5)
+      .setInteractive({ useHandCursor: true });
+    const skipText = this.add
+      .text(cx + p2BtnW / 2 + p2BtnGap / 2, p2BtnY, 'SKIP · 1×', {
+        ...fontBase,
+        fontStyle: 'bold',
+        fontSize: '14px',
+        color: '#c0a0e6',
+      })
+      .setOrigin(0.5);
+    page2.add([this.summaryPage2SkipBg, skipText]);
+    this.summaryPage2SkipBg.on('pointerover', () => this.summaryPage2SkipBg.setFillStyle(0x3d2566, 1));
+    this.summaryPage2SkipBg.on('pointerout', () => this.summaryPage2SkipBg.setFillStyle(0x2c1856, 1));
+
+    this.summaryPage2BackBg.setInteractive({ useHandCursor: true });
+    this.summaryPage2BackBg.on('pointerover', () => this.summaryPage2BackBg.setFillStyle(0x3d2566, 1));
+    this.summaryPage2BackBg.on('pointerout', () => this.summaryPage2BackBg.setFillStyle(0x2c1856, 1));
+
+    container.add(page2);
+    this.summaryPage2 = page2;
+
     this.summary = container;
+  }
+
+  /** Toggle the summary panel between page-1 (stats + Play Again/Post
+   *  Comment) and page-2 (comment compose surface). Page-2's panel fully
+   *  overlays page-1 when visible, so this is a single visibility flip
+   *  on the page-2 sub-container — page-1 doesn't need per-child hiding. */
+  private setSummaryPage(page: 1 | 2): void {
+    if (!this.summaryPage2) return;
+    this.summaryActivePage = page;
+    this.summaryPage2.setVisible(page === 2);
   }
 
   private buildHud(): void {
