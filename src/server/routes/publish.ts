@@ -139,10 +139,24 @@ publish.post('/chart', async (c) => {
         const slots = state.equippedCosmetics?.[id];
         if (slots) equippedSlice[id] = slots;
       }
-      const equippedTypesSlice: Record<string, Record<string, string>> = {};
+      // equippedCosmeticTypes is a FLAT map: cosInstanceId → typeId
+      // (per PlayerState in shared/state.ts:581). Previous code indexed
+      // by catInstanceId which always returned undefined and saved an
+      // empty types slice — that's why Tim's visitor splash showed
+      // naked cats. Trim to only the cosmetic instances equipped on
+      // seated cats so the snapshot stays small.
+      const equippedCosInstanceIds = new Set<string>();
       for (const id of seatedInstanceIds) {
-        const types = state.equippedCosmeticTypes?.[id];
-        if (types) equippedTypesSlice[id] = types;
+        const slots = state.equippedCosmetics?.[id];
+        if (!slots) continue;
+        for (const cosId of Object.values(slots)) {
+          if (cosId) equippedCosInstanceIds.add(cosId);
+        }
+      }
+      const equippedTypesSlice: Record<string, string> = {};
+      for (const cosId of equippedCosInstanceIds) {
+        const typeId = state.equippedCosmeticTypes?.[cosId];
+        if (typeId) equippedTypesSlice[cosId] = typeId;
       }
       const stageSnapshot = {
         seatedCats: state.seatedCats ?? {},

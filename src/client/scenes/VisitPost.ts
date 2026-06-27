@@ -332,14 +332,17 @@ export class VisitPost extends Scene {
         scale: 1.4,
       };
 
-      // Resolve cosmetic instance ids → catalog type ids, same as Decorate.
+      // Resolve cosmetic instance ids → catalog type ids, same as
+      // Decorate. typeMap is a FLAT cosInstanceId → typeId map, NOT
+      // nested by catInstanceId (that was the bug — naked-cat visitor
+      // splash).
       const slots = stage.equippedCosmetics[instanceId];
       const typeMap = stage.equippedCosmeticTypes ?? {};
       if (slots && Object.keys(slots).length > 0) {
         const resolved: Partial<Record<string, string>> = {};
         for (const [slotKey, cosInstanceId] of Object.entries(slots)) {
           if (!cosInstanceId) continue;
-          const typeId = typeMap[instanceId]?.[cosInstanceId];
+          const typeId = typeMap[cosInstanceId];
           if (typeId) resolved[slotKey] = typeId;
         }
         if (Object.keys(resolved).length > 0) model.equippedCosmetics = resolved;

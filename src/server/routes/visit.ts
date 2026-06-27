@@ -38,7 +38,8 @@ visit.get('/', async (c) => {
     activeBackground: string;
     ownedCats: unknown[];
     equippedCosmetics: Record<string, Record<string, string>>;
-    equippedCosmeticTypes: Record<string, Record<string, string>>;
+    // FLAT map cosInstanceId → typeId, matching PlayerState shape.
+    equippedCosmeticTypes: Record<string, string>;
   } | null = null;
 
   const postStageRaw = await redis.get(`meowcert:post-stage:${postId}`);
@@ -59,10 +60,20 @@ visit.get('/', async (c) => {
       const slots = ownerState.equippedCosmetics?.[id];
       if (slots) equippedSlice[id] = slots;
     }
-    const equippedTypesSlice: Record<string, Record<string, string>> = {};
+    // Same flat-map fix as publish.ts — equippedCosmeticTypes is
+    // keyed by cosInstanceId, not by catInstanceId.
+    const equippedCosInstanceIds = new Set<string>();
     for (const id of seatedInstanceIds) {
-      const types = ownerState.equippedCosmeticTypes?.[id];
-      if (types) equippedTypesSlice[id] = types;
+      const slotsOwner = ownerState.equippedCosmetics?.[id];
+      if (!slotsOwner) continue;
+      for (const cosId of Object.values(slotsOwner)) {
+        if (cosId) equippedCosInstanceIds.add(cosId);
+      }
+    }
+    const equippedTypesSlice: Record<string, string> = {};
+    for (const cosId of equippedCosInstanceIds) {
+      const typeId = ownerState.equippedCosmeticTypes?.[cosId];
+      if (typeId) equippedTypesSlice[cosId] = typeId;
     }
     stage = {
       seatedCats: (ownerState.seatedCats ?? {}) as Record<string, string | null>,
