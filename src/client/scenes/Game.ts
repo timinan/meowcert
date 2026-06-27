@@ -946,34 +946,22 @@ export class Game extends Scene {
       .setOrigin(0.5);
     page2.add(taPlaceholder);
 
-    // Buttons row: POST (yellow primary, left) + SKIP (purple secondary,
-    // right). Same dimensions as the page-1 button row so the page
-    // transition doesn't visually jump.
+    // Buttons row: SKIP (purple secondary, LEFT) + POST (yellow primary,
+    // RIGHT). Affirmative-right matches general UI convention (iOS,
+    // Material, web) + matches page-1's Post Comment button which lives
+    // on the right — same tap position carries through to POST on page-2.
+    // Same dimensions as the page-1 button row so the page transition
+    // doesn't visually jump.
     const p2BtnY = cy + 100;
     const p2BtnW = 110;
     const p2BtnH = 38;
     const p2BtnGap = 12;
-    this.summaryPage2PostBg = this.add
-      .rectangle(cx - p2BtnW / 2 - p2BtnGap / 2, p2BtnY, p2BtnW, p2BtnH, 0xffd34d, 1)
-      .setInteractive({ useHandCursor: true });
-    const postText = this.add
-      .text(cx - p2BtnW / 2 - p2BtnGap / 2, p2BtnY, 'POST · 2×', {
-        ...fontBase,
-        fontStyle: 'bold',
-        fontSize: '14px',
-        color: '#1a0a2e',
-      })
-      .setOrigin(0.5);
-    page2.add([this.summaryPage2PostBg, postText]);
-    this.summaryPage2PostBg.on('pointerover', () => this.summaryPage2PostBg.setFillStyle(0xffe680, 1));
-    this.summaryPage2PostBg.on('pointerout', () => this.summaryPage2PostBg.setFillStyle(0xffd34d, 1));
-
     this.summaryPage2SkipBg = this.add
-      .rectangle(cx + p2BtnW / 2 + p2BtnGap / 2, p2BtnY, p2BtnW, p2BtnH, 0x2c1856, 1)
+      .rectangle(cx - p2BtnW / 2 - p2BtnGap / 2, p2BtnY, p2BtnW, p2BtnH, 0x2c1856, 1)
       .setStrokeStyle(1, 0xc0a0e6, 0.5)
       .setInteractive({ useHandCursor: true });
     const skipText = this.add
-      .text(cx + p2BtnW / 2 + p2BtnGap / 2, p2BtnY, 'SKIP · 1×', {
+      .text(cx - p2BtnW / 2 - p2BtnGap / 2, p2BtnY, 'SKIP · 1×', {
         ...fontBase,
         fontStyle: 'bold',
         fontSize: '14px',
@@ -983,6 +971,21 @@ export class Game extends Scene {
     page2.add([this.summaryPage2SkipBg, skipText]);
     this.summaryPage2SkipBg.on('pointerover', () => this.summaryPage2SkipBg.setFillStyle(0x3d2566, 1));
     this.summaryPage2SkipBg.on('pointerout', () => this.summaryPage2SkipBg.setFillStyle(0x2c1856, 1));
+
+    this.summaryPage2PostBg = this.add
+      .rectangle(cx + p2BtnW / 2 + p2BtnGap / 2, p2BtnY, p2BtnW, p2BtnH, 0xffd34d, 1)
+      .setInteractive({ useHandCursor: true });
+    const postText = this.add
+      .text(cx + p2BtnW / 2 + p2BtnGap / 2, p2BtnY, 'POST · 2×', {
+        ...fontBase,
+        fontStyle: 'bold',
+        fontSize: '14px',
+        color: '#1a0a2e',
+      })
+      .setOrigin(0.5);
+    page2.add([this.summaryPage2PostBg, postText]);
+    this.summaryPage2PostBg.on('pointerover', () => this.summaryPage2PostBg.setFillStyle(0xffe680, 1));
+    this.summaryPage2PostBg.on('pointerout', () => this.summaryPage2PostBg.setFillStyle(0xffd34d, 1));
 
     this.summaryPage2BackBg.setInteractive({ useHandCursor: true });
     this.summaryPage2BackBg.on('pointerover', () => this.summaryPage2BackBg.setFillStyle(0x3d2566, 1));
