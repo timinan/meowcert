@@ -82,6 +82,14 @@ publish.post('/chart', async (c) => {
       title: `🎵 ${username}'s show`,
       subredditName,
       runAs: 'USER',
+      // `entry` was missing from every submitCustomPost call we shipped
+      // today — every example in Devvit docs passes it, and the docs
+      // explicitly say "the entry parameter references one of these
+      // keys" (referring to devvit.json's entrypoints). Without `entry`
+      // Devvit may be creating a post whose entrypoint binding is
+      // incomplete, which would explain navigateTo not being able to
+      // route to it. 'default' is our splash entrypoint per devvit.json.
+      entry: 'default',
       userGeneratedContent: {
         text: `A new Meowcert show from ${username} — tap to play.`,
       },
