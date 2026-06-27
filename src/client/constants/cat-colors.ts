@@ -90,10 +90,10 @@ export function vividBorderColor(rgb: number): number {
  * keep all the logic here so changes ripple to every screen at once.
  */
 export function resolveLaneTintsFromSeatedCats(
-  playerState: PlayerState | null,
+  source: { seatedCats?: PlayerState['seatedCats']; ownedCats?: { id: string; breed: string }[] } | null,
 ): [number, number, number] | null {
-  const seatedCats = playerState?.seatedCats ?? {};
-  const ownedCats = playerState?.ownedCats ?? [];
+  const seatedCats = source?.seatedCats ?? {};
+  const ownedCats = source?.ownedCats ?? [];
   const laneColors: (number | null)[] = [null, null, null];
   for (let i = 0; i < 3; i++) {
     const seatId = SEAT_ORDER[i]!;

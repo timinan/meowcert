@@ -470,12 +470,24 @@ export class Game extends Scene {
    *  the same shade). Falls back to the bg-sampled or default trio
    *  when no cats are seated at all. */
   private resolveLaneTints(): readonly [number, number, number] {
-    const fromCats = resolveLaneTintsFromSeatedCats(this.playerState);
+    // Same visitor-mode branching as seatCats: in visitor mode read
+    // from the per-post stage so lane tints match the OWNER's seated
+    // cats + bg, not the visitor's stale playerState. Tim's bug:
+    // "the new cats appear but lane colors are incorrect" — cats now
+    // came from per-post stage but lane tints were still sampled off
+    // the visitor's playerState bg.
+    const useVisitStage = this.visitorMode && this.visitPostStage !== null;
+    const tintSource = useVisitStage
+      ? { seatedCats: this.visitPostStage!.seatedCats, ownedCats: this.visitPostStage!.ownedCats }
+      : this.playerState;
+    const fromCats = resolveLaneTintsFromSeatedCats(tintSource);
     if (fromCats) return fromCats;
     const sampled = this.cache.json.get(AssetKeys.Json.BgLaneColors) as
       | Record<string, [string, string, string]>
       | undefined;
-    const activeBg = this.playerState?.activeBackground ?? 'stage';
+    const activeBg = useVisitStage
+      ? (this.visitPostBg || 'stage')
+      : this.playerState?.activeBackground ?? 'stage';
     const trio = sampled?.[activeBg];
     if (!trio || trio.length !== 3) return L.LANE_COLORS;
     return trio.map((hex) => parseInt(hex.replace('#', ''), 16)) as unknown as readonly [number, number, number];
