@@ -210,6 +210,15 @@ export class Game extends Scene {
   private summaryPage2SkipBg!: Phaser.GameObjects.Rectangle;
   private summaryPage2BackBg!: Phaser.GameObjects.Rectangle;
   private summaryPage2TextareaBox!: Phaser.GameObjects.Rectangle;
+  // HTML textarea overlay over the page-2 placeholder rect. Mounted on
+  // page-2 show, unmounted on page-2 hide / summary close / scene shutdown.
+  // Lives outside Phaser so it survives canvas redraws but follows the
+  // canvas position via window.resize.
+  private summaryPage2Textarea: HTMLTextAreaElement | null = null;
+  private summaryPage2OverlayResize: (() => void) | null = null;
+  // Cached play summary for the active page-2 session — captured when
+  // onPostCommentClicked flips to page-2, consumed by POST / SKIP.
+  private summaryPage2PlaySummary: PlaySummary | null = null;
 
   // Page boundary tracking — cached chart timing so update() can spawn
   // falling page-boundary lines at the right step crossings without
@@ -979,6 +988,34 @@ export class Game extends Scene {
     this.summaryPage2BackBg.on('pointerover', () => this.summaryPage2BackBg.setFillStyle(0x3d2566, 1));
     this.summaryPage2BackBg.on('pointerout', () => this.summaryPage2BackBg.setFillStyle(0x2c1856, 1));
 
+    // Wire the three page-2 buttons. BACK returns to page-1 without
+    // submitting. POST reads the textarea + finalizes with body. SKIP
+    // finalizes without a body (base reward, no Reddit comment).
+    this.summaryPage2BackBg.on('pointerup', () => {
+      this.setSummaryPage(1);
+    });
+    this.summaryPage2PostBg.on('pointerup', () => {
+      const summary = this.summaryPage2PlaySummary;
+      if (!summary) {
+        console.warn('[Game] page-2 POST tapped with no cached summary');
+        return;
+      }
+      const body = this.summaryPage2Textarea?.value?.trim() ?? '';
+      this.setSummaryPage(1);
+      this.summaryPage2PlaySummary = null;
+      void this.finalizePlay(summary, body.length > 0 ? body : undefined, undefined);
+    });
+    this.summaryPage2SkipBg.on('pointerup', () => {
+      const summary = this.summaryPage2PlaySummary;
+      if (!summary) {
+        console.warn('[Game] page-2 SKIP tapped with no cached summary');
+        return;
+      }
+      this.setSummaryPage(1);
+      this.summaryPage2PlaySummary = null;
+      void this.finalizePlay(summary, undefined, undefined);
+    });
+
     container.add(page2);
     this.summaryPage2 = page2;
 
@@ -988,11 +1025,74 @@ export class Game extends Scene {
   /** Toggle the summary panel between page-1 (stats + Play Again/Post
    *  Comment) and page-2 (comment compose surface). Page-2's panel fully
    *  overlays page-1 when visible, so this is a single visibility flip
-   *  on the page-2 sub-container — page-1 doesn't need per-child hiding. */
+   *  on the page-2 sub-container — page-1 doesn't need per-child hiding.
+   *  Mounts / unmounts the HTML textarea overlay as a side effect. */
   private setSummaryPage(page: 1 | 2): void {
     if (!this.summaryPage2) return;
     this.summaryActivePage = page;
     this.summaryPage2.setVisible(page === 2);
+    if (page === 2) this.mountSummaryPage2Overlay();
+    else this.unmountSummaryPage2Overlay();
+  }
+
+  /** Position + append the HTML <textarea> over the page-2 placeholder
+   *  rect. Mirrors CommentComposeModal's overlay pattern — position:fixed
+   *  pinned to viewport (iOS keyboard scroll-safe), 16px font (avoids
+   *  iOS auto-zoom-lock), single class for orphan sweeps. */
+  private mountSummaryPage2Overlay(): void {
+    if (this.summaryPage2Textarea) return; // already mounted
+    const box = this.summaryPage2TextareaBox;
+    if (!box) return;
+    const ta = document.createElement('textarea');
+    ta.className = 'meowcert-summary-page2-input';
+    ta.placeholder = 'tap to leave a comment…';
+    ta.style.position = 'fixed';
+    ta.style.background = 'transparent';
+    ta.style.color = '#ffffff';
+    ta.style.border = 'none';
+    ta.style.outline = 'none';
+    ta.style.resize = 'none';
+    ta.style.fontFamily = '"Pixeloid Sans", sans-serif';
+    ta.style.fontSize = '16px';
+    ta.style.padding = '4px 6px';
+    ta.style.boxSizing = 'border-box';
+    ta.style.zIndex = '9999';
+    ta.rows = 2;
+    ta.wrap = 'soft';
+    ta.maxLength = 240;
+    document.body.appendChild(ta);
+    const updateOverlayPosition = (): void => {
+      const canvas = this.game.canvas;
+      const rect = canvas.getBoundingClientRect();
+      const sx = rect.width / this.scale.width;
+      const sy = rect.height / this.scale.height;
+      // Page-2 textarea rect is centered at (box.x, box.y) with
+      // (box.width, box.height) — convert to fixed-position CSS box.
+      const left = rect.left + (box.x - box.width / 2) * sx;
+      const top = rect.top + (box.y - box.height / 2) * sy;
+      ta.style.left = `${left}px`;
+      ta.style.top = `${top}px`;
+      ta.style.width = `${box.width * sx}px`;
+      ta.style.height = `${box.height * sy}px`;
+    };
+    updateOverlayPosition();
+    const resizeHandler = (): void => updateOverlayPosition();
+    window.addEventListener('resize', resizeHandler);
+    this.summaryPage2Textarea = ta;
+    this.summaryPage2OverlayResize = resizeHandler;
+  }
+
+  /** Remove the HTML textarea overlay + sweep any orphans (defensive — if
+   *  a previous teardown missed under unusual circumstances, this clears
+   *  stale inputs lingering on document.body). */
+  private unmountSummaryPage2Overlay(): void {
+    if (this.summaryPage2OverlayResize) {
+      window.removeEventListener('resize', this.summaryPage2OverlayResize);
+      this.summaryPage2OverlayResize = null;
+    }
+    this.summaryPage2Textarea?.remove();
+    this.summaryPage2Textarea = null;
+    document.querySelectorAll('.meowcert-summary-page2-input').forEach((el) => el.remove());
   }
 
   private buildHud(): void {
@@ -1942,6 +2042,11 @@ export class Game extends Scene {
     this.pendingStart = true;
     this.lastEmittedPageBoundary = 0;
     // Hide the summary modal so the new round isn't drawing over it.
+    // Also flip back to page-1 + unmount the textarea overlay if page-2
+    // was active when the player tapped RESTART without going through
+    // POST/SKIP (e.g., reached for the chip directly).
+    this.setSummaryPage(1);
+    this.summaryPage2PlaySummary = null;
     this.summary?.setVisible(false);
     // Clear feedback texts in case any are mid-tween. Match buildFeedback's
     // initial state (alpha 0, visible true) — setVisible(false) here would
@@ -1984,24 +2089,14 @@ export class Game extends Scene {
   };
 
   private onPostCommentClicked = (): void => {
-    // Open the social-loop comment composer. Player gets one screen
-    // to add free-text + optional gift, then POST (=2x reward) or
-    // SKIP (=base reward). Both paths call submitPlay() to record the
-    // run on the leaderboard + inbox + earn coins. Owner defaults to
-    // the chart's authorId; for self-rehearse the server rejects
-    // self-gifting and self-inboxing but the comment flow still runs
-    // through the same UI for now (visitor-mode entry comes next).
-    const summary = this.buildPlaySummary();
-    if (!this.commentModal) this.commentModal = new CommentComposeModal(this);
-    this.commentModal.open({
-      summary,
-      onPost: (commentBody: string, gift: GiftPayload | undefined) => {
-        void this.finalizePlay(summary, commentBody, gift);
-      },
-      onSkip: () => {
-        void this.finalizePlay(summary, undefined, undefined);
-      },
-    });
+    // Flip the summary panel to page-2 (comment compose) instead of
+    // opening the floating CommentComposeModal. Page-2 lives inside the
+    // same summary container, so the player isn't looking at a modal on
+    // top of a modal. The cached summary is consumed by page-2's POST
+    // or SKIP handler. The floating CommentComposeModal stays around as
+    // dead fallback code for stage 4 cleanup — not invoked here.
+    this.summaryPage2PlaySummary = this.buildPlaySummary();
+    this.setSummaryPage(2);
   };
 
   /** Build the PlaySummary blob from the round's score + chart context.
@@ -3131,6 +3226,10 @@ export class Game extends Scene {
 
     tearDown('hud', () => this.hud?.destroy());
     tearDown('summary', () => {
+      // Unmount the page-2 HTML textarea BEFORE destroying the Phaser
+      // container — the textarea lives on document.body, not inside the
+      // Phaser scene graph, so destroy(true) would otherwise leak it.
+      this.unmountSummaryPage2Overlay();
       this.summary?.destroy(true);
       this.summary = null;
     });
