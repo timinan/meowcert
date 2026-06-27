@@ -216,10 +216,21 @@ export class VisitPost extends Scene {
     if (this.music) return; // idempotent — only ever one backing at a time
     try {
       this.music = new MusicSystem(this, chart);
-      // Fire-and-forget start. preload + start are both async + safe to
-      // call concurrently with other scene work. Errors swallowed
-      // internally; worst case the splash is silent.
-      void this.music.start(0);
+      // iOS Safari + the Reddit webview block audio playback until the
+      // user's first gesture unlocks the WebAudio context. If we just
+      // call music.start() on splash entry it silently no-ops on iOS —
+      // Tim's bug: "no preview songs on this page". Phaser exposes
+      // sound.locked + a one-shot 'unlocked' event for exactly this
+      // pattern: if locked, defer the start to the moment any tap on
+      // the canvas unlocks the context.
+      if (this.sound.locked) {
+        this.sound.once('unlocked', () => {
+          if (!this.scene.isActive() || !this.music) return;
+          void this.music.start(0);
+        });
+      } else {
+        void this.music.start(0);
+      }
     } catch (err) {
       console.warn('[VisitPost] startSplashMusic threw:', err);
     }
