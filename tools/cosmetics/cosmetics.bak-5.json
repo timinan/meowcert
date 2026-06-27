@@ -5,8 +5,8 @@
     "slot": "face",
     "rarity": "common",
     "offsetX": -5,
-    "offsetY": 18,
-    "scale": 0.9
+    "offsetY": 17,
+    "scale": 1
   },
   {
     "id": "c2",
@@ -14,8 +14,8 @@
     "slot": "face",
     "rarity": "common",
     "offsetX": -5,
-    "offsetY": 18,
-    "scale": 0.9
+    "offsetY": 17,
+    "scale": 1
   },
   {
     "id": "c3",
@@ -23,8 +23,8 @@
     "slot": "face",
     "rarity": "uncommon",
     "offsetX": -5,
-    "offsetY": 18,
-    "scale": 0.9
+    "offsetY": 17,
+    "scale": 1
   },
   {
     "id": "c4",
@@ -32,8 +32,8 @@
     "slot": "face",
     "rarity": "common",
     "offsetX": -5,
-    "offsetY": 18,
-    "scale": 0.9
+    "offsetY": 17,
+    "scale": 1
   },
   {
     "id": "c5",
@@ -220,9 +220,9 @@
     "name": "Tan Beret",
     "slot": "head",
     "rarity": "common",
-    "offsetX": -11,
+    "offsetX": -8,
     "offsetY": 5,
-    "scale": 1.1
+    "scale": 1.2
   },
   {
     "id": "c27",
@@ -497,5 +497,14 @@
     "scale": 0.9,
     "sourceFrame": "cosmetic_c5_idle_00",
     "tint": "#c678ff"
+  },
+  {
+    "id": "c57",
+    "name": "Fire Emoji Head",
+    "slot": "head",
+    "rarity": "legendary",
+    "offsetX": -5,
+    "offsetY": 9,
+    "scale": 1.1
   }
 ]

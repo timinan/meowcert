@@ -196,7 +196,7 @@
     "backdropKey": "theme-cyberpunkalley-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": -38,
+    "bgShiftUp": -47,
     "bgScale": 1.56
   },
   "cityskyline": {
@@ -278,5 +278,317 @@
     "rarity": "rare",
     "bgShiftUp": 10,
     "bgScale": 1.27
+  },
+  "hidden-oasis-cave": {
+    "displayName": "Hidden Oasis Cave",
+    "backdropKey": "theme-hidden-oasis-cave-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 47,
+    "bgScale": 1.07
+  },
+  "moonlit-bamboo-grove": {
+    "displayName": "Moonlit Bamboo Grove",
+    "backdropKey": "theme-moonlit-bamboo-grove-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 21,
+    "bgScale": 1.09
+  },
+  "frozen-waterfall-cave": {
+    "displayName": "Frozen Waterfall Cave",
+    "backdropKey": "theme-frozen-waterfall-cave-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 26,
+    "bgScale": 1.09
+  },
+  "enchanted-lily-pond": {
+    "displayName": "Enchanted Lily Pond",
+    "backdropKey": "theme-enchanted-lily-pond-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 31,
+    "bgScale": 1.13
+  },
+  "dragon-s-sunset-shrine": {
+    "displayName": "Dragon's Shrine",
+    "backdropKey": "theme-dragon-s-sunset-shrine-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 32,
+    "bgScale": 1.12
+  },
+  "pegasus-cloud-kingdom": {
+    "displayName": "Pegasus Cloud Kingdom",
+    "backdropKey": "theme-pegasus-cloud-kingdom-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 13,
+    "bgScale": 1.09
+  },
+  "latern": {
+    "displayName": "Latern Festival",
+    "backdropKey": "theme-latern-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 4,
+    "bgScale": 1.12
+  },
+  "classworkshop": {
+    "displayName": "Glass Workshop",
+    "backdropKey": "theme-classworkshop-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": -10,
+    "bgScale": 1.16
+  },
+  "poolhall": {
+    "displayName": "Poolhall",
+    "backdropKey": "theme-poolhall-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": -14,
+    "bgScale": 1.16
+  },
+  "acdfedc1-3aa0-4c65-8435-efa2807": {
+    "displayName": "Egyption Tomb",
+    "backdropKey": "theme-acdfedc1-3aa0-4c65-8435-efa2807-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 18,
+    "bgScale": 1.07
+  },
+  "helipad": {
+    "displayName": "Helipad",
+    "backdropKey": "theme-helipad-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 6,
+    "bgScale": 1.14
+  },
+  "lava-cave": {
+    "displayName": "Lava Cave",
+    "backdropKey": "theme-lava-cave-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": -1,
+    "bgScale": 1.14
+  },
+  "jellyfish-aquarium": {
+    "displayName": "Jellyfish Aquarium",
+    "backdropKey": "theme-jellyfish-aquarium-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 26,
+    "bgScale": 1.12
+  },
+  "vinetemple": {
+    "displayName": "Vine Temple",
+    "backdropKey": "theme-vinetemple-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 26,
+    "bgScale": 1.12
+  },
+  "arcade": {
+    "displayName": "Arcade",
+    "backdropKey": "theme-arcade-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 6,
+    "bgScale": 1.11
+  },
+  "rollerdisco": {
+    "displayName": "Rollerdisco",
+    "backdropKey": "theme-rollerdisco-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 15,
+    "bgScale": 1.17
+  },
+  "drivein": {
+    "displayName": "Drivein Theatre",
+    "backdropKey": "theme-drivein-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 29,
+    "bgScale": 1.3
+  },
+  "sparkling-crystal-cavern": {
+    "displayName": "Sparkling Crystal Cavern",
+    "backdropKey": "theme-sparkling-crystal-cavern-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 7,
+    "bgScale": 1.17
+  },
+  "b97bb0b0-40d2-4c61-af1b-cf565bd": {
+    "displayName": "Dragon Dungeon",
+    "backdropKey": "theme-b97bb0b0-40d2-4c61-af1b-cf565bd-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": -9,
+    "bgScale": 1.17
+  },
+  "spacestations": {
+    "displayName": "Spacestations",
+    "backdropKey": "theme-spacestations-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": -3,
+    "bgScale": 1.15
+  },
+  "sunkenship": {
+    "displayName": "Sunkenship",
+    "backdropKey": "theme-sunkenship-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 6,
+    "bgScale": 1.11
+  },
+  "f3d69855-1f47-4e78-bed9-32772ae": {
+    "displayName": "Circus",
+    "backdropKey": "theme-f3d69855-1f47-4e78-bed9-32772ae-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 11,
+    "bgScale": 1.09
+  },
+  "sakura-onsen-retreat": {
+    "displayName": "Onsen",
+    "backdropKey": "theme-sakura-onsen-retreat-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": -8,
+    "bgScale": 1.18
+  },
+  "cozy-meowcert-stage": {
+    "displayName": "Cozy Meowcert Stage",
+    "backdropKey": "theme-cozy-meowcert-stage-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 32,
+    "bgScale": 1.13
+  },
+  "icy-igloo-dining": {
+    "displayName": "Igloo",
+    "backdropKey": "theme-icy-igloo-dining-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 29,
+    "bgScale": 1.12
+  },
+  "sunset-yoga-studio": {
+    "displayName": "Sunset Yoga Studio",
+    "backdropKey": "theme-sunset-yoga-studio-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 30,
+    "bgScale": 1.16
+  },
+  "sweet-ice-cream-shop": {
+    "displayName": "Sweet Ice Cream Shop",
+    "backdropKey": "theme-sweet-ice-cream-shop-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 44,
+    "bgScale": 1.18
+  },
+  "french-fromagerie-shop": {
+    "displayName": "Cheese Shop",
+    "backdropKey": "theme-french-fromagerie-shop-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 9,
+    "bgScale": 1.17
+  },
+  "tatoo-parlou": {
+    "displayName": "Tatoo Parlour",
+    "backdropKey": "theme-tatoo-parlou-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 41,
+    "bgScale": 1.16
+  },
+  "c4a2f861-9ba9-4733-8e6d-a1c9b17": {
+    "displayName": "Meowcert Purple Stage",
+    "backdropKey": "theme-c4a2f861-9ba9-4733-8e6d-a1c9b17-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": -37,
+    "bgScale": 1.29
+  },
+  "petstore": {
+    "displayName": "Petstore",
+    "backdropKey": "theme-petstore-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 42,
+    "bgScale": 1.12
+  },
+  "country-stage": {
+    "displayName": "Meowcert Country Stage",
+    "backdropKey": "theme-country-stage-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": -12,
+    "bgScale": 1.19
+  },
+  "metal-stage": {
+    "displayName": "Metal Stage",
+    "backdropKey": "theme-metal-stage-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 0,
+    "bgScale": 1.15
+  },
+  "ef35b0bb-bdc6-4b4b-9b3a-2910244": {
+    "displayName": "Meowcert Stage",
+    "backdropKey": "theme-ef35b0bb-bdc6-4b4b-9b3a-2910244-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 14,
+    "bgScale": 1.09
+  },
+  "greek-palace": {
+    "displayName": "Greek Palace",
+    "backdropKey": "theme-greek-palace-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 29,
+    "bgScale": 1.14
+  },
+  "egyption-tomb": {
+    "displayName": "Egyptian Hall",
+    "backdropKey": "theme-egyption-tomb-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 15,
+    "bgScale": 1.08
+  },
+  "hotair": {
+    "displayName": "Hotair Balloon",
+    "backdropKey": "theme-hotair-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": -1,
+    "bgScale": 1.15
+  },
+  "witchlab": {
+    "displayName": "Witchlab",
+    "backdropKey": "theme-witchlab-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 6,
+    "bgScale": 1.16
+  },
+  "library": {
+    "displayName": "Library",
+    "backdropKey": "theme-library-bg",
+    "musicKey": "theme-default-music",
+    "rarity": "rare",
+    "bgShiftUp": 30,
+    "bgScale": 1.17
   }
 }

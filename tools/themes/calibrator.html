@@ -119,6 +119,11 @@
   <a class="back" href="/">← all tools</a>
   <ul class="bg-list" id="bg-list"></ul>
   <button class="new-btn" id="add-new">+ Add background</button>
+  <button class="new-btn" id="bulk-upload" style="margin-top: 6px; background: var(--accent-2); color: #1a0a2e;">
+    ⤴︎ Bulk upload (multi-file)
+  </button>
+  <input type="file" id="bulk-input" accept="image/png,image/jpeg" multiple hidden />
+  <div class="status" id="bulk-status" style="margin-top: 8px; font-size: 11px;"></div>
 </div>
 
 <div class="main">
@@ -591,6 +596,155 @@ document.getElementById('new-form').addEventListener('submit', async (e) => {
   } catch (err) {
     setStatus('err', 'create failed: ' + err.message);
   }
+});
+
+// =====================================================================
+// Bulk upload — drops a multi-file picker, creates one theme per file
+// with the slug derived from the filename. Defaults rarity to 'rare' +
+// scale 1 + bgShiftUp 0 so they show up in the sidebar immediately and
+// the user can fine-tune each one's metadata after the batch lands.
+// =====================================================================
+function slugifyFilename(name) {
+  // Drop extension + the trailing "-bg" suffix if the user already named
+  // the file the way the calibrator writes it back out.
+  const base = name.replace(/\.[a-z0-9]+$/i, '').replace(/-bg$/i, '');
+  let slug = base
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 31);
+  if (!slug) slug = 'theme';
+  if (/^[0-9]/.test(slug)) slug = 't-' + slug;
+  return slug;
+}
+
+function uniqueSlug(base) {
+  if (!themes[base]) return base;
+  let i = 2;
+  while (themes[`${base}-${i}`]) i++;
+  return `${base}-${i}`;
+}
+
+function titleCaseFromSlug(slug) {
+  return slug
+    .replace(/[-_]+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+function slugifyTitle(title) {
+  let slug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 31);
+  if (!slug) slug = 'theme';
+  if (/^[0-9]/.test(slug)) slug = 't-' + slug;
+  return slug;
+}
+
+// Ask the server-proxied Gemini vision endpoint for a scene title.
+// Returns null on any failure so the caller can fall back to filename.
+async function describeBg(file) {
+  try {
+    const r = await fetch('/api/describe-bg', {
+      method: 'POST',
+      headers: { 'Content-Type': file.type || 'image/png' },
+      body: file,
+    });
+    const j = await r.json();
+    if (j.ok && j.title) return j.title;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+const bulkInput = document.getElementById('bulk-input');
+const bulkStatus = document.getElementById('bulk-status');
+document.getElementById('bulk-upload').addEventListener('click', () => bulkInput.click());
+
+bulkInput.addEventListener('change', async (e) => {
+  const files = Array.from(e.target.files || []);
+  e.target.value = ''; // allow re-selecting the same files later
+  if (!files.length) return;
+
+  bulkStatus.textContent = `Starting bulk upload of ${files.length} file(s)…`;
+  bulkStatus.style.color = 'var(--muted)';
+
+  let ok = 0;
+  let fail = 0;
+  const failures = [];
+  let firstNewSlug = null;
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    bulkStatus.textContent = `[${i + 1}/${files.length}] ${file.name} → analyzing scene…`;
+
+    // Try Gemini vision first; fall back to filename if it fails or
+    // returns nothing usable.
+    const visionTitle = await describeBg(file);
+    let displayName;
+    let baseSlug;
+    if (visionTitle) {
+      displayName = visionTitle;
+      baseSlug = slugifyTitle(visionTitle);
+    } else {
+      baseSlug = slugifyFilename(file.name);
+      displayName = titleCaseFromSlug(baseSlug);
+    }
+    const slug = uniqueSlug(baseSlug);
+    const labelSuffix = visionTitle ? '(named by vision)' : '(named by filename)';
+    bulkStatus.textContent = `[${i + 1}/${files.length}] ${file.name} → "${displayName}" ${labelSuffix}…`;
+
+    try {
+      const r = await fetch('/upload-bg/' + slug, {
+        method: 'POST',
+        headers: { 'Content-Type': 'image/png' },
+        body: file,
+      });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'upload failed');
+      themes[slug] = {
+        displayName,
+        backdropKey: 'theme-' + slug + '-bg',
+        musicKey: 'theme-default-music',
+        rarity: 'rare',
+        bgShiftUp: 0,
+        bgScale: 1,
+      };
+      ok++;
+      if (!firstNewSlug) firstNewSlug = slug;
+    } catch (err) {
+      fail++;
+      failures.push(`${file.name}: ${err.message}`);
+    }
+    // Stay under Gemini's 10-RPM free-tier ceiling.
+    if (i < files.length - 1) await new Promise((r) => setTimeout(r, 150));
+  }
+
+  // One save at the end instead of N saves — much faster + only one
+  // backup rotation. Same as how the single-add flow eventually calls doSave.
+  try {
+    await doSave();
+  } catch (err) {
+    failures.push(`save themes.json: ${err.message}`);
+    fail++;
+  }
+
+  if (fail === 0) {
+    bulkStatus.style.color = 'var(--ok)';
+    bulkStatus.textContent = `✅ ${ok} theme(s) created — click any in the list to edit metadata + position`;
+  } else {
+    bulkStatus.style.color = ok > 0 ? 'var(--accent)' : 'var(--err)';
+    bulkStatus.textContent = `${ok} ok · ${fail} failed — ${failures.join('; ').slice(0, 200)}`;
+  }
+  // Refresh sidebar so the new themes are clickable, and jump to the
+  // first new one so the user lands on it ready to tune.
+  if (firstNewSlug) setActive(firstNewSlug);
+  else renderSidebar();
 });
 
 // =====================================================================

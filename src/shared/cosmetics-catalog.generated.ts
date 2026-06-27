@@ -345,4 +345,10 @@ export const GENERATED_COSMETIC_CATALOG: readonly CosmeticEntry[] = [
     sourceFrame: "cosmetic_c5_idle_00",
     tint: "#c678ff",
   },
+  {
+    id: "c57",
+    name: "Fire Emoji Head",
+    rarity: "legendary",
+    slot: "head",
+  },
 ];

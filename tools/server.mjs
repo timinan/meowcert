@@ -31,6 +31,25 @@ const PROJECT_ROOT = path.resolve(TOOL_DIR, '..');
 const PORT = Number(process.env.PORT) || 3000;
 const NO_CACHE = 'no-store, no-cache, must-revalidate';
 
+// Tiny inline .env loader — no dep on dotenv. Loaded once at startup.
+// Only used by /api/* endpoints that need API keys; keys stay server-side,
+// never reach the browser.
+async function loadEnv() {
+  const envPath = path.join(PROJECT_ROOT, '.env');
+  try {
+    const txt = await fs.readFile(envPath, 'utf8');
+    const out = {};
+    for (const line of txt.split('\n')) {
+      const m = /^([A-Z_][A-Z0-9_]*)\s*=\s*(.*)$/i.exec(line.trim());
+      if (m) out[m[1]] = m[2].replace(/^["']|["']$/g, '');
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+const ENV = await loadEnv();
+
 // Each registered tool: where its calibrator lives and where the save
 // endpoint writes its JSON. Add a new entry per tool — the / index page
 // renders this object as a list.
@@ -732,6 +751,75 @@ async function handleUploadCosmetic(req, res, query) {
  * On success the devvit playtest watcher should re-upload + the
  * Preloader picks the new file up on next reload.
  */
+async function handleDescribeBg(req, res) {
+  if (!ENV.GEMINI_API_KEY) {
+    res.writeHead(503, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ ok: false, error: 'GEMINI_API_KEY missing from .env' }));
+    return;
+  }
+  const chunks = [];
+  req.on('data', (c) => chunks.push(c));
+  req.on('end', async () => {
+    const buf = Buffer.concat(chunks);
+    if (buf.length < 100) {
+      res.writeHead(400, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'image body too small' }));
+      return;
+    }
+    const mime = (req.headers['content-type'] || 'image/png').split(';')[0].trim();
+    try {
+      const apiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${ENV.GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { inline_data: { mime_type: mime, data: buf.toString('base64') } },
+                  {
+                    text:
+                      'This is a pixel-art game background. Give it a short, evocative 2-4 word title that captures the scene (examples: "Pirate Treasure Cove", "Crystal Geode Cave", "Sunken Atlantis Ruins", "Cherry Blossom Tunnel", "F1 Pit Garage"). Output ONLY the title, no quotes, no punctuation other than spaces, no explanation, no extra words.',
+                  },
+                ],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.4,
+              maxOutputTokens: 128,
+              // 2.5 Flash burns "thinking" tokens before producing output;
+              // disabling thinking gives us faster + cheaper naming calls.
+              thinkingConfig: { thinkingBudget: 0 },
+            },
+          }),
+        },
+      );
+      const text = await apiRes.text();
+      let json;
+      try { json = JSON.parse(text); } catch { json = { raw: text }; }
+      if (!apiRes.ok) {
+        res.writeHead(502, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: `gemini ${apiRes.status}`, detail: json }));
+        return;
+      }
+      const raw = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+      const title = (raw ?? '').trim().replace(/^["']|["']$/g, '').slice(0, 60);
+      if (!title) {
+        res.writeHead(502, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'no title in response', detail: json }));
+        return;
+      }
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, title }));
+    } catch (e) {
+      console.warn(`[describe-bg] failed: ${e.message}`);
+      res.writeHead(500, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: e.message }));
+    }
+  });
+}
+
 async function handleBgUpload(req, res, slug) {
   if (!/^[a-z][a-z0-9_-]{0,30}$/.test(slug)) {
     res.writeHead(400, { 'content-type': 'application/json' });
@@ -1008,6 +1096,17 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && req.url?.startsWith('/upload-bg/')) {
       const slug = req.url.replace(/^\/upload-bg\//, '').split('?')[0];
       await handleBgUpload(req, res, slug);
+      return;
+    }
+
+    // --- POST /api/describe-bg ----------------------------------------
+    // Body: raw image bytes (image/png or image/jpeg).
+    // Calls Google Gemini 2.5 Flash vision with a tight naming prompt;
+    // returns { ok, title } so the themes calibrator's bulk-upload flow
+    // can auto-name new themes from the image content instead of the
+    // filename. Falls back gracefully if GEMINI_API_KEY is missing.
+    if (req.method === 'POST' && req.url === '/api/describe-bg') {
+      await handleDescribeBg(req, res);
       return;
     }
 

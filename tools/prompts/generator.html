@@ -89,11 +89,45 @@
   }
   .bg-card .body b { color: var(--accent-2); font-weight: 700; }
   .bg-card .copy-hint {
-    position: absolute; top: 14px; right: 16px;
+    position: absolute; top: 14px; right: 50px;
     font-size: 10px; color: var(--muted);
     text-transform: uppercase; letter-spacing: 0.5px;
   }
   .bg-card.copied .copy-hint { color: var(--ok); }
+  .bg-card .hide-btn {
+    position: absolute; top: 10px; right: 12px;
+    background: transparent; color: var(--muted); border: 1px solid var(--panel-2);
+    border-radius: 4px; padding: 3px 8px; font-size: 11px; cursor: pointer;
+    font-family: inherit; line-height: 1;
+  }
+  .bg-card .hide-btn:hover { color: var(--accent); border-color: var(--accent); background: rgba(255, 211, 77, 0.06); }
+
+  .pager {
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    margin-top: 14px; color: var(--muted); font-size: 12px;
+  }
+  .pager button {
+    background: var(--panel-2); color: #fff; border: none;
+    padding: 7px 14px; border-radius: 5px; cursor: pointer; font-family: inherit;
+    font-weight: 600; font-size: 12px;
+  }
+  .pager button:hover:not(:disabled) { background: var(--accent-2); color: var(--bg); }
+  .pager button:disabled { opacity: 0.35; cursor: default; }
+  .pager .page-meta { min-width: 130px; text-align: center; font-variant-numeric: tabular-nums; }
+
+  .hidden-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 0 0 12px; padding: 8px 12px;
+    background: var(--bg); border: 1px solid var(--panel-2); border-radius: 6px;
+    font-size: 12px; color: var(--muted);
+  }
+  .hidden-bar button {
+    background: transparent; color: var(--accent-2); border: 1px solid var(--accent-2);
+    padding: 5px 10px; border-radius: 4px; font-family: inherit; font-size: 11px; cursor: pointer;
+    font-weight: 700;
+  }
+  .hidden-bar button:hover { background: var(--accent-2); color: var(--bg); }
+  .hidden-bar.empty { display: none; }
 
   .music-prompt {
     background: var(--bg); border-radius: 8px; padding: 12px 14px;
@@ -140,14 +174,12 @@
     </div>
     <p class="blurb">
       v12 composition rule: <b>1024×1856 portrait</b> matching canvas aspect (16:29)
-      + back to <b>top 1/5</b> for decoration (v8's expansion to 3/10 let too much
+      + back to <b>top 1/5</b> for decoration (v8&apos;s expansion to 3/10 let too much
       bleed into the cat-seating zone). Densely-decorated <b>top 1/5</b> above
       horizon at y ≈ 371, completely empty floor in the <b>bottom 4/5</b> where
       cats sit. The 1/5 rule is hammered at top, middle, and end of the prompt
       because single mentions kept getting ignored.
     </p>
-    <button class="regen" id="regen-bg"><span class="icon">🎲</span>Regenerate</button>
-
     <div class="custom-bg">
       <div class="custom-bg-head">
         <span class="icon">✏️</span>
@@ -166,7 +198,12 @@
       </div>
     </div>
 
+    <div class="hidden-bar empty" id="hidden-bar">
+      <span><span id="hidden-count">0</span> theme(s) hidden — out of the way but preserved</span>
+      <button id="show-all">Show all again</button>
+    </div>
     <div id="bg-list"></div>
+    <div class="pager" id="bg-pager"></div>
   </section>
 
   <section class="section">
@@ -187,8 +224,25 @@
 
 <script src="/tools-nav.js"></script>
 <script>
-const BG_PROMPTS_PER_BATCH = 4;
+const BG_PROMPTS_PER_PAGE = 8;
 const MUSIC_PROMPTS_PER_BATCH = 6;
+const HIDDEN_STORAGE_KEY = 'meowcert:prompt-gen:hidden-bgs';
+const PAGE_STORAGE_KEY = 'meowcert:prompt-gen:page';
+
+function loadHidden() {
+  try {
+    const raw = localStorage.getItem(HIDDEN_STORAGE_KEY);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch { return new Set(); }
+}
+function saveHidden(set) {
+  try { localStorage.setItem(HIDDEN_STORAGE_KEY, JSON.stringify([...set])); } catch {}
+}
+let hiddenTitles = loadHidden();
+let currentPage = parseInt(localStorage.getItem(PAGE_STORAGE_KEY) || '0', 10) || 0;
+// One-off custom themes the user generated this session — kept in memory
+// only (not persisted). Always rendered at the top, never paginated.
+const customCards = [];
 
 // ─── Background themes ───────────────────────────────────────────────────
 //
@@ -198,13 +252,13 @@ const MUSIC_PROMPTS_PER_BATCH = 6;
 //           the 320×580 game canvas exactly + 1/5 rule stated up front
 //           so it lands before any scene description)
 //   COMPOSITION RULE: horizon at y ≈ 371 (top 1/5 of the 1856-tall
-//                     image), what's above/below
+//                     image), what\'s above/below
 //   ABOVE HORIZON: dense scene-specific props + atmosphere packed
 //                  into the upper 1/5 strip
 //   BELOW HORIZON: floor material with subtle texture filling the
 //                  bottom 4/5 of the image
 //   FAILURE MODE: theme-specific forbidden props below the line +
-//                 "don't let decoration creep past the top 1/5"
+//                 "don\'t let decoration creep past the top 1/5"
 //   NEGATIVE: explicit no-cats, plus theme-specific exclusions
 //
 // Quality > quantity — these mirror the depth of the 10 hand-written v6
@@ -227,570 +281,358 @@ const BG_HEADER =
   'render in; any other aspect will get squashed or stretched).';
 
 const BG_THEMES = [
+  // ─── Starter stages — every new player gets these as their default
+  // backgrounds. All three must:
+  //   • say "MEOWCERT" on a banner (clear, large, central)
+  //   • show a clear stage for the 3 cats to stand on (the floor IS the
+  //     stage — polished wood, planks, or similar — never generic)
+  //   • feel cute, bright, joyful — Stardew/Animal Crossing/Ghibli vibes
+  //   • spark "I want to put my cat on this stage" energy
   {
-    title: 'Old Library Reading Room',
-    horizonContext: "where the library's tall bookshelves and back wall meet the wooden floor",
-    floorMaterial: 'warm wooden plank floor with subtle pixel grain',
+    title: 'Sunny Pop Star Stage',
+    horizonContext: 'where the bubblegum-pink stage curtains and MEOWCERT marquee meet the polished honey-wood stage floor',
+    floorMaterial: 'polished honey-wood stage floor with subtle plank lines and a soft sheen (this IS the stage — the cats stand directly on it)',
     aboveHorizon:
-      'floor-to-ceiling dark oak bookshelves stuffed with leather-bound books in deep greens / reds / browns flanking both side walls, a rolling brass ladder leaning against one shelf, hanging pendant lamps with warm amber glow, a large arched stained-glass window in the back wall throwing colored light, framed oil paintings between shelves, a marble bust on a high pedestal in the distant background, scattered open books and rolled scrolls on background tables, dust motes drifting through the light beams',
-    failureProps: 'reading desks, chairs, books, lecterns',
-    negativeExtras: 'no librarians',
+      'tall bubblegum-pink stage curtains framing both sides with golden-tassel tie-backs in shiny gold thread, a HUGE chunky pixel-art MEOWCERT marquee sign dead-center showing every letter M-E-O-W-C-E-R-T in big pastel-yellow lightbulb-letters on a hot-pink panel (the banner is the focal point — make it bold and unmissable), hanging strings of star-shaped fairy lights criss-crossing across the top, three pastel-rainbow spotlight cones aimed downward in mint / lavender / peach, hanging heart-shaped paper lanterns at both corners, a striped-candy back wall peeking behind the curtains in soft pink-and-cream stripes, drifting cartoon-pixel music-notes and sparkles in the upper third, a smaller "TONIGHT" sub-banner in cursive pastel-pink letters tucked beneath the MEOWCERT marquee. Sparkles, hearts, cuteness — the vibe is a chibi pop concert',
+    failureProps: 'microphone stands, amps, drum kits, instrument cases, monitor speakers, audience seating',
+    negativeExtras: 'no performers, no audience, no live people',
   },
   {
-    title: 'Witch Cottage Kitchen',
-    horizonContext: "where the witch's hanging herbs and stone fireplace meet the worn wooden floor",
-    floorMaterial: 'worn wooden plank floor with subtle knot patterns and faint cobwebs',
+    title: 'Cozy Coffeehouse Open Mic Stage',
+    horizonContext: 'where the warm cream-brick back wall with MEOWCERT banner meets the polished walnut open-mic stage floor',
+    floorMaterial: 'polished walnut hardwood stage floor in warm caramel tones with subtle plank lines and a faint braided-rug edge tucked at the back corner (this IS the small home-stage — the cats stand on it)',
     aboveHorizon:
-      'a large stone fireplace center-back with a black iron cauldron bubbling green smoke, dried herb bundles in sage / lavender / thyme hanging from the wooden ceiling beams, shelves of glass jars filled with eyeballs / mushrooms / glowing liquids, a hanging broom in the corner, a black cat skull on a high shelf (decorative, NOT a live cat), a leather spellbook open on a back counter with a quill, a string of garlic, a brass scale, candles in iron sconces flickering on the walls, distant cobwebbed windows showing a full moon',
-    failureProps: 'cauldrons, books, jars, broomsticks',
-    negativeExtras: 'no witches, no live black cats (the skull is decorative only)',
+      'a back wall of soft cream-painted brick with a giant hand-painted MEOWCERT banner stretched across the upper-middle (each letter M-E-O-W-C-E-R-T painted in chunky chalk-bubble pastel-letters on a butter-cream banner with twine-tied corners), hanging strings of warm Edison-bulb fairy lights draping above the banner, two small cute potted-plant silhouettes in the back corners (terracotta pots with cascading ivy, sized cat-height — not towering), a hanging chalkboard reading "OPEN MIC NIGHT — ALL WELCOME" in cursive chalk-script tucked beside the banner, hanging vintage acoustic-guitar-shape silhouette and a tambourine as wall decoration, hanging dried-flower wreaths in pastel pink and butter-yellow, a hand-painted "TIPS APPRECIATED" mason-jar-art sign at one side, warm tungsten-amber pendant lights with woven-rattan shades, drifting cartoon-pixel music-note doodles in the upper third. Vibe: cozy, warm, an inviting little neighborhood stage',
+    failureProps: 'microphone stands, stools, cafe tables, guitar cases, monitor speakers, music stands',
+    negativeExtras: 'no performers, no audience, no baristas',
   },
   {
-    title: 'Treetop Hideout',
-    horizonContext: 'where the treehouse interior walls and rope ladder meet the wooden plank floor',
-    floorMaterial: 'wide wooden plank floor with visible nails and faint moss between boards',
+    title: 'Outdoor Park Festival Stage',
+    horizonContext: 'where the bright cloud-dotted sky with MEOWCERT bunting and tree silhouettes meet the wooden festival-stage planks',
+    floorMaterial: 'fresh wooden festival-stage planks in warm pine tones with subtle plank-edge shadows and a faint clean varnish-shine (this IS the festival stage — the cats stand on it; assume the stage edges go off-frame so the planks fill the entire bottom 4/5)',
     aboveHorizon:
-      'rough-hewn timber walls with hanging rope vines, a porthole window showing a forest canopy with shafts of green-tinted sunlight, hanging lanterns made from glass jars with fireflies inside, a rope ladder snaking up out of frame, a wooden treasure map pinned to the back wall, woven-twig shelves with pinecones and acorns, a "NO ADULTS" sign painted in chalk, paper airplanes stuck in the rafters, a hanging string of pennant flags in red / yellow / blue, distant glimpses of bird nests in the branches outside',
-    failureProps: 'crates, chests, ropes coiled on the floor, planks',
-    negativeExtras: 'no kids, no people',
+      'a bright pale-blue sky with fluffy cartoon-pixel clouds drifting at the top, a HUGE MEOWCERT pennant-bunting strung in a gentle arc between two tall festival flagpoles (each letter M-E-O-W-C-E-R-T painted on its own colorful triangle-flag in pastel rainbow — pink, peach, butter-yellow, mint, sky-blue, lavender, coral, rose), hanging strings of paper-cone party lanterns in coral and mint above the bunting, a pair of cute balloon-bouquets tied to each flagpole base (pastel pink and yellow round balloons), distant rounded green park-tree silhouettes peeking up at both edges (background-distance, low silhouette — the trees are small not towering), hanging strings of triangular-flag bunting in primary colors framing the sides, drifting cartoon-pixel cherry-blossom petals and sparkles, a small sub-banner reading "WELCOME TO MEOWCERT" in chunky bubble-letters below the main bunting, warm midday golden sunlight bathing the upper band. Vibe: joyful outdoor festival',
+    failureProps: 'speaker stacks, mic stands, picnic blankets, tents, instrument cases, food carts',
+    negativeExtras: 'no performers, no audience, no festival-goers, no live animals',
+  },
+  // ─── Cool epic sceneries ────────────────────────────────────────────
+  {
+    title: 'Northern Lights Glacier Plain',
+    horizonContext: 'where the towering blue-glacier ridges and rippling aurora-streaked night sky meet the snow-dusted ice-plain floor',
+    floorMaterial: 'snow-dusted pale-blue ice-plain floor with subtle frost-crystal sparkles and a faint wind-blown snowdrift pattern at the back edge',
+    aboveHorizon:
+      'a backdrop of towering jagged pale-blue glacier ridges receding into the distance, vivid pixel-aurora ribbons of emerald-green / hot-pink / amethyst-purple swirling across the upper band in dramatic sweeping arcs, a vast star-flecked night sky behind the auroras with cute cartoon-pixel twinkle-stars, hanging cartoon-pixel-friendly-snow-owl silhouettes (smiling pastel chibi-snow-owls in pearl-white) drifting at the upper third, hanging clusters of glowing-icicle-cluster decorations from the ceiling-of-frame edge, drifting cartoon-pixel-snowflake sparkles continuously, distant pastel-purple mountain silhouettes at the very top horizon. Vibe: epic-cozy arctic spectacle',
+    failureProps: 'snowdrifts piled on the floor, ice-blocks, sled-dogs, fire-pits',
+    negativeExtras: 'no people, no live wildlife',
   },
   {
-    title: "Wizard's Potion Lab",
-    horizonContext: "where the wizard's cluttered workbench and bookcase wall meet the stone-tile floor",
-    floorMaterial: 'cool grey stone-tile floor with faint chalk runes traced into the cracks',
+    title: 'Bioluminescent Cave Lake',
+    horizonContext: 'where the glowing-blue-mushroom cave walls and mirror-still cave-lake at the horizon meet the polished damp-stone cave-shore floor',
+    floorMaterial: 'polished damp-stone cave-shore floor in muted slate with subtle glowing-blue moisture-sheen and faint scattered pixel-pebble flecks at the back edge',
     aboveHorizon:
-      'a back wall packed with glowing potion bottles in vivid teal / magenta / amber on dark wood shelves, a tall arched window with star-filled night sky, a hanging crystal orb radiating soft purple light, a giant open spellbook on a high lectern with floating runes hovering above it, dried starfish and bat wings hanging from the ceiling, a coiled brass alembic with bubbling green liquid in the distant background, a hanging astrolabe, scrolls tied with ribbon, candle flames in tall iron candelabra, drifting motes of golden light',
-    failureProps: 'cauldrons, books on the floor, scrolls, glass vials',
-    negativeExtras: 'no wizards, no apprentices',
+      'a backdrop of a vast dark-cave-interior with hundreds of glowing-bioluminescent-pixel-mushrooms in vivid electric-cyan / lavender / mint-glow growing along the back walls, a mirror-still cave-lake at the horizon line reflecting all the glow in a perfect dreamy doubled-image, hanging clusters of glowing-pixel-vines drooping from cave-stalactites in soft-glowing-azure, hanging cartoon-pixel-friendly-glow-newt silhouettes (smiling chibi-cave-salamanders in pastel-cyan with tiny glowing spots) on a back-rock perch, drifting cartoon-pixel-glow-particle sparkles continuously rising, distant pinprick-glow-mushroom clusters fading into deep cave-shadow at the top. Vibe: dreamy magical bioluminescent cavern',
+    failureProps: 'mushrooms piled at floor level, rock-piles, mining-helmets, lanterns',
+    negativeExtras: 'no explorers, no live newts in foreground',
   },
   {
-    title: 'Cherry Blossom Garden',
-    horizonContext: 'where the garden background and stone wall meet the moss-covered ground',
-    floorMaterial: 'soft moss-covered ground with scattered pink cherry petals',
+    title: 'Moonlit Bamboo Forest',
+    horizonContext: 'where the towering moonlit-bamboo stalks and distant silhouette-mountain backdrop meet the soft moss-and-bamboo-leaf forest floor',
+    floorMaterial: 'soft mossy forest floor in muted emerald-and-silver-grey with subtle scattered pixel-bamboo-leaf flecks and a faint silvered-moonlight-sheen at the back edge',
     aboveHorizon:
-      'pink and white cherry blossom trees in full bloom arching across the top of the frame with petals drifting downward, a traditional stone lantern (toro) center-back glowing softly, a small wooden footbridge in the distant background crossing a koi pond, distant pagoda silhouettes against pale teal sky, hanging paper lanterns in warm peach tones, a torii gate framing the back, soft golden morning light, mountain peaks in the far distance, a ribbon of pale mist near the horizon',
-    failureProps: 'benches, rocks, lanterns, koi statues, rakes',
-    negativeExtras: 'no monks, no people, no live koi in the foreground',
+      'a backdrop of towering jade-green bamboo stalks rising vertically into the upper band, silvered by a giant cute cartoon-pixel-full-moon hanging center-back in pearl-white glow, distant pastel-blue-and-indigo silhouette-mountains far behind the bamboo, hanging cartoon-pixel-friendly-paper-lantern decorations in soft-glowing-amber drifting between the stalks, hanging cartoon-pixel-friendly-firefly silhouettes (smiling chibi-fireflies in warm-glow-yellow) drifting throughout, hanging strings of silver-moss-and-vine garlands, drifting cartoon-pixel-bamboo-leaf-shower sparkles and tiny-moondust motes, faint pastel-silver moonlight-beam streaming down through the bamboo canopy. Vibe: mystical-cozy bamboo grove at night',
+    failureProps: 'bamboo poles at floor level, stone-lanterns, picnic-mats, fallen-leaves piled',
+    negativeExtras: 'no people, no live wildlife',
   },
   {
-    title: 'Western Saloon',
-    horizonContext: "where the saloon's wooden bar and swinging doors meet the dust-streaked plank floor",
-    floorMaterial: 'rough wooden plank floor with dust streaks and faint boot scuffs',
+    title: 'Steaming Geyser Field',
+    horizonContext: 'where the rainbow-mineral pools and rising-geyser steam-plumes backdrop meet the pale mineral-crust ground floor',
+    floorMaterial: 'pale mineral-crust ground floor in muted cream-and-soft-pink with subtle scattered pixel-mineral-crystal-sparkle and a faint steam-haze at the back edge',
     aboveHorizon:
-      'a long wooden bar center-back with a row of glass bottles and a brass spittoon, a stuffed deer head mounted above the bar, hanging oil lamps with warm yellow glow, batwing saloon doors with sunlight pouring through, wanted posters tacked to the side walls, a piano in the back-right corner with sheet music propped up, hanging horseshoes for luck, a hand-painted "WHISKEY 5¢" sign, a row of bar stools (in the distant background only), a chalkboard menu, fake plant tumbleweeds, distant view of dusty plains through a side window',
-    failureProps: 'spittoons, stools, barrels, cards on tables',
-    negativeExtras: 'no cowboys, no bartenders, no people',
+      'a backdrop of brilliant pastel-rainbow mineral-pool circles (vivid pastel-turquoise, hot-pink, butter-yellow, lavender, coral — each ringed with bands of color like Yellowstone hot-springs) glowing in the upper band, multiple tall cartoon-pixel-steam-plumes erupting upward in soft pastel-cream and rose-pink, distant pastel mountain-ridges in muted-purple behind the geysers, hanging cartoon-pixel-friendly-bison-and-elk silhouettes (smiling pastel chibi-bison in muted-cream and rose) at background-distance, hanging cluster of mineral-crystal-cluster decorations at side-corners, drifting cartoon-pixel-steam-curl sparkles and tiny-rainbow-mist particles continuously rising, warm golden-amber sunlight streaming through the steam. Vibe: epic-cute geothermal wonderland',
+    failureProps: 'rocks piled at floor level, boardwalks, ranger-signs, geyser-cones at floor level',
+    negativeExtras: 'no tourists, no live bison in foreground',
   },
   {
-    title: 'Steampunk Airship Bridge',
-    horizonContext: "where the airship's brass control panels and porthole window meet the riveted metal deck",
-    floorMaterial: 'dark riveted metal deck with brass bolt heads in a regular pattern',
+    title: 'Floating Lily Pad Lagoon',
+    horizonContext: 'where the lily-pad-strewn lagoon surface with pastel water-lily blooms and distant willow-canopy backdrop meet the soft moss-and-water-edge floor',
+    floorMaterial: 'soft moss-and-shallow-water-edge floor in muted emerald with subtle scattered pixel-lily-pad-and-petal flecks and a faint glassy-reflection sheen at the back edge',
     aboveHorizon:
-      'a massive central brass wheel with a captain\'s telescope mounted beside it, banks of dials and pressure gauges with needles wiggling, hanging chains and copper tubing across the ceiling, a large round porthole window center-back showing clouds and the curve of distant mountains far below, flickering Edison-bulb cage lamps, a hanging speaking tube, leather-bound logbooks on a back shelf, a rotating radar screen with green sweep line, brass valves with steam puffing from the joints, a small barometer, a hanging weather pennant flag',
-    failureProps: 'crates, barrels, control consoles on the floor',
-    negativeExtras: 'no captains, no crew, no people',
+      'a backdrop of a still-mirror lagoon-surface dotted with floating cartoon-pixel lily-pads in muted-emerald, each with a vivid pastel water-lily-bloom in soft-blush-pink and butter-cream, distant pastel-willow-tree canopy in soft sage-green and silvered-green draping down at the upper edge, hanging cartoon-pixel-friendly-dragonfly silhouettes (smiling pastel chibi-dragonflies in iridescent peach-and-mint) drifting at varied heights, hanging cluster of cattail-and-reed silhouettes along the back lagoon-edge, hanging cartoon-pixel-friendly-koi-fish silhouettes (smiling pastel chibi-koi in cream-and-coral) just below the water at background-distance, drifting cartoon-pixel-petal-shower and pollen sparkles, warm golden-hour pastel-peach sunlight reflecting on the water. Vibe: serene-magical Monet-style lily-lagoon',
+    failureProps: 'lily-pads at floor level, koi-statues, bridge-railings, garden-stones',
+    negativeExtras: 'no live fish in foreground, no people',
   },
   {
-    title: 'Carnival Funhouse',
-    horizonContext: "where the funhouse's striped walls and curtained doorways meet the checkered tile floor",
-    floorMaterial: 'glossy red-and-yellow checkered tile floor with subtle reflective sheen',
+    title: 'Cliffside Waterfall Veil',
+    horizonContext: 'where the towering cliffside cascade-waterfall with rainbow-mist arc and lush jungle-canopy backdrop meet the polished wet-rock cliff-edge floor',
+    floorMaterial: 'polished wet-rock cliff-edge floor in muted slate-grey with subtle reflective sheen and a faint scattered pixel-spray-droplet pattern at the back edge',
     aboveHorizon:
-      'red-and-white striped circus tent walls leaning at warped angles, hanging carnival pennant flags in primary colors strung across the ceiling, two distorted funhouse mirrors mounted on either side wall reflecting wonky colors, a grinning clown face painted above the back doorway, hanging strings of carnival lights, a balloon animal vendor display in the distant background, a popcorn cart silhouette deep in the back, gold tassel curtains framing the edges, faint big-top music notes drawn in the corners as decoration',
-    failureProps: 'balloons on the floor, popcorn buckets, ride seats, signs',
-    negativeExtras: 'no clowns, no carnies, no people',
+      'a backdrop of a HUGE cascading waterfall pouring down center-back in pastel-aqua and pearl-white, the falling water rendered as flowing pixel-strands, a vivid soft-pastel-rainbow mist-arc hanging in front of the waterfall, lush emerald jungle-canopy framing the sides at the upper edges with broad cartoon-pixel banana-leaves and ferns, hanging cartoon-pixel-friendly-toucan silhouettes (smiling pastel chibi-toucans in vivid coral-and-mint) on a vine-perch, distant tropical-mountain silhouettes in muted-blue behind the waterfall, drifting cartoon-pixel-water-spray-and-rainbow-mist sparkles continuously, warm tropical-golden light glinting off the spray. Vibe: epic-cute jungle waterfall adventure',
+    failureProps: 'rocks piled at floor level, fallen-logs, hiking-gear, boats',
+    negativeExtras: 'no hikers, no live wildlife in foreground',
   },
   {
-    title: 'Underground Jazz Club',
-    horizonContext: "where the jazz club's brick back wall and stage meet the polished wooden floor",
-    floorMaterial: 'dark polished wooden floor with subtle reflective grain',
+    title: 'Misty Bog of Wisps',
+    horizonContext: 'where the gnarled mangrove-tree silhouettes with drifting will-o-wisp-glow and low-mist-veiled backdrop meet the soft mossy bog-floor',
+    floorMaterial: 'soft pale-mossy bog-floor in muted sage-green with subtle scattered pixel-glow-flecks and a faint low-mist-veil hovering at the back edge',
     aboveHorizon:
-      'a low brick stage center-back lit by a single warm spotlight, an unattended upright bass leaning against a back wall (decorative), an unmanned drum kit silhouetted in the back-left, a vintage microphone on a stand, a hanging "JAZZ" sign in cursive neon pink, dim wall sconces casting amber pools on exposed brick, framed black-and-white photos of jazz legends on the walls, hanging cigar smoke wisps in the air, a chalkboard menu listing cocktails, hanging Edison bulbs at varying heights, dark velvet curtains framing the stage',
-    failureProps: 'instruments on the floor, chairs, tables, cocktail glasses',
-    negativeExtras: 'no musicians, no patrons, no people',
+      'a backdrop of gnarled-cartoon-pixel-mangrove-tree silhouettes with twisted branches in muted-charcoal-and-sage receding into a misty distance, dozens of drifting will-o-wisp-glow-orbs in vivid pastel-mint / butter-yellow / soft-lavender floating at varied heights throughout the upper band (each wisp a soft-glowing-pixel-pastel-orb with a faint glow-halo), a low mist-veil lying along the horizon line in soft pearl-grey, hanging clusters of hanging-spanish-moss decorations draping down from the branches, hanging cartoon-pixel-friendly-firefly-cluster silhouettes (smiling chibi-fireflies in warm-glow) drifting among the wisps, drifting cartoon-pixel-mist-veil sparkles continuously, faint twilight-purple-and-amber sky visible behind. Vibe: mysterious-cozy magical bog',
+    failureProps: 'log-stumps at floor level, wooden-boards, lantern-stakes, swamp-roots',
+    negativeExtras: 'no people, no live wildlife in foreground',
   },
   {
-    title: 'Bamboo Dojo',
-    horizonContext: 'where the dojo paper screens and weapon rack meet the polished tatami floor',
-    floorMaterial: 'tightly woven tan tatami mats with subtle pixel weave pattern and dark border bands',
+    title: 'Meteor Shower Plains',
+    horizonContext: 'where the vast-rolling-hill silhouettes under a meteor-streaked starry sky and distant mountain-horizon backdrop meet the soft grassland prairie floor',
+    floorMaterial: 'soft pale-emerald grassland prairie floor with subtle scattered pixel-wildflower-glow flecks in cream and rose at the back edge',
     aboveHorizon:
-      'sliding shoji paper screens forming the back wall with sunrise glow behind them, a wooden weapon rack holding bokken / staffs / katanas mounted on one side wall, a calligraphy scroll with bold Japanese kanji hanging center-back, hanging paper lanterns with warm amber light, a small altar shelf with a single bonsai tree, a row of hanging bells on a rope, a gong with a striker hanging beside it, exposed dark wood beams across the ceiling, a small spray of cherry blossoms drifting in through a slightly-ajar screen',
-    failureProps: 'training dummies, mats, cushions, swords on the floor',
-    negativeExtras: 'no martial artists, no people, no sensei',
+      'a backdrop of dramatic deep-pastel-indigo night sky filled with dozens of cartoon-pixel-meteor-streak shooting-stars (each meteor a glowing-pixel-pastel-amber-trail-with-tail-flare arcing across the sky in varied directions), distant rolling-pastoral-hill silhouettes in muted-purple-and-rose at the very bottom of the upper band, a pastel-pink and amber-glow at the very horizon-line suggesting late twilight, hanging cluster of cartoon-pixel-twinkle-stars (chibi pastel-stars with smile-faces) throughout the upper band, drifting cartoon-pixel-cosmic-dust and meteor-spark sparkles continuously, hanging cartoon-pixel-friendly-owl silhouettes (smiling chibi-owls) on a low-perch silhouette. Vibe: epic-magical cosmic-shower spectacle',
+    failureProps: 'telescopes at floor level, picnic-blankets, sleeping-bags, campfires',
+    negativeExtras: 'no stargazers, no campers',
   },
   {
-    title: 'Moroccan Riad Courtyard',
-    horizonContext: 'where the riad arches and tiled wall meet the patterned mosaic floor',
-    floorMaterial: 'intricate blue-and-white geometric mosaic tile floor with star and diamond patterns',
+    title: 'Cherry Blossom Tunnel',
+    horizonContext: 'where the arching cherry-blossom-branch tunnel with cascading-petal canopy and distant pastel-pagoda silhouette backdrop meet the soft petal-strewn stone-path floor',
+    floorMaterial: 'soft pebble-stone-path floor in muted pearl with subtle scattered pixel-cherry-petal flecks in soft pastel-pink and cream at the back edge',
     aboveHorizon:
-      'tall horseshoe arches center-back framing a deep teal evening sky with a crescent moon, a tinkling tiled fountain backed against the central wall, hanging brass lanterns in a cascade of warm jewel tones, climbing vines of jasmine and pink bougainvillea curling around the arches, a copper teapot and ornate glasses on a back niche shelf, hanging tasseled rugs on the side walls in deep red and turquoise patterns, palm fronds peeking over the courtyard wall, a small carved cedar door in the distant back, hanging birdcages (empty) as decoration',
-    failureProps: 'cushions, low tables, rugs across the floor, urns',
-    negativeExtras: 'no people, no live birds',
+      'a backdrop of an arching tunnel of intertwined cherry-blossom branches in full vivid cotton-candy-pink-and-white bloom, the canopy arching across the entire upper band with thousands of pastel-pink-and-white pixel-blossoms cascading down, a distant cute pastel-pagoda silhouette in soft-cream-and-rose at the very end of the tunnel center-back at background-distance, hanging strings of pastel paper-lantern-cluster decorations in soft saffron and rose, hanging cartoon-pixel-friendly-songbird silhouettes (smiling chibi-songbirds in pastel coral and mint) perched among the branches, drifting cartoon-pixel-cherry-petal-shower continuously in the upper third, warm peach-pink late-afternoon golden glow filtering through the canopy. Vibe: magical-cute hanami spring tunnel',
+    failureProps: 'fallen branches at floor level, garden-stones, picnic-blankets, koi-statues',
+    negativeExtras: 'no people, no live songbirds in foreground',
   },
   {
-    title: 'Polar Aurora Observatory',
-    horizonContext: 'where the observatory dome opening and instrument racks meet the wood-plank floor',
-    floorMaterial: 'pale wood-plank floor with frosted edges and subtle ice crystal patterns',
+    title: 'Whale Skeleton Cathedral',
+    horizonContext: 'where the massive whale-skeleton arch with hanging-kelp curtains and twilight-deep-sea backdrop meet the soft pearl-sand seafloor',
+    floorMaterial: 'soft pearl-and-cream sand seafloor with subtle scattered pixel-bone-fragments and tiny-coral-glow flecks at the back edge',
     aboveHorizon:
-      'a massive brass telescope center-back pointing up through a slit in the dome ceiling, a sky full of green-and-pink aurora swirling above the open dome, star charts pinned to wooden walls, brass astrolabes and sextants mounted on shelves, hanging crystal prisms catching aurora light, frost-edged windows on either side showing snow-laden pine trees outside, a hot kettle on a pot-belly stove in the back corner with steam rising, a chalkboard covered in constellation diagrams, hanging fur-lined coats by a back hook, a small wind-up planetarium model on a shelf',
-    failureProps: 'rugs, books on the floor, snow drifts inside, fur pelts',
-    negativeExtras: 'no astronomers, no scientists, no people',
+      'a backdrop of a colossal cartoon-pixel-whale-skeleton arching overhead, the ribcage curving across the upper band like a cathedral-vault in pearl-bone tones, the skeleton encrusted with pastel-cartoon-pixel-coral in soft pink / mint / coral / amber growing along the bones, distant deep-twilight-pastel-purple-and-indigo ocean beyond the skeleton with tiny pinprick-pixel-bioluminescent-creatures glowing in the depths, hanging hanging-kelp-curtain strands draping from the bone-arches in muted emerald, hanging cartoon-pixel-friendly-jellyfish silhouettes (smiling pastel chibi-jellies in iridescent peach-and-mint) drifting through the skeleton, drifting cartoon-pixel-bubble-sparkles continuously rising, hanging cluster of cartoon-pixel-friendly-anglerfish-and-tiny-fish silhouettes (smiling pastel-glow-creatures) at background-distance. Vibe: epic-cozy underwater ossuary',
+    failureProps: 'bones piled at floor level, kelp-piles, treasure-chests, anchor-stands',
+    negativeExtras: 'no live whales in foreground, no divers',
   },
   {
-    title: 'Candy Land Bakery',
-    horizonContext: "where the bakery's pastel display case and gumdrop walls meet the candy-cane tile floor",
-    floorMaterial: 'glossy red-and-white candy-cane diagonal-stripe tile floor with sugar sparkle pixels',
+    title: 'Snow Monkey Onsen Valley',
+    horizonContext: 'where the steaming-onsen-pool ringed with snowy-cliff-walls and distant winter-pine-forest backdrop meet the snow-dusted stone bath-edge floor',
+    floorMaterial: 'snow-dusted polished pebble-stone floor in muted warm-grey with subtle scattered tiny-snow-flake sparkles at the back edge (the dry stone edging around the bath — the steaming pool is BEHIND the horizon)',
     aboveHorizon:
-      'a back wall made of stacked gumdrop spheres in cotton-candy pink / mint green / lemon yellow, frosting dripping from the ceiling in pastel swirls, hanging chocolate bar curtains framing the edges, a back counter display of giant cupcakes / macarons / lollipops in towering pastel stacks, hanging strings of jellybean garland, a "BAKERY" sign in pink-and-mint icing letters, a hanging cookie clock with frosting hands, sprinkles drifting downward like confetti, a pink-and-cream-striped awning across the top, towering whipped-cream cloud shapes on either side',
-    failureProps: 'cakes, donuts, candies, sprinkles piled on the floor',
-    negativeExtras: 'no bakers, no children, no people',
+      'a backdrop of a steaming-onsen-pool at the horizon line with vivid pastel-pearl-and-rose hot-water rising cartoon-pixel-steam clouds upward continuously, distant snowy-cliff-walls in muted-pearl-and-pale-blue rising on both sides at background-distance, cartoon-pixel-friendly-snow-monkey silhouettes (smiling pastel chibi-snow-monkeys in soft-cream-and-rose fur with rosy-cheek-blushes) sitting in the steaming pool at background-distance (sized cat-friendly), distant winter-pine-forest silhouettes in muted sage-and-frosted-pearl beyond the cliffs, hanging snow-laden-pine-branches drooping into the upper-frame edges, a small cute crescent-moon and starry-twilight sky at the very top, drifting cartoon-pixel-snowflake-and-steam-curl sparkles continuously. Vibe: cozy-cute hot-spring with friendly monkeys',
+    failureProps: 'rocks at floor level, towels, bath-buckets, water in the playable area',
+    negativeExtras: 'no live monkeys in the playable foreground (only distant background), no real water in the playable zone',
   },
   {
-    title: 'Fairy Mushroom Village',
-    horizonContext: 'where the village backdrop of giant glowing toadstools and ferns meets the mossy ground',
-    floorMaterial: 'soft moss-covered ground with tiny white flower pixels and faint mushroom spores',
+    title: 'Hollow Ancient Tree Hall',
+    horizonContext: 'where the towering ancient-hollow-tree-interior walls with glowing-spirit-orbs and tree-root-archway backdrop meet the warm earthy root-floor',
+    floorMaterial: 'warm earthy mossy root-floor in muted honey-brown with subtle scattered pixel-glowing-fern-frond flecks at the back edge',
     aboveHorizon:
-      'giant glowing toadstool mushrooms in deep red / orange / purple with white spots crowding the back, tiny pixel-art mushroom houses with round windows nestled between the stalks, fireflies drifting upward in clusters of warm yellow, glowing fairy dust trails curling through the air, twisted ivy vines hanging from above, tall ferns framing both edges, distant pixel rays of moonlight piercing through a dense forest canopy, hanging gourd-lanterns with soft cyan glow, tiny pixel-art butterflies in the distance, a small wooden signpost half-hidden in the back',
-    failureProps: 'mushroom seats, toadstool platforms, baskets, lanterns on the floor',
-    negativeExtras: 'no fairies, no gnomes, no people, no live animals in the foreground',
+      'a backdrop of curved interior walls of a colossal hollow-ancient-tree, the walls textured in deep honey-brown bark with cartoon-pixel-glowing-spirit-orbs in soft pastel-amber-and-rose floating throughout the upper band, a soaring tree-root archway center-back at background-distance with thick gnarled-roots curling overhead, hanging clusters of cascading-glowing-vines drooping from the upper canopy in iridescent-emerald and gold, hanging cartoon-pixel-friendly-forest-spirit silhouettes (smiling cute chibi-Totoro-style spirits in muted-pearl-and-rose) on root-perches at varied heights at background-distance, hanging cluster of hanging-mushroom-and-fern decorations, drifting cartoon-pixel-magical-pollen-and-glow-spark sparkles continuously, faint pastel-golden-glow emanating from cracks in the bark. Vibe: magical-cozy ancient forest spirit hall',
+    failureProps: 'tree-stumps at floor level, lantern-stakes, picnic-baskets, magic-relics',
+    negativeExtras: 'no live spirits in the foreground, no people',
   },
   {
-    title: 'Subway Station Platform',
-    horizonContext: "where the subway's tiled wall and tunnel mouth meet the cement platform floor",
-    floorMaterial: 'plain dark grey cement platform floor with subtle scuff marks and faint yellow safety stripe far in the back',
+    title: 'Frozen Waterfall Ice Cave',
+    horizonContext: 'where the towering frozen-waterfall-cascade with crystal-icicle ceiling and ice-blue grotto-walls backdrop meet the polished glassy-ice grotto-floor',
+    floorMaterial: 'polished glassy-ice grotto-floor in vivid pale-aqua with subtle reflective sheen and a faint frozen-rippling-water pattern at the back edge',
     aboveHorizon:
-      'a tiled back wall in cream and forest green subway tile reading "MEOWCERT STATION" in vintage typography, a dark tunnel mouth center-back fading into pixel-black with a single tiny train light far in the distance, hanging fluorescent ceiling tubes giving cold blue-white light, peeling movie posters in faded reds and blues on the side walls, a hanging clock showing 11:47 PM, a wall-mounted route map with colored lines, hanging duct cables and pipes across the ceiling, graffiti tags in pink and chartreuse on the lower wall, a vintage destination-board with flipping letters',
-    failureProps: 'benches, trash cans, vending machines, luggage on the floor',
-    negativeExtras: 'no commuters, no passengers, no people',
+      'a backdrop of a colossal frozen-waterfall pouring down center-back captured in mid-cascade as solidified pale-aqua-and-pearl-blue ice with pixel-icicle-stalactite formations hanging like a frozen veil, the surrounding grotto-walls of vivid ice-blue with cluster crystal-icicle formations on side walls, hanging clusters of long crystal-icicle stalactites dropping from the ceiling in iridescent pastel-cyan and pearl, hanging cartoon-pixel-friendly-arctic-fox silhouettes (smiling pastel chibi-arctic-foxes in pearl-and-rose fur) on a back-ice-ledge perch, hanging cluster of glowing-pastel-amethyst-crystal-cluster decorations, drifting cartoon-pixel-snowflake-and-frost-shimmer sparkles continuously, faint pastel-aurora-glow halo at the top of the cave. Vibe: epic-magical frozen-waterfall ice grotto',
+    failureProps: 'ice-blocks at floor level, snow-drifts, sleds, ice-pick-tools',
+    negativeExtras: 'no live foxes in foreground, no people',
   },
   {
-    title: 'Ramen Shop Interior',
-    horizonContext: "where the ramen shop's curtains and back kitchen meet the polished concrete floor",
-    floorMaterial: 'cool dark polished concrete floor with subtle radial light reflections from overhead lanterns',
+    title: 'Glow Worm Constellation Cave',
+    horizonContext: 'where the dark cave-vault ceiling carpeted in glowing-blue-worms and distant water-stream-cave-bottom backdrop meet the polished damp-cave-stone floor',
+    floorMaterial: 'polished damp-cave-stone floor in muted slate-grey with subtle reflective dark-water-sheen and a faint scattered pixel-mineral-glint at the back edge',
     aboveHorizon:
-      'red and white noren curtains hanging from the ceiling reading "RAMEN" in white kanji (ラーメン), a back open kitchen with a giant simmering pot wreathed in steam, neon "OPEN" signs in pink and blue glowing on the side walls, hanging strings of paper lanterns in red and gold, framed black-and-white photos of bowls of noodles, a hanging chalkboard menu with handwritten specials, hanging ladles and chopstick holders on a brass rack, vintage Japanese movie posters faded on the walls, a small Lucky Cat statue on a high shelf (decorative, NOT a live cat), a hanging vintage Coca-Cola sign in Japanese script',
-    failureProps: 'stools, bowls, chopsticks, soup, counter slabs',
-    negativeExtras: 'no chefs, no diners, no people, no live cats (the maneki-neko statue is decorative only)',
+      'a backdrop of a vast pitch-black cave-vault ceiling carpeted entirely in cartoon-pixel-glow-worms — thousands of tiny glowing pinpoint-pixels in vivid electric-cyan-and-mint creating an artificial starry-night sky pattern overhead (like the famous Waitomo caves but cute pixel-style), reflected mirror-still in the deep-still cave-water at the lower-back horizon-line creating a doubled image, hanging cluster of glow-strand-silk threads drooping from the ceiling (the worm-silk in soft-pixel-glow-cyan), hanging cartoon-pixel-friendly-cave-fish silhouettes (smiling pastel chibi-cave-fish in pearl-blue) just below the water at background-distance, drifting cartoon-pixel-glow-particle sparkles continuously, distant cave-passage-opening glowing softly at the top. Vibe: magical-dreamy cave-constellation',
+    failureProps: 'boats at floor level, rope-ladders, helmets, lantern-stakes',
+    negativeExtras: 'no boatmen, no people in foreground',
   },
   {
-    title: 'Cyberpunk Noodle Alley',
-    horizonContext: 'where the noodle stalls and neon signs meet the rain-slick alley pavement',
-    floorMaterial: 'rain-slick dark asphalt with reflective neon highlights pooling on the surface',
+    title: 'Tropical Cenote Pool',
+    horizonContext: 'where the limestone-cenote-cliff-walls with hanging-vine-curtains and turquoise-water-pool backdrop meet the polished damp-limestone cenote-shore floor',
+    floorMaterial: 'polished damp-limestone cenote-shore floor in muted pale-cream with subtle scattered pixel-water-droplet flecks and a faint mossy-edge at the back',
     aboveHorizon:
-      'a narrow alley crammed with overlapping neon signs in magenta / cyan / lime, hanging Japanese / Chinese / Korean characters glowing in script, a steaming noodle stall booth center-back with paper lanterns, holographic billboards advertising synthetic ramen above the rooftops, dripping pipes overhead with falling rain pixels, exposed wiring and conduit, a vending machine glowing electric blue against one wall, hanging string lights tangled across the alley, distant hovercar tail-lights blurring in the deep background, "OPEN 24H" neon sign in red, faded graffiti tags layered on a brick wall',
-    failureProps: 'stools, crates, noodle bowls on the ground, garbage',
-    negativeExtras: 'no people, no androids, no cyberpunk citizens',
+      'a backdrop of towering pale-limestone cenote-cliff-walls receding upward to a circular opening at the top showing vivid pastel-blue-sky and shafts of pastel-golden-sunlight beaming down into the cave, vivid pastel-turquoise-and-aqua water pool below the horizon-line at the back glowing iridescently, cascading hanging-vine-curtains in vivid emerald-and-lime cascading down from the upper opening, cartoon-pixel-friendly-cute-bat silhouettes (smiling pastel chibi-bats in muted-cream) drifting at the upper third near the opening (decoration only), hanging cluster of stalactite-formations dripping from the cave-rim, drifting cartoon-pixel-water-spray and golden-sun-mote sparkles in the central sunbeam, hanging cluster of tropical-fern-clumps along the back-cliff. Vibe: epic-magical hidden cenote',
+    failureProps: 'rocks at floor level, swimming-gear, rope-ladders, kayaks',
+    negativeExtras: 'no swimmers, no live bats in foreground',
   },
   {
-    title: 'Spooky Haunted Mansion Hall',
-    horizonContext: 'where the mansion grand staircase and ancestral portraits meet the dusty marble floor',
-    floorMaterial: 'cracked black-and-white marble checkered floor with thick layers of pixel dust',
+    title: 'Inside a Crystal Dragon Egg',
+    horizonContext: 'where the curved iridescent-crystal-shell walls with rainbow-prism-light and pearl-dust-ceiling backdrop meet the polished pearl-crystal egg-bottom floor',
+    floorMaterial: 'polished pearl-iridescent crystal egg-bottom floor with subtle rainbow-prism-shimmer and a faint hairline-crack-pattern at the back edge',
     aboveHorizon:
-      'a grand sweeping staircase center-back with broken banisters and a torn red carpet runner, hanging cobweb-draped chandelier swinging slightly, ancestral oil-painting portraits on the walls (eyes slightly off-center to feel watched), a tall grandfather clock stopped at midnight, tattered velvet drapes framing arched windows revealing a thunderstorm sky with lightning flash, ghostly white candle sconces with green flickering flame, a hovering pale phantom orb in the upper-back corner, mounted suits of armor leaning oddly in the corners, peeling wallpaper showing brick beneath, a large dusty mirror reflecting nothing',
-    failureProps: 'rugs, furniture, candelabras, books, urns',
-    negativeExtras: 'no ghosts in the foreground, no people, no skeletons walking',
+      'curved interior walls of a giant translucent-crystal dragon-egg, the walls in iridescent-pastel-prism colors shifting through soft-blush-pink / mint-green / butter-yellow / lavender / pearl-cream like a soap-bubble surface, vivid rainbow-prism-light beams refracting through the shell creating pastel-light-cone patterns across the upper band, the ceiling-of-egg overhead showing soft pearl-dust drifting in stable swirls, hanging cluster of cartoon-pixel-friendly-baby-dragon silhouettes (smiling pastel chibi-baby-dragons in pearl-and-rose with tiny-flame-tufts) curled at the back-wall at background-distance (the egg is full of cute siblings — decoration only), drifting cartoon-pixel-pearl-and-prism sparkles continuously, faint glowing-pulse rhythm in the shell-walls (cartoon-pixel-soft-heartbeat-glow). Vibe: magical-cozy inside-the-egg dragon nursery',
+    failureProps: 'egg-shell-fragments at floor level, hatch-tools, nest-tools, mineral-clusters',
+    negativeExtras: 'no live dragons in the foreground (only distant chibi siblings), no characters',
   },
   {
-    title: 'Beach Tiki Hut',
-    horizonContext: 'where the tiki hut walls and ocean view meet the sandy floor',
-    floorMaterial: 'soft golden beach sand with subtle wave-ripple pixel texture and a few scattered tiny seashells',
+    title: 'Floating Mountain Archipelago',
+    horizonContext: 'where the cluster of floating-mountain-islands with cascading-waterfalls between them and pastel-sky-cloud-cover backdrop meet the soft cloud-floor below',
+    floorMaterial: 'soft puffy-cloud-floor in pearl-white-and-pastel-pink with subtle cumulus-tuft texture (the cloud-platform is the playable floor — the cats stand on clouds)',
     aboveHorizon:
-      'a tiki bar back wall made of bamboo poles with a wide opening framing a sunset ocean view (orange-to-pink gradient sky with a small sailboat silhouette), hanging string of fairy lights in warm white across the bamboo roof, two large carved wooden tiki masks on either side of the back wall in red / black / yellow, hanging coconut shells and dried pineapple, a hanging surfboard mounted decoratively, palm leaves drooping in from the top edges, a "TIKI BAR" sign in carved letters, hanging colored glass floats in nets, a few drifting pixel seagulls in the distance, gentle wisps of beach grass framing the lower edges of the back wall',
-    failureProps: 'lounge chairs, towels, drinks, sandcastles, beach balls',
-    negativeExtras: 'no tourists, no beachgoers, no people',
+      'a backdrop of multiple cartoon-pixel floating-mountain-islands suspended at varied heights in a vast pastel-sky, each island a chunk of green-and-rose-stone with cute pastel-trees-and-tiny-waterfalls cascading off their underside into endless cloud-mist below, vivid pastel-sky in soft-blue and peach with fluffy cartoon-pixel-clouds, hanging cluster of cute cartoon-pixel-friendly-flying-fish-and-pegasus silhouettes (smiling pastel chibi-creatures with tiny wings) drifting between the islands at background-distance, distant rainbow-arc visible in the upper corner, hanging strings of trailing-cascade-waterfall-spray, drifting cartoon-pixel-cloud-puff-and-feather sparkles continuously, warm golden-pastel sunlight bathing the islands. Vibe: epic-cute Avatar-style sky islands',
+    failureProps: 'rocks at floor level, rope-bridges, ladders, sky-anchors',
+    negativeExtras: 'no live flying creatures in the foreground, no people',
   },
   {
-    title: 'Pirate Cove Cave',
-    horizonContext: 'where the pirate cove cave walls and treasure stash meet the wet stone floor',
-    floorMaterial: 'damp dark stone floor with subtle puddle reflections and faint sand-streaked grain',
+    title: 'Coral Atoll Lagoon Heart',
+    horizonContext: 'where the ring of pastel-coral-atoll-cliffs with turquoise-lagoon water-pool and tropical-sky backdrop meet the warm pearl-sand atoll-shore floor',
+    floorMaterial: 'warm pearl-sand atoll-shore floor in pale-gold with subtle scattered pixel-coral-fragment and tiny-seashell sparkles at the back edge',
     aboveHorizon:
-      'a rocky cave mouth back-center opening to a moonlit pirate cove with a docked ship silhouette and palm-tree island shapes far in the distance, a treasure chest overflowing with gold coins and gems on a stone shelf high in the back, hanging skull-and-crossbones flag, dripping ceiling stalactites, a wall map pinned with daggers, a stuck cutlass in a wooden barrel up on a back ledge (decorative), hanging tankards on a rope, swinging lanterns with warm flame light, a parrot perch in the distance (no parrot present — decorative perch only), barrels of rum stacked against the back wall, scattered gold doubloons on the high shelves',
-    failureProps: 'open chests, gold piles, barrels, ropes, anchors',
-    negativeExtras: 'no pirates, no crewmen, no people, no live parrots',
+      'a backdrop of a ring of cartoon-pixel coral-atoll-cliffs in vivid pastel-coral-pink / cream / mint encircling a brilliant pastel-turquoise lagoon pool at the horizon line, distant tropical pastel-blue-sky above the atoll-rim with fluffy cartoon-pixel-clouds, a small cute cartoon-pixel-friendly-tropical-sailboat silhouette in pastel-cream drifting in the lagoon at background-distance (decoration), hanging cluster of palm-frond-canopies drooping into the upper-frame edges with broad cartoon-pixel-palm-leaves in vivid lime-and-mint, hanging cartoon-pixel-friendly-tropical-bird silhouettes (smiling pastel chibi-tropical-birds in coral-and-mint) on a palm-perch, drifting cartoon-pixel-sea-spray-and-tropical-petal sparkles continuously, warm golden-tropical sunlight bathing the scene. Vibe: epic-cute paradise atoll',
+    failureProps: 'sand-pails at floor level, snorkel-gear, beach-umbrellas, kayaks',
+    negativeExtras: 'no swimmers, no live wildlife in foreground',
   },
   {
-    title: 'Robot Assembly Line',
-    horizonContext: 'where the factory conveyor belts and assembly arms meet the polished concrete floor',
-    floorMaterial: 'polished light grey concrete floor with painted yellow safety hashing far in the distant back',
+    title: 'Salt Flat Mirror at Twilight',
+    horizonContext: 'where the vast mirror-glass salt-flat reflecting twilight-sky with distant pastel-mountain-silhouette and dreamy-cloud-doubling backdrop meet the polished mirror-still salt-flat floor',
+    floorMaterial: 'polished mirror-still salt-flat floor in pearl-white with vivid pastel-twilight-sky-reflection mirrored across the entire surface (the floor IS the reflection — it doubles the upper-sky perfectly)',
     aboveHorizon:
-      'two long industrial conveyor belts running across the upper third carrying partially-assembled cartoon robots, mechanical arms with sparks descending from the ceiling, hanging hazard signs and rotating warning lights in amber, a big back wall control panel covered in blinking buttons and CRT monitors showing wave forms, exposed pipes and wiring in vibrant red / blue / yellow, a "SAFETY FIRST" sign in pixel orange, hanging chains with hooks, a large round factory window high up showing a smoggy industrial cityscape, neon hazard tape draped across the upper frame, smoke wisps drifting from the conveyors',
-    failureProps: 'crates, robot parts on the floor, conveyor belt extensions, tools',
-    negativeExtras: 'no workers, no engineers, no operating robots on the floor',
+      'a backdrop of vast vivid pastel-twilight sky in sweeping gradient of soft-blush-pink / pastel-coral / lavender-purple / pale-indigo at the top, perfectly mirror-reflected in the salt-flat floor below the horizon line creating a dreamy doubled-image, distant pastel-mountain-silhouette in muted-violet-and-rose at the very horizon-line, fluffy cartoon-pixel-clouds in soft pearl drifting at varied heights doubled in the reflection, hanging cluster of cartoon-pixel-friendly-flamingo silhouettes (smiling pastel chibi-flamingos in coral-and-rose) at background-distance, hanging strings of trailing-cloud-streamers, drifting cartoon-pixel-pearl-glitter-and-sun-mote sparkles, a tiny cute cartoon-pixel-friendly-sun setting at the very horizon. Vibe: epic-dreamy mirror salt-flat',
+    failureProps: 'tents at floor level, camera-tripods, jeeps, picnic-tables',
+    negativeExtras: 'no tourists, no live flamingos in foreground',
   },
   {
-    title: 'Snowy Ski Lodge Lounge',
-    horizonContext: 'where the lodge stone fireplace and antler decor meet the warm wood-plank floor',
-    floorMaterial: 'rich honey-toned wooden plank floor with faint melted snow puddles and a subtle grain pattern',
+    title: 'World Tree Root Chamber',
+    horizonContext: 'where the colossal world-tree root-tangle-walls with glowing-amber-sap-veins and golden-sun-canopy-opening backdrop meet the warm earthy moss-and-root tangle floor',
+    floorMaterial: 'warm earthy moss-and-root-tangle floor in deep honey-brown with subtle scattered pixel-glow-mushroom flecks and a faint amber-sap-shimmer at the back edge',
     aboveHorizon:
-      'a huge stone fireplace center-back with a roaring orange flame, a mounted moose head with antlers above the mantel, hanging woven snowshoes and wooden skis crossed on the side walls, a glowing pine garland strung across the top edge, a tall window in the back-right showing falling snow against a starry sky and distant snow-capped peaks, a hot kettle dangling on an iron arm over the fire, hanging plaid blankets on a wall hook, a stuffed owl on a high shelf (decorative), hanging amber-lit lanterns, a chalkboard sign reading "WARM UP" in cursive, framed vintage ski-resort posters on the side wall',
-    failureProps: 'armchairs, rugs in the foreground, ski boots, logs',
-    negativeExtras: 'no skiers, no guests, no people, no live animals',
+      'a backdrop of colossal interwoven cartoon-pixel-tree-roots wrapping the upper band in deep honey-and-amber tones, glowing-amber-sap-veins pulsing softly through the roots in vivid warm-glow, a soaring opening center-back at background-distance leading upward to a distant golden-sun-canopy showing pale-emerald-leaves bathed in warm-sunlight, hanging cluster of cascading-glowing-vines and moss-curtains drooping from the upper root-tangle, hanging cartoon-pixel-friendly-tree-sprite silhouettes (smiling pastel chibi-tree-spirits in muted-emerald-and-amber with leaf-crowns) on root-perches at background-distance, hanging cluster of glowing-mushroom-cluster decorations along the root-walls, drifting cartoon-pixel-pollen-and-amber-glow sparkles continuously, faint Yggdrasil-style epic majesty in the scale. Vibe: epic-cozy primordial world-tree heart',
+    failureProps: 'tree-roots at floor level, lantern-stakes, magical-relics, mushroom-piles',
+    negativeExtras: 'no live spirits in the foreground, no characters',
   },
   {
-    title: 'Cathedral Stained Glass Apse',
-    horizonContext: 'where the cathedral pillars and stained-glass apse meet the polished marble floor',
-    floorMaterial: 'cool polished black-and-cream marble floor with subtle reflective sheen and faint inlaid cross pattern far in the back',
+    title: 'Sky Lantern Festival Night',
+    horizonContext: 'where the hundreds-of-floating-paper-lanterns ascending to a starry-night-sky and distant pastel-pagoda-village backdrop meet the polished cobblestone festival-plaza floor',
+    floorMaterial: 'polished worn-cobblestone festival-plaza floor in muted warm-stone with subtle scattered pixel-petal-and-confetti flecks at the back edge',
     aboveHorizon:
-      'a massive rose stained-glass window center-back glowing with rich jewel tones casting colored light beams, two tall stone pillars framing the back, hanging brass thurible censers with curling incense smoke, candle racks on the side walls with rows of votive flames, a gothic vaulted stone ceiling far above with ribbed arches, ornate carved stone reliefs of vines, hanging banner-flags in deep crimson and gold, a small organ pipe array high in the back, distant choir stalls in the deep background (no figures present)',
-    failureProps: 'pews, kneelers, altar tables, baskets, candelabra on the floor',
-    negativeExtras: 'no priests, no choir members, no congregants, no people',
+      'a backdrop of HUNDREDS of cartoon-pixel-glowing-paper-lanterns in vivid pastel-saffron / coral / rose-pink / butter-yellow / pearl-cream ascending in a dreamy upward drift, the lanterns rendered in tight clusters with glow-halos against a deep pastel-indigo night sky, a giant cute cartoon-pixel-full-moon hanging at the upper edge in soft pearl-glow, distant pastel-pagoda-village silhouette in muted-cream-and-rose at the very back horizon, hanging strings of pennant-bunting in pastel-rainbow (abstract triangle shapes), hanging cluster of cartoon-pixel-friendly-songbird silhouettes (smiling pastel chibi-birds in soft-cream) flying among the lanterns, drifting cartoon-pixel-lantern-glow-sparkles and tiny-firefly motes continuously, warm pastel-amber lantern-light reflection. Vibe: magical-epic Tangled-style lantern festival',
+    failureProps: 'lanterns at floor level, festival-booths, paper-banners, market-tables',
+    negativeExtras: 'no festival-goers, no people',
   },
   {
-    title: 'Sushi Conveyor Bar',
-    horizonContext: "where the sushi bar's conveyor track and chef station meet the polished bamboo floor",
-    floorMaterial: 'polished pale bamboo floor with subtle horizontal grain and gentle reflective sheen',
+    title: 'Lantern-Lit Floating Market',
+    horizonContext: 'where the boats-laden-with-lanterns floating-market and twilight-river-water backdrop meet the polished wet-wooden dock-board floor',
+    floorMaterial: 'polished wet-wooden dock-board floor in warm honey-pine with subtle reflective river-shimmer at the back edge',
     aboveHorizon:
-      'a continuous sushi conveyor belt running across the upper third carrying tiny pixel-art plates of nigiri / maki / inari in pinks and yellows, the chef station back wall has a giant brass kettle steaming over a flame, hanging noren curtains with white kanji on indigo, paper lantern strings of red-and-white globes, a wall of small wooden order chits clipped to a string, hanging sake casks (kazaridaru) stacked on the back wall, neon "SUSHI" sign in pink against a brick column, hanging cone-shaped pendant lamps with warm light, framed black-ink fish art on the walls',
-    failureProps: 'stools, plates on the floor, chopsticks, soy sauce bottles',
-    negativeExtras: 'no chefs, no diners, no people',
-  },
-  // ─── Aquatic + sky themes (fresh territory — none above this point) ─
-  {
-    title: 'Coral Reef Aquarium',
-    horizonContext: "where the aquarium's glass back wall and reef diorama meet the sand-pixel floor",
-    floorMaterial: 'pale sand-pixel floor with scattered seashell silhouettes and faint water-light caustic patterns',
-    aboveHorizon:
-      'a floor-to-ceiling glass aquarium wall center-back showing a vivid coral reef in pink / orange / electric blue with darting tropical fish silhouettes, swaying anemone fronds, a sunken pirate skull on the reef floor (decorative), bubbles rising in lazy streams, beams of water-filtered light pixelating downward, hanging coral sculptures on the side walls in living-coral pink, a hanging "AQUARIUM" sign in art-deco type, framed maritime maps on the wood-paneled walls, a brass diving helmet on a high shelf (decorative), shimmering reflected ripples dancing across the upper walls',
-    failureProps: 'fish tanks on the floor, plastic plants, gravel, dive gear',
-    negativeExtras: 'no divers, no scientists, no live people in foreground',
+      'a backdrop of dozens of cartoon-pixel small-wooden-boats laden with brightly-glowing paper-lanterns in vivid pastel-saffron / rose-pink / coral / butter-yellow floating on a twilight-river at the horizon line, distant pastel-cottage-village silhouettes along the river-bank in muted-rose-and-cream, hanging strings of glowing-paper-lantern-chains crisscrossing the upper band in alternating pastel sizes, hanging cluster of cartoon-pixel-friendly-koi-and-pearl-bead silhouettes (smiling pastel chibi-koi peeking out of the water) at background-distance, hanging strings of trailing-flower-garlands in pastel-saffron and rose, drifting cartoon-pixel-firefly-and-petal-shower sparkles continuously, warm twilight-amber-and-rose sky-glow bathing the scene. Vibe: magical-cute Asian floating-market at dusk',
+    failureProps: 'boats at floor level, market-baskets, fish-crates, lantern-stacks',
+    negativeExtras: 'no merchants, no buyers',
   },
   {
-    title: 'Hot Air Balloon Basket',
-    horizonContext: 'where the balloon basket rim and ropes meet the woven-wicker floor',
-    floorMaterial: 'tightly woven tan wicker floor with subtle rope-grain texture and tiny pixel knots',
+    title: 'Sunken Atlantis Ruins',
+    horizonContext: 'where the coral-encrusted sunken-marble-columns with cascading-kelp-curtains and underwater-sunbeam backdrop meet the soft pearl-sand seafloor',
+    floorMaterial: 'soft pearl-sand seafloor in pale-aqua with subtle scattered pixel-coin-glint and mosaic-tile fragments at the back edge',
     aboveHorizon:
-      'a giant red-and-white striped hot-air balloon dome filling the upper frame with thick rope rigging draped down, a brass burner mounted above flickering blue-orange flame, a wooden compass nailed to one rim post, hanging brass altimeter and barometer instruments, hanging sandbags on the basket exterior, a small picnic basket on the rim, drifting clouds visible just past the basket edges in baby blue and peach, a distant patchwork-quilt landscape of fields far below, a hanging postal-bag with a "MEOWCERT MAIL" stamp (decorative), tiny pixel birds drifting past',
-    failureProps: 'maps spread on the floor, baskets, sandbags piled, chairs',
-    negativeExtras: 'no pilots, no balloonists, no people',
+      'a backdrop of crumbling cartoon-pixel-Greek-style marble columns rising from the seafloor encrusted with vivid pastel-coral in soft pink / mint / coral / amber, the columns wrapped in cascading hanging-kelp-and-seaweed strands in muted emerald, distant sunken-temple-arch silhouette at background-distance in pearl-marble, beams of pale-aqua-and-gold sunbeams streaming down from the upper water-surface, hanging cluster of cartoon-pixel-friendly-stingray-and-eel silhouettes (smiling pastel chibi-rays in pearl-and-rose) drifting at varied heights, hanging cluster of mosaic-tile-fragment decorations on the columns, drifting cartoon-pixel-bubble-and-sun-mote sparkles continuously rising, schools of cartoon-pixel-pastel-fish darting through the ruins. Vibe: epic-magical sunken civilization',
+    failureProps: 'columns fallen at floor level, treasure-piles, urns, broken-statues',
+    negativeExtras: 'no merfolk, no divers, no live large sea-creatures',
   },
   {
-    title: 'Space Station Observation Deck',
-    horizonContext: 'where the space station bulkhead and main viewport meet the gridded metal floor',
-    floorMaterial: 'matte black grid-pattern metal floor with faint glowing teal LED inlays tracing the seams',
+    title: 'Dragon Skeleton Cliff',
+    horizonContext: 'where the massive dragon-skeleton arching over a windswept-cliff and pastel-sunset-sky-with-clouds backdrop meet the polished sun-bleached bone-and-stone cliff floor',
+    floorMaterial: 'polished sun-bleached bone-and-stone cliff floor in muted pearl-tan with subtle scattered pixel-bone-fragment and tiny-wildflower flecks at the back edge',
     aboveHorizon:
-      'a massive curved panoramic viewport center-back showing Earth in glorious blue-and-white from low orbit, the sun cresting over the horizon casting golden rim-light, satellite specks in the distance, banks of glowing console buttons in cyan / amber on the side bulkheads, hanging cables and oxygen lines across the ceiling, a "GRAVITY: SIMULATED" sign in orange caution typography, framed mission patches on the wall, a docked-spacecraft schematic poster, blinking status LEDs in tight rows, a NASA-style chunky helmet on a high shelf (decorative), drifting pixel-stars beyond the glass',
-    failureProps: 'space suits, oxygen tanks, control panels on the floor, crates',
-    negativeExtras: 'no astronauts, no engineers, no people',
+      'a backdrop of a colossal cartoon-pixel-dragon-skeleton arching across the upper band, the spine and ribcage curving in pearl-bone-and-cream tones receding to a wing-bone splay across the very top, a vivid pastel-sunset-sky behind the bones in sweeping gradient of warm-coral / butter-yellow / rose-pink / pale-violet, distant rolling-pastoral-hills at the very horizon in muted-purple and rose, hanging cluster of cartoon-pixel-friendly-songbird-and-butterfly silhouettes (smiling pastel chibi-creatures) perched on the bones (cute decoration), hanging strings of dried-wildflower-and-feather garlands draping from the rib-arches, drifting cartoon-pixel-feather-and-wind-streamer sparkles continuously, warm sunset-golden glow bathing the skeleton. Vibe: epic-cute mythical-cliff with ancient bones',
+    failureProps: 'bones at floor level, wildflower-piles, climbing-gear, banner-stakes',
+    negativeExtras: 'no live dragons, no people, no live wildlife in foreground',
   },
   {
-    title: 'Cloud City Cafe',
-    horizonContext: 'where the cloud-city pavilion arches and pastel sky meet the marble cloud-floor',
-    floorMaterial: 'opalescent pale marble floor with subtle pink-and-gold cloud-wisp swirls and dreamy reflective sheen',
+    title: 'Glowing Pandora Spore Grove',
+    horizonContext: 'where the giant glowing-fungal-tree canopy with drifting-luminous-spores and bioluminescent-fern backdrop meet the soft mossy-and-glow-mushroom forest floor',
+    floorMaterial: 'soft mossy forest floor in muted emerald-and-glow-cyan with subtle scattered tiny-pixel-glow-mushroom-and-spore flecks at the back edge',
     aboveHorizon:
-      'fluffy white cumulus clouds drifting at eye-level outside ornate art-nouveau pavilion arches, a pastel rainbow gradient sky from peach to lavender to mint, hanging crystal-ball planter pots with curling vines, a wrought-iron archway covered in pink wisteria across the back, gold-leaf cafe lettering reading "CLOUDS" hanging above the back arch, hanging glass terrariums with tiny pixel butterflies inside, distant floating islands with castle silhouettes in the deep background, fluttering paper cranes drifting upward, sparkles in the air, an angelic harp shape on a high pedestal (decorative)',
-    failureProps: 'tables, chairs, cushions, plant pots on the floor',
-    negativeExtras: 'no angels, no flying figures, no people',
-  },
-  // ─── Ancient + mythological cultures ─────────────────────────────────
-  {
-    title: 'Egyptian Tomb Antechamber',
-    horizonContext: 'where the tomb hieroglyph walls and sarcophagus alcove meet the sand-dusted stone floor',
-    floorMaterial: 'aged sandstone floor with thin layers of pixel sand drifting across cracks and faint scarab-shape inlays in the corners',
-    aboveHorizon:
-      'a back wall covered in vivid blue-gold-red hieroglyphs telling a pharaoh\'s story, a tall painted sarcophagus standing center-back with golden death mask glinting, two flanking jackal-headed Anubis statues looming on each side, hanging gold ankh symbols on chains from the ceiling, eternal flame torches in iron sconces casting orange flicker, scarab beetle wall reliefs, a stone offering altar on a high niche with painted lotuses, hanging linen banners with pharaoh cartouches, distant glints of treasure (gold goblets, jeweled fans) on back ledges, drifting motes of golden dust',
-    failureProps: 'piles of treasure on the floor, urns, scrolls, mummies in coffins',
-    negativeExtras: 'no archaeologists, no mummies walking, no living figures',
+      'a backdrop of towering cartoon-pixel-giant-glowing-fungal-trees with caps glowing in vivid electric-pastel-cyan / electric-magenta / butter-yellow casting bioluminescent light, drifting clusters of cartoon-pixel-luminous-spores in pastel-pearl floating slowly upward throughout the upper band like fireflies, distant bioluminescent-fern-and-grass silhouettes in vivid glow-green at background-distance, hanging cluster of cartoon-pixel-friendly-jellyfish-tree-spirit silhouettes (smiling pastel chibi-tree-jellies in iridescent-pearl) drifting at the upper third, hanging strings of glow-vine-curtain decorations cascading from the upper-fungal-canopy, drifting cartoon-pixel-bioluminescent-spore sparkles continuously, faint Avatar-Pandora atmospheric glow halo across the scene. Vibe: epic-magical alien spore forest',
+    failureProps: 'fungal-stumps at floor level, glow-baskets, spore-collectors, magic-staffs',
+    negativeExtras: 'no live wildlife in foreground, no characters',
   },
   {
-    title: 'Aztec Temple Sanctum',
-    horizonContext: "where the temple's stone pyramid wall and feathered banners meet the basalt-tile floor",
-    floorMaterial: 'dark basalt-tile floor with carved sun-disc motifs and faint reddish jaguar-paw prints traced in the cracks',
+    title: 'Pegasus Cloud Stables',
+    horizonContext: 'where the cloud-built-stable-archways with golden-mane-pegasus silhouettes and pastel-sky-vista backdrop meet the puffy-cloud stable-floor',
+    floorMaterial: 'puffy-cloud stable-floor in pearl-white-and-pastel-pink with subtle cumulus-tuft texture and a faint scattered pixel-golden-mane-feather at the back edge',
     aboveHorizon:
-      'a stepped pyramid back wall carved with grinning skull-stones, a giant carved Aztec sun-stone calendar dominating center-back, fluttering quetzal-feather banners in iridescent green-and-red on either side, two stone jaguar heads jutting from the back corners with red-glowing eyes, smoking copal incense braziers, hanging gold-and-jade necklaces on stone pegs, a ceremonial obsidian dagger on a high altar shelf (decorative), painted murals of dancers and warriors on the side walls, hanging tropical orchids in volcanic-stone pots, distant jungle canopy peeking over the temple walls',
-    failureProps: 'altars on the floor, idols, masks, ceremonial drums',
-    negativeExtras: 'no priests, no warriors, no people, no live jaguars',
+      'a backdrop of cloud-built stable-archways in soft puffy pearl-and-pastel-pink rising at the back, rows of stalls (each housing a cute cartoon-pixel-friendly-pegasus silhouette in pearl-coat with golden-mane and feathery-wings — smiling chibi-pegasus mascots at background-distance, sized cat-friendly), vivid pastel-sky beyond the stables in soft-blue-and-peach with fluffy cartoon-pixel-clouds, distant pastel-rainbow-arc visible in the upper corner, hanging strings of star-and-moon-shaped pendant decorations in pastel-pearl, hanging cluster of cartoon-pixel-friendly-cherub silhouettes (cute chibi-cherubs in pastel-rose) drifting (decoration only), hanging strings of cloud-garland-bunting in soft pearl-and-pink, drifting cartoon-pixel-feather-and-pearl-sparkle continuously, warm pastel-golden sunlight glow. Vibe: magical-cute Olympian cloud stables',
+    failureProps: 'hay-bales at floor level, stable-buckets, saddles, riding-tack',
+    negativeExtras: 'no live pegasi in foreground, no riders',
   },
   {
-    title: 'Greek Oracle Chamber',
-    horizonContext: "where the oracle's marble pillars and crystalline mist meet the inlaid marble floor",
-    floorMaterial: 'cool white marble floor with delicate gold-inlay laurel-wreath pattern receding into perspective and a single carved omphalos symbol far in the distance',
+    title: 'Aurora Sailing Ship Deck',
+    horizonContext: 'where the wooden-pirate-ship-deck rigging with billowing-aurora-streaked sky and distant cloud-island silhouette backdrop meet the polished deck-plank ship floor',
+    floorMaterial: 'polished honey-walnut deck-plank ship floor with subtle plank lines and a faint coil-of-rope at the back edge',
     aboveHorizon:
-      'three towering Doric marble columns center-back with delicate fluting, a glowing aqua-and-gold mist swirling between them, a bronze tripod cauldron sitting between the columns emitting prophetic green vapor, hanging laurel wreaths from the ceiling beams, two flanking statues of muses with arms upraised (decorative stone), bronze plaques inscribed with Greek letters mounted on the side walls, hanging brass oil-lamps casting honey-amber light, distant Aegean blue sea glimpsed through an open arched window, a small olive tree in a marble urn in a back corner, drifting golden-dust motes catching the light',
-    failureProps: 'urns, scrolls, statues on the floor, cushions, braziers',
-    negativeExtras: 'no oracles, no priests, no priestesses, no people',
+      'a backdrop of a wooden tall-ship-mast and rigging center-back with billowing canvas-sails in soft pearl-cream catching pastel-aurora-light, vivid cartoon-pixel-aurora ribbons of emerald-green / hot-pink / amethyst-purple swirling across the deep pastel-indigo night sky overhead, distant cloud-island silhouettes at background-distance with cute floating-castle silhouettes in muted-rose, a giant cute cartoon-pixel-full-moon at the upper edge in pearl-glow, hanging cluster of rigging-rope-and-pulley decorations, hanging cartoon-pixel-friendly-magical-flying-fish silhouettes (smiling pastel chibi-flying-fish with tiny-wings) drifting at varied heights, hanging strings of trailing-cloud-streamers, drifting cartoon-pixel-stardust-and-aurora-spark sparkles continuously. Vibe: epic-magical sky-sailing voyage',
+    failureProps: 'cannons at floor level, barrels, ropes coiled, anchors, treasure-chests',
+    negativeExtras: 'no pirates, no crew',
   },
   {
-    title: 'Viking Longhouse Hall',
-    horizonContext: 'where the longhouse rune-carved wall and timber rafters meet the rough-plank floor',
-    floorMaterial: 'rough-hewn dark timber plank floor with subtle axe-cut texture and faint splashes of pixel mead',
+    title: 'Frozen River Ice Sculptures',
+    horizonContext: 'where the frozen-river-path lined with elegant-ice-sculptures and snow-laden-fir-forest backdrop meet the polished glassy-frozen-river floor',
+    floorMaterial: 'polished glassy-frozen-river floor in vivid pale-aqua with subtle reflective sheen and a faint frozen-rippling-current pattern at the back edge',
     aboveHorizon:
-      'massive A-frame timber beams crisscrossing the upper rafters in dark stained wood, a soaring stone hearth with crackling fire dominating center-back, a horned helmet and crossed battle-axes mounted as wall trophy above the hearth, hanging round wooden shields painted with red-and-gold rune patterns lining the side walls, dangling cauldrons on iron chains, smoke-curing meat hanging from the rafters (decorative jerky strips), a tall mead horn on a high shelf, fluttering animal-skin banners with Norse runes, a small wood-carving of Thor\'s hammer Mjölnir on a back beam, distant glimpses of fjord through small slat windows',
-    failureProps: 'long benches, tankards, wooden tables, fur rugs, weapons piled',
-    negativeExtras: 'no vikings, no warriors, no people, no live animals',
+      'a backdrop of a frozen-river-path stretching into the distance flanked on both sides by elegant cartoon-pixel-ice-sculptures in pearl-and-blue-glass — cute friendly chibi-ice-animal sculptures (smiling ice-bears, ice-foxes, ice-deer, ice-rabbits in soft pearl-and-frost-blue at background-distance, sized cat-friendly), snow-laden-fir-forest silhouettes flanking the path in muted sage-and-frosted-pearl, a starry-twilight sky overhead in pastel-indigo with a tiny cute crescent-moon, hanging strings of icicle-glitter-garland-decorations, hanging cluster of cartoon-pixel-friendly-cardinal-and-snow-bunting silhouettes (smiling pastel chibi-birds in cherry-red and pearl) perched on snowy-branches, drifting cartoon-pixel-snowflake-and-frost-glimmer sparkles continuously, warm pearl-amber lantern-glow at the path-edges. Vibe: epic-magical winter wonderland river',
+    failureProps: 'ice-sculptures at floor level, sleds, skating-blades, snow-piles',
+    negativeExtras: 'no people, no live wildlife in foreground',
   },
   {
-    title: 'Indian Spice Market Stall',
-    horizonContext: "where the bazaar's spice tower wall and brass tray displays meet the woven jute floor",
-    floorMaterial: 'tightly woven jute mat floor with subtle natural-fiber texture and warm sand undertones',
+    title: 'Mist-Wreathed Floating Pagoda',
+    horizonContext: 'where the multi-tiered floating-pagoda perched on a mountain-pillar and dreamy-misty-sky backdrop meet the polished smooth-stone mountain-plateau floor',
+    floorMaterial: 'polished smooth-stone mountain-plateau floor in muted pale-grey-and-sage with subtle scattered tiny-pixel-petal flecks at the back edge',
     aboveHorizon:
-      'a stacked back wall of giant burlap sacks tipped open revealing brightly colored spice mounds — saffron orange, turmeric gold, paprika red, ground green cardamom, deep maroon cumin, snow-white salt — labeled with chalkboard signs in Hindi/English script, hanging strings of dried red chilis and garlic, hanging brass kitchenware (kadhai pans, tongs) on iron hooks, hanging marigold flower garlands in marigold-orange across the top, a small painted Ganesh idol on a high shelf (decorative), hanging colorful cotton fabric banners in saffron-and-fuchsia, neon "MASALA" sign in pink, a vintage scale with brass weights on a back ledge',
-    failureProps: 'sacks of spice on the floor, baskets, stools, jars, scales',
-    negativeExtras: 'no shopkeepers, no shoppers, no people',
+      'a backdrop of a multi-tiered cartoon-pixel-pagoda-tower in soft cream-and-rose with curved upturned-roofs perched at the top of a towering rocky-mountain-pillar at background-distance, distant smaller mountain-pillars in muted-purple receding into a dreamy pastel-misty sky in soft-peach-and-lavender, hanging strings of pastel paper-lantern-cluster decorations cascading from the pagoda-eaves, hanging cluster of cartoon-pixel-friendly-crane silhouettes (smiling pastel chibi-cranes in pearl-and-rose with feather-detail) drifting between the mountain-pillars, hanging strings of dried-cherry-blossom-branch decorations drooping from the upper edges, drifting cartoon-pixel-mist-veil-and-petal sparkles continuously, faint sunlight breaking through the mist at the very top. Vibe: epic-magical Chinese-fantasy mountain pagoda',
+    failureProps: 'lantern-poles at floor level, prayer-bells, garden-stones, picnic-mats',
+    negativeExtras: 'no monks, no live cranes in foreground',
   },
   {
-    title: 'Andean Mountain Lodge',
-    horizonContext: 'where the lodge alpaca-woven tapestries and back window meet the terracotta-tile floor',
-    floorMaterial: 'warm terracotta-tile floor with thin grout lines and faint andean weaving-pattern faded into the surface',
+    title: 'Hanging Crystal Stalactite Cave',
+    horizonContext: 'where the cathedral-like cave-ceiling of glowing-crystal-stalactites with luminous-amethyst-walls and underground-river backdrop meet the polished glassy-mineral cave floor',
+    floorMaterial: 'polished glassy-mineral cave floor in pearl-cream with subtle scattered pixel-amethyst-and-quartz fragments and a faint glowing-river-edge at the back',
     aboveHorizon:
-      'a colorful woven alpaca tapestry dominating center-back with bold geometric patterns in red / yellow / turquoise / brown, a tall back window showing snow-capped Andes peaks and a condor soaring against a pale sky, hanging ceramic pots glazed in earthy oranges, hanging pan-flute zampoñas on the side walls, a small clay statue of a llama on a high shelf (decorative), terracotta urns mounted on wall pegs filled with dried golden corn cobs, hanging coca-leaf garlands, a small alpaca-fur cape mounted as wall art, hanging dried-flower wreaths, distant glimpse of Machu Picchu silhouette far in the background',
-    failureProps: 'baskets, pottery, rugs on the floor, fur pelts, ceremonial drums',
-    negativeExtras: 'no shamans, no porters, no people, no live alpacas',
-  },
-  // ─── Modern urban hangouts ───────────────────────────────────────────
-  {
-    title: 'Vinyl Record Shop',
-    horizonContext: "where the record store's wall-mounted album displays meet the worn linoleum floor",
-    floorMaterial: 'scuffed black-and-white linoleum-checkered floor with faded scratch lines from decades of foot traffic',
-    aboveHorizon:
-      'a back wall completely covered in framed iconic vinyl album sleeves at slight angles forming a chaotic mosaic — punk / jazz / hip-hop / electronic / classic rock in saturated period colors, a hand-painted "VINYLS" sign in retro 70s bubble letters, hanging band posters peeling at the corners (Bowie, Prince, Talking Heads), a wall-mounted turntable demo unit spinning a record, hanging string lights in warm white draped across the top, a chalkboard listing "STAFF PICKS", hanging headphones on a wire-rack listening station, a vintage Marshall speaker in the back corner glowing red, tape-cassette wall art arranged geometrically',
-    failureProps: 'record bins, crates of vinyl, listening chairs, headphone stations',
-    negativeExtras: 'no shopkeepers, no customers, no people',
+      'a backdrop of a vast cathedral-like cave-ceiling carpeted in dozens of giant cartoon-pixel-glowing-crystal-stalactites hanging down like natures chandeliers in vivid pastel-amethyst-purple / rose-quartz-pink / citrine-yellow / pearl-clear (sized cat-friendly at background-distance, like a hanging crystal-cathedral), the surrounding cave-walls of vivid amethyst-purple-and-rose-quartz crystal-clusters, a distant glowing-underground-river at the horizon-line in soft-pixel-glow-cyan, hanging cluster of cartoon-pixel-friendly-cave-fairy silhouettes (smiling pastel chibi-cave-sprites in pearl-and-rose) drifting at varied heights, hanging strings of trailing-crystal-prism garlands, drifting cartoon-pixel-rainbow-prism-sparkle continuously, faint glowing-pulse rhythm in the crystal walls. Vibe: epic-magical crystal cathedral cave',
+    failureProps: 'crystals at floor level, mining-tools, lantern-stakes, gemstone-piles',
+    negativeExtras: 'no fairies in the foreground, no people',
   },
   {
-    title: 'Old-School Arcade',
-    horizonContext: 'where the arcade machine cabinets and neon-strip ceiling meet the carpeted floor',
-    floorMaterial: 'dark purple carpet with vivid neon-cyan-and-magenta abstract pixel pattern, the kind of arcade carpet from the 90s',
+    title: 'Lighthouse Lens Room',
+    horizonContext: 'where the giant rotating Fresnel-lens with rainbow-prism-glow and panoramic ocean-storm-window backdrop meet the polished brass-and-glass lens-room floor',
+    floorMaterial: 'polished brass-and-glass lens-room floor in warm honey-gold with subtle reflective rainbow-prism-shimmer at the back edge',
     aboveHorizon:
-      'a back wall of glowing arcade cabinet marquees stacked floor-to-ceiling — Pac-Man, Street Fighter, Galaga, Donkey Kong silhouettes faintly visible through the marquee glow, neon strip lights tracing every cabinet edge in pink / blue / green, a "HIGH SCORE" leaderboard sign in pixel-letter green, hanging strings of carnival prize tickets in golden yellow, a giant prize-claw machine in a back corner with stuffed-animal silhouettes inside, hanging banner reading "ARCADE" in chunky pixel-block letters, glowing CRT screens flickering with attract-mode demo scenes, hanging plastic light fixtures shaped like dice and quarters',
-    failureProps: 'gaming chairs, joysticks on the floor, prize tickets piled, change machines',
-    negativeExtras: 'no gamers, no kids, no parents, no people',
+      'a backdrop of a giant cartoon-pixel-Fresnel-lens center-back at background-distance — concentric rings of glowing crystal-prism glass in pastel-rainbow refracting light in dramatic colored beams sweeping across the upper band, surrounding panoramic windows showing a stormy pastel-twilight-ocean view with dramatic pastel-violet-and-rose storm-clouds and tiny cute cartoon-pixel-friendly-distant-ship silhouettes in pearl-and-cream at background-distance, hanging cluster of brass nautical-instruments on the back wall (gimbal-compass, brass-bell, brass-barometer at background-distance), hanging cluster of cartoon-pixel-friendly-seagull silhouettes (smiling pastel chibi-seagulls) circling outside the windows, hanging strings of trailing-rope-and-anchor garlands, drifting cartoon-pixel-light-prism-sparkle continuously catching the lens-glow, warm honey-amber lens-glow bathing the entire room. Vibe: epic-cozy lighthouse heart',
+    failureProps: 'lenses at floor level, instruments on the floor, ropes coiled, lantern-stakes',
+    negativeExtras: 'no keepers, no sailors',
   },
   {
-    title: 'Boba Tea Shop',
-    horizonContext: "where the boba shop's menu board and beverage station meet the pastel-tile floor",
-    floorMaterial: 'pastel mint-and-pink hexagonal-tile floor with subtle gloss and tiny pixel sparkle highlights',
+    title: 'Inside a Giant Conch',
+    horizonContext: 'where the curved iridescent-conch-shell spiral walls with pearl-dust-light and distant ocean-opening backdrop meet the polished pearl-iridescent shell-bottom floor',
+    floorMaterial: 'polished pearl-iridescent shell-bottom floor in soft-blush-pink with subtle scattered tiny-pixel-pearl-fragment and rainbow-sheen at the back edge',
     aboveHorizon:
-      'a back wall of pastel-pink and mint-green stripes with a hand-lettered chalkboard menu listing "TARO LATTE / MATCHA / STRAWBERRY POPPING / BROWN SUGAR MILK", giant boba-pearl decorative spheres hanging from the ceiling in brown and pink, a wall of clear acrylic dispensers filled with rainbow tapioca pearls (purple / green / yellow), a neon "BOBA" sign in cursive pink, hanging plastic plant garland in pothos green, hanging Polaroid-style polaroids of cute drink photos pinned to a corkboard, a back counter with a tea-steeping kettle and a sealing machine, hanging string lights in warm white, framed kawaii-style cup mascots',
-    failureProps: 'cups, straws, drinks on the floor, stools, blenders',
-    negativeExtras: 'no baristas, no customers, no people',
+      'curved interior walls of a giant cartoon-pixel-conch-shell spiraling up and around the upper band, the walls in iridescent-pastel-prism-pink and pearl-cream with delicate spiral-rib texture, soft pearl-dust-light filtering in from the upper conch-opening creating shimmery pastel-light-beams, a distant ocean-water-glow at the very top edge of the shell-opening showing pale-turquoise sea beyond, hanging cluster of trailing-seaweed-and-pearl-strand decorations cascading from the upper spiral, hanging cartoon-pixel-friendly-tiny-sea-snail silhouettes (smiling pastel chibi-snails in pearl-and-rose) climbing the shell-walls at varied heights (decoration), hanging cluster of cartoon-pixel-friendly-jellyfish silhouettes (smiling pastel chibi-jellies in iridescent peach) drifting near the opening, drifting cartoon-pixel-pearl-mist-and-bubble sparkles continuously, faint underwater-aqua light-halo. Vibe: magical-cozy inside-the-seashell dream',
+    failureProps: 'shells at floor level, sand-piles, pearl-trinket-piles, treasure-chests',
+    negativeExtras: 'no mermaids, no live sea creatures in foreground',
   },
   {
-    title: 'Punk Rock Garage',
-    horizonContext: 'where the garage band practice space and gear stacks meet the oil-stained concrete floor',
-    floorMaterial: 'oil-stained polished concrete floor with subtle tire-mark scuffs and a faint chalk-circle setlist marking in the back',
+    title: 'Floating Library Sky Realm',
+    horizonContext: 'where the drifting-floating-books constellation and pastel-cloud-and-bookshelf-island backdrop meet the soft pastel-cloud-platform floor',
+    floorMaterial: 'soft puffy-cloud-platform floor in pearl-white-and-pastel-rose with subtle cumulus-tuft texture and a faint scattered tiny-paper-page flecks at the back edge',
     aboveHorizon:
-      'a back wall plastered with overlapping flyers, stickers, and zines in raw black-and-white photocopied punk aesthetic, a wall-mounted electric guitar (decorative) covered in band-name stickers, a stack of Marshall amplifiers in the back corner with one cone blown out, a giant hand-painted band-name banner "THE FERAL CATS" in dripping spray-paint, hanging string lights in cold blue, a graffiti-tagged side door in chartreuse and hot pink, hanging tour posters in DIY collage style, a hanging set list scrawled on torn cardboard, exposed pipes and ductwork across the ceiling painted in bright orange, hanging chain-strings of beer bottle caps as decoration',
-    failureProps: 'amps stacked on the floor, drum kits, instruments, mic stands, beer cans, chairs',
-    negativeExtras: 'no band members, no musicians, no people',
+      'a backdrop of dozens of cartoon-pixel-floating-books drifting in the upper band — each book open or closed in pastel-jewel-leather-bindings (mint / blush / lavender / butter / rose / amber) with pastel-paper-pages fluttering as they drift, distant pastel-cloud-bookshelf-island silhouettes at background-distance with cute floating shelves stuffed with pastel-books, a vivid pastel-sky in soft-blue-and-peach with fluffy cartoon-pixel-clouds, hanging cluster of cartoon-pixel-friendly-tiny-ink-fairy silhouettes (smiling pastel chibi-paper-fairies in pearl-and-rose with tiny-quill-pens) drifting among the books, hanging strings of paper-bookmark-tassel garlands, hanging cluster of trailing-paper-page-streamer decorations, drifting cartoon-pixel-ink-droplet-and-paper-confetti sparkles continuously. Vibe: magical-cozy literary sky-realm',
+    failureProps: 'books at floor level, lectern-stands, paper-piles, ink-wells',
+    negativeExtras: 'no readers, no characters, no readable text on the books',
   },
   {
-    title: 'Hip-Hop Barbershop',
-    horizonContext: "where the barbershop's mirror wall and product display meet the checkered tile floor",
-    floorMaterial: 'classic black-and-white checkered ceramic tile floor with subtle reflective sheen and a faint barber-pole-spiral inlay in one corner',
+    title: 'Galactic Train Tracks',
+    horizonContext: 'where the cosmic-train-tracks stretching across the starry-galaxy with distant nebula-cloud and steam-train-silhouette backdrop meet the polished iridescent-glass track-platform floor',
+    floorMaterial: 'polished iridescent-glass track-platform floor in muted star-flecked-indigo with subtle rainbow-prism-shimmer and a faint twin-railroad-stripe pattern at the back edge',
     aboveHorizon:
-      'a long back mirror wall reflecting a hand-painted hip-hop mural on the opposite side (full of stylized graffiti tags in gold / red / black), a row of chrome hair-product bottles on glass shelves under warm vanity bulbs, a vintage barber pole spinning red-white-blue mounted on the back wall, hanging gold-record awards framed on the side walls, a glowing "OPEN" sign in red neon, hanging Polaroid photos of clients pinned to a corkboard, a wall of Air Jordan sneakers in shoe-box display (decorative), framed boxing-championship belts in the back, hanging gold chains as decoration, a small radio playing (no sound, decorative) on a high shelf',
-    failureProps: 'barber chairs, capes, scissors on the floor, sinks, brooms',
-    negativeExtras: 'no barbers, no clients, no people',
+      'a backdrop of cosmic-train-tracks stretching across a vast starry-galaxy in vivid pastel-indigo and amethyst — twin glowing-pearl rails curving off into the distance through deep-space, distant nebula-clouds in vivid pastel-rose / lavender / butter-yellow / mint-green swirling at the upper corners, a small distant cute cartoon-pixel-steam-train silhouette (smiling chibi-steam-train in pearl-and-rose with a tiny-smoke-puff) chugging along the tracks at background-distance, dozens of cartoon-pixel-twinkle-star clusters throughout the night sky (cute chibi-stars with smile-faces), hanging cluster of trailing-cosmic-dust-and-ribbon decorations, drifting cartoon-pixel-stardust-and-comet-trail sparkles continuously, a tiny cute cartoon-pixel-crescent-moon at the upper corner. Vibe: epic-magical Galaxy-Express cosmic voyage',
+    failureProps: 'rails at floor level, lantern-poles, baggage-carts, station-benches',
+    negativeExtras: 'no conductors, no passengers, no people',
   },
   {
-    title: 'Karaoke Booth',
-    horizonContext: "where the karaoke booth's LED video wall and disco ball meet the velvet-carpet floor",
-    floorMaterial: 'plush deep-burgundy velvet carpet with subtle pixel-sparkle highlights catching the disco-ball reflections',
+    title: 'Volcanic Hot Springs Pools',
+    horizonContext: 'where the multi-tiered volcanic hot-spring-pools with steaming-pastel-water and distant lava-glow-mountain backdrop meet the polished warm-mineral-stone tier floor',
+    floorMaterial: 'polished warm-mineral-stone tier floor in muted warm-tan-and-coral with subtle scattered tiny-pixel-glow-mineral-fleck at the back edge and a faint steam-haze at the back',
     aboveHorizon:
-      'a giant LED video wall center-back playing scrolling karaoke lyrics in white-on-black with bouncing pixel-ball indicators, a glittering mirror-ball hanging from the ceiling throwing rainbow-pixel scatter across the upper walls, hanging strings of color-changing fairy lights in pink and electric blue, plush wall padding in burgundy velvet with diamond-tufted buttons on the side walls, a wall-mounted song-book binder with handwritten label "TONIGHT\'S HITS", hanging tambourines and maracas on iron hooks as wall art, a neon "SING IT" sign in hot pink across the top, framed gold-record props on the side walls, a vintage cassette-tape art wall mural',
-    failureProps: 'microphones, tablets, drinks, song books, couches',
-    negativeExtras: 'no singers, no friends, no people',
+      'a backdrop of multiple cartoon-pixel-tiered hot-spring-pools cascading down (sized cat-friendly at background-distance — like a small Pamukkale terrace) each filled with vivid pastel-iridescent-glowing-water in soft pastel-aqua / turquoise / rose / coral / amber, billowing cartoon-pixel-pastel-steam clouds rising from each tier in soft cream-and-rose, distant lava-glow-mountain silhouettes at the very back horizon in muted-purple with tiny pastel-coral-glow streaks (cute warm-mountain decoration), hanging cluster of cartoon-pixel-friendly-tropical-bird silhouettes (smiling pastel chibi-birds in coral-and-mint) drifting at varied heights, hanging strings of tropical-fern-and-vine-curtain decorations along the upper edges, drifting cartoon-pixel-steam-curl-and-glow-mineral sparkles continuously, warm pastel-golden-and-rose volcanic-glow sky. Vibe: epic-magical volcanic hot-spring sanctuary',
+    failureProps: 'rocks at floor level, towels, basket-piles, lava-rock-piles',
+    negativeExtras: 'no bathers, no real lava in the playable zone, no live wildlife in foreground',
   },
-  {
-    title: 'Comic Book Store',
-    horizonContext: "where the comic shop's poster wall and figurine displays meet the dark green-carpet floor",
-    floorMaterial: 'dark forest-green low-pile carpet with subtle comic-panel grid pattern faded into the weave',
-    aboveHorizon:
-      'a back wall of glass-cased vintage comic books with bright Silver-Age covers in red / yellow / blue, lifesize cardboard standees of generic superheroes (cape, mask — non-trademark) flanking the back corners, hanging fishing-line suspended action figures in dynamic poses, a wall of glowing red-and-yellow "POW! / ZAP! / BAM!" comic-style sound-effect signs as decoration, a long shelf of pristine vinyl figurine boxes labeled with collector grades, hanging movie posters for indie hero films in pulp style, a neon "COMICS" sign in chartreuse green, hanging strings of multicolored pennants, a wall-mounted display case of rare playing-card decks',
-    failureProps: 'comic bins, gaming tables, chairs, cash register, display racks on the floor',
-    negativeExtras: 'no shoppers, no shopkeepers, no people, no live action figures',
-  },
-  // ─── Sci-fi + cyberpunk depth ────────────────────────────────────────
-  {
-    title: 'Alien Diner',
-    horizonContext: "where the diner's chrome counter wall and viewport window meet the checkered alien-tile floor",
-    floorMaterial: 'iridescent purple-and-teal checkered alien-tile floor with subtle bioluminescent glow seeping from the grout lines',
-    aboveHorizon:
-      'a wraparound back window showing a deep-purple alien planet sky with twin suns setting in green-and-magenta, a vintage 50s-diner chrome counter back-wall with neon piping in electric-pink, a hanging menu board listing "PROTEIN CUBE / NEBULA SHAKE / METEOR PIE / SPACE FRIES" in alien-glyph fonts, a glowing jukebox in the back corner playing soundwave squiggles, hanging vinyl banner reading "ZORG\'S DINER — OPEN 24 CYCLES" in green neon, hanging tentacle-shaped pendant lamps, hanging plant-pots with bioluminescent alien plants, framed black-and-white photos of made-up alien celebrities, a small abandoned ray-gun on a back shelf (decorative)',
-    failureProps: 'booth seating, counter stools, ray guns on the floor, food trays',
-    negativeExtras: 'no aliens, no diners, no waitstaff, no people',
-  },
-  {
-    title: 'Hacker Bunker',
-    horizonContext: "where the hacker den's monitor wall and server racks meet the anti-static-mat floor",
-    floorMaterial: 'matte black anti-static mat floor with subtle hex-grid pattern and tiny pixel-LED accents in the corners',
-    aboveHorizon:
-      'a wall of stacked CRT monitors center-back displaying cascading green Matrix-style code rain, hanging tangles of CAT-5 ethernet cables in neon yellow / blue / red drooping from the ceiling, server racks with blinking blue and red LEDs on the side walls, a "DO NOT TRACE" poster in stencil-spray font, hanging clipboard with handwritten passwords (scrambled, decorative), a glowing red "RECORDING" indicator on a high shelf, hanging Faraday-cage prop mesh, neon "ACCESS GRANTED" sign in green, a hanging ham-radio antenna in chrome, framed printouts of fictional hacker manifestos in monospace font, exposed wiring conduits painted in bright orange caution',
-    failureProps: 'desk chairs, keyboards, mice, drink cans, takeout boxes on the floor',
-    negativeExtras: 'no hackers, no operators, no people',
-  },
-  {
-    title: 'Mars Colony Greenhouse',
-    horizonContext: "where the greenhouse's transparent dome walls and hydroponic racks meet the regolith-dusted metal floor",
-    floorMaterial: 'matte metal floor with thin layers of rust-red martian regolith dust drifting across cracks and faint solar-panel grid pattern',
-    aboveHorizon:
-      'a sweeping transparent dome ceiling showing a rust-red Martian landscape with the smaller-than-Earth sun and Phobos visible in a peach sky, towering hydroponic plant racks against the back wall with leafy greens / glowing tomatoes / climbing beanstalks under purple grow-lights, a "SOL 4287" calendar wall plaque, exposed ducting and oxygen pipes overhead in matte gray, hanging humidity-meter dials in cyan, glowing wave-form readouts on a side bulkhead, a tiny Earth-flag pin on a high shelf (decorative), hanging seed-storage canisters in rainbow color-coding, distant Olympus Mons silhouette on the Martian horizon outside',
-    failureProps: 'plant pots on the floor, gardening tools, spacesuits, crates, irrigation hoses',
-    negativeExtras: 'no colonists, no scientists, no people',
-  },
-  {
-    title: 'Holographic Theater',
-    horizonContext: "where the hologram theater's stage frame and projector arrays meet the dark glass floor",
-    floorMaterial: 'glossy obsidian glass floor reflecting holographic light specks in cyan and magenta',
-    aboveHorizon:
-      'a central holographic emitter array dome center-back projecting a rotating 3D wireframe-cat hologram (decorative, in neon-cyan vector lines), banks of pixel-projector arrays in chrome mounted on the side walls beaming concentrated light cones, hanging holographic "ON AIR" sign in pulsing red, glowing parallel laser grid lines across the back wall, hanging fiber-optic cable bundles in shifting rainbow colors, a vintage Edison-bulb counter-display reading "VIEWERS: 1,294,801" in retro digit-font, hanging strings of bare neon-tubes in pink, framed holographic-effect posters of past performances, drifting smoke catching laser beams in dramatic volumetric rays',
-    failureProps: 'theater seating, equipment crates, projector stands on the floor, cables coiled',
-    negativeExtras: 'no audience members, no technicians, no people',
-  },
-  // ─── Whimsical + fantasy depth ───────────────────────────────────────
-  {
-    title: 'Dragon Treasure Hoard',
-    horizonContext: "where the dragon's lair stone walls and treasure mountain meet the gold-coin-strewn cavern floor",
-    floorMaterial: 'rough volcanic-stone cavern floor with a faint scattering of pixel gold-coins half-embedded in cracks (subtle, not a heap)',
-    aboveHorizon:
-      'a towering mountain of gold coins / gem-studded crowns / jeweled goblets / golden chalices piled against the back cavern wall reaching to the cathedral-high ceiling, a single colossal red dragon scale mounted as wall art (decorative, NO live dragon), hanging chain-mail tapestries in deep crimson and gold, stalactites dripping from the cavern ceiling, glowing magenta crystals growing from the back walls, scattered ancient weapons (shields, swords, axes) leaning against the back treasure pile, eternal flame torches in iron rings casting orange flicker, hanging banners with stylized dragon-sigils, distant glints of jeweled cups deeper in the hoard, drifting motes of golden ember-light',
-    failureProps: 'gold piles on the foreground floor, chests, weapons leaning in foreground, urns',
-    negativeExtras: 'no dragons, no adventurers, no people',
-  },
-  {
-    title: 'Elven Treetop Library',
-    horizonContext: 'where the elven library carved-tree walls and stained-glass leaves meet the polished living-wood floor',
-    floorMaterial: 'polished living-wood floor with delicate gold-leaf inlay tracing elven script swirls and subtle natural grain',
-    aboveHorizon:
-      'curving carved tree-trunk back walls with golden elven-script glowing softly etched into the bark, a vaulted ceiling formed of intertwined branches with translucent stained-glass leaves casting jewel-tone light, towering bookshelves curving with the trunk filled with leather-bound elvish tomes, hanging crystal pendants emitting soft golden light, a hovering ancient grimoire on a back lectern (open, glowing pages), hanging mossy banners with embroidered leaf sigils, a small silver harp on a back stand (decorative), distant view through carved-leaf windows of impossibly tall trees and floating lantern lights at twilight, drifting pixie-dust motes in pale aqua',
-    failureProps: 'reading desks, chairs, books in the foreground, lecterns on the floor',
-    negativeExtras: 'no elves, no scholars, no people, no live pixies',
-  },
-  {
-    title: 'Gingerbread Cottage Interior',
-    horizonContext: "where the gingerbread cottage's frosted walls and candy-pane window meet the chocolate-tile floor",
-    floorMaterial: 'glossy dark-chocolate tile floor with subtle white-icing grout lines and tiny scattered pixel-sprinkle highlights',
-    aboveHorizon:
-      'gingerbread-cookie back walls with thick white-frosting trim, a frosted-sugar windowpane center-back showing a snowy candy-mountain landscape outside, a roaring chocolate-fudge fireplace with marshmallow logs and gummy-bear flame-shapes, hanging garlands of peppermint twists and rainbow candy buttons, gumdrop pendants hanging from the ceiling on candy-cane chains, a back wall shelf of stacked macaron-cookie discs and sugar-glass jars filled with jellybeans, hanging chocolate-bar curtains framing the side walls, a "SWEETS" sign in icing-cursive script, frosting-snowflake decorations on the ceiling, a tiny ginger-bread cat-shaped cookie on a high shelf (decorative)',
-    failureProps: 'candy piled on the floor, gingerbread furniture, cookie tins, kitchen items',
-    negativeExtras: 'no bakers, no children, no people, no live characters',
-  },
-  // ─── Spooky + horror depth ───────────────────────────────────────────
-  {
-    title: 'Vampire Crypt',
-    horizonContext: "where the crypt's stone burial niches and gothic arches meet the cracked stone floor",
-    floorMaterial: 'cracked aged grey stone floor with faint blood-red rune-tracings half-faded into the cracks and creeping dark-vine pixels along the edges',
-    aboveHorizon:
-      'arched gothic stone niches center-back each containing an ornate stone coffin with crossed-arm relief carvings, two flanking marble vampire-bust statues with red-glowing eyes, hanging chandeliers of black wrought-iron with melted black candles dripping crimson wax, a giant decorative bat-silhouette stained-glass window in the back wall with a blood-moon glow, hanging tapestries embroidered with bat-and-rose sigils in burgundy and black, scattered cobwebs in every corner, ancient gothic banners in deep crimson hanging from the rafters, eternal candelabra with black-flame candles, a gold goblet on a high stone altar shelf (decorative), drifting shadow-mist along the ceiling',
-    failureProps: 'open coffins in the foreground, candles on the floor, capes, books, goblets',
-    negativeExtras: 'no vampires, no ghouls, no people, no live bats',
-  },
-  {
-    title: 'Abandoned Asylum Hallway',
-    horizonContext: 'where the asylum hallway and rusted security door meet the cracked tile floor',
-    floorMaterial: 'cracked institutional-green linoleum floor with rust-stains and faded yellow caution-stripe pixels and drifting paper-scrap silhouettes',
-    aboveHorizon:
-      'a long hallway perspective leading to a heavy rusted iron security door at the back, peeling institutional-green wall paint, hanging fluorescent ceiling tubes flickering with cold dead-white light (one missing), a peeling "ROOM 237" door plaque, hanging tattered patient-records charts pinned to a clipboard on the wall, rust-stains streaking down the walls in horrifying patterns, exposed wiring and broken pipes across the ceiling, a wheelchair-silhouette decoration mounted as wall art (creepy, decorative, deep background), a peeling "QUIET" sign hanging askew, hanging "MEDICAL WING" arrow-sign with the arrow scratched out, drifting dust-motes catching the broken-light',
-    failureProps: 'wheelchairs on the floor, gurneys, broken furniture, scattered papers',
-    negativeExtras: 'no patients, no ghosts, no medical staff, no people',
-  },
-  // ─── Food + drink depth ──────────────────────────────────────────────
-  {
-    title: 'Mexican Taqueria',
-    horizonContext: "where the taqueria's chalk menu wall and tile-mural meet the painted-tile floor",
-    floorMaterial: 'hand-painted talavera-tile floor in cobalt-blue and warm cream with intricate bird-and-flower patterns and tiny pixel sun-motifs',
-    aboveHorizon:
-      'a vibrant hand-painted tile mural center-back depicting marigold flowers, sugar-skull motifs, and a cactus in saturated pink / orange / lime, a chalkboard menu listing "AL PASTOR / CARNITAS / LENGUA / BARBACOA" in colorful chalk, hanging strings of papel-picado banners in fluorescent pink / yellow / lime / orange, hanging dried red-chili ristras and corn cobs, a small Day-of-the-Dead-style skull altar in a side niche (decorative), hanging maracas and a guitarra mounted on the wall, a glowing "TACOS" sign in pink-and-lime neon, hanging string lights with star-shaped covers, hanging cast-iron skillets and a comal griddle, hanging marigold flower wreaths',
-    failureProps: 'tables, chairs, baskets of chips, salsa containers, tortilla press',
-    negativeExtras: 'no cooks, no diners, no people',
-  },
-  {
-    title: 'French Patisserie',
-    horizonContext: "where the patisserie's glass display case and gold-leaf signage meet the herringbone-parquet floor",
-    floorMaterial: 'warm honey-toned herringbone-parquet wood floor with delicate gloss and subtle grain reflecting the warm shop-light',
-    aboveHorizon:
-      'a curved glass display case center-back showcasing pastel macaron towers in raspberry / pistachio / vanilla / lavender, elegant tier-stand of croissants and pain-au-chocolat against the back wall, gilt-framed art-nouveau "PATISSERIE" signage in gold-leaf cursive script, hanging crystal chandeliers with warm Edison bulbs, soft-pink-and-cream striped wallpaper with gold-frame baroque mirrors, hanging silver dessert trays as wall art, hanging garlands of dried lavender and rose-buds, a small Eiffel-Tower silhouette on a high shelf (decorative), framed vintage French perfume ads, hanging tassel-cord drapery in dusty rose',
-    failureProps: 'tables, chairs, cake stands on the floor, baskets, espresso machine',
-    negativeExtras: 'no bakers, no customers, no people',
-  },
-  // ─── Sports + activity venues ────────────────────────────────────────
-  {
-    title: 'Boxing Gym',
-    horizonContext: "where the boxing gym's brick walls and hanging heavy bags meet the canvas-covered floor",
-    floorMaterial: 'rough canvas-painted floor in muted red and gray with chalk-circle training markings and faint wear-pattern footprints',
-    aboveHorizon:
-      'rough exposed brick back wall with hand-painted "GYM" lettering in red-and-white block-paint, hanging heavy bags in worn brown leather with chain-rigging from the ceiling, an old vintage boxing-ring corner-post mounted as decoration in the back-left, hanging speed-bags in oxblood red, framed black-and-white boxing-champion photos lining the side walls (generic silhouettes), a hanging "LADDER" wood-burned plaque listing rankings, a chalkboard with sparring schedule, hanging jump-ropes in red-and-blue coil patterns, vintage hand-wraps draped over a high pipe, a punch-mitt pair on a wall-hook (decorative), hanging robe in satin-red with stitched gold letters',
-    failureProps: 'training mats on the floor, gloves, water bottles, towels, weight benches',
-    negativeExtras: 'no fighters, no trainers, no people',
-  },
-  {
-    title: 'Skate Park Underpass',
-    horizonContext: "where the skate park's graffiti walls and concrete ramps meet the polished skate-floor",
-    floorMaterial: 'polished smooth concrete floor with subtle skate-mark scuffs and graffiti tag-fragments faded into the surface',
-    aboveHorizon:
-      'a back wall completely covered in vivid graffiti murals in saturated street-art colors — neon pinks / electric blues / acid greens / bold blacks — with abstract characters and stylized tags, the curved concrete underpass ceiling spanning the upper third with hanging fluorescent tubes, a half-pipe ramp visible at the back-left with neon-yellow lip-rail tape, hanging skate-deck art-pieces mounted as wall art in a vertical row, a fire-hydrant silhouette in the deep back, hanging string lights in white wrapping around exposed pipes, a vinyl-banner reading "SK8" in spray-paint style, scattered street-cone silhouettes in the deep background, hanging chain-link fence sections framing the side walls',
-    failureProps: 'skateboards on the floor, cones, ramps in the foreground, helmets, water bottles',
-    negativeExtras: 'no skaters, no spectators, no people',
-  },
-  // ─── Historical eras ─────────────────────────────────────────────────
-  {
-    title: '1920s Speakeasy',
-    horizonContext: "where the speakeasy's gold-leaf bar wall and art-deco mirror meet the herringbone wood floor",
-    floorMaterial: 'dark herringbone-pattern hardwood floor with deep walnut tones and a faint subtle sheen catching the warm bar lights',
-    aboveHorizon:
-      'an ornate gold-leaf back-bar with stacked rows of vintage liquor bottles glowing amber under hanging Edison bulbs, a massive art-deco mirror with sunburst-frame center-back, hanging Tiffany-style stained-glass pendant lamps in jewel-tones, a velvet-lined back wall in deep wine-red with gold-leaf fleur-de-lis pattern, a hand-painted "GIN JOINT" sign in gilt-cursive script, hanging tasseled drapery in burgundy with gold trim, framed sepia-toned vintage burlesque posters, an upright piano silhouette in the back corner (decorative), hanging cigar-box wall display, brass cocktail-shaker bookend display on a high shelf, drifting cigarette-smoke wisps along the ceiling',
-    failureProps: 'bar stools, cocktail tables, glasses, ashtrays, bottles in the foreground',
-    negativeExtras: 'no bartenders, no flappers, no patrons, no people',
-  },
-  {
-    title: 'Victorian Parlor',
-    horizonContext: "where the parlor's damask wallpaper and ornate fireplace meet the persian-rug-edged hardwood floor",
-    floorMaterial: 'dark mahogany hardwood floor edged with a richly-patterned persian rug border in deep burgundy / gold / navy showing intricate medallion motifs',
-    aboveHorizon:
-      'rich crimson-and-gold damask wallpaper covering the back wall with delicate baroque floral patterns, an ornate marble fireplace center-back with carved-cherub mantel and brass fender, a massive gold-framed oil painting of a stern-looking ancestor above the mantel, hanging crystal chandelier with thousands of pendants catching warm candlelight, framed silhouette-portraits on the side walls, hanging brocade tasseled curtains in heavy emerald velvet, a tall grandfather clock in the back-left corner ticking, hanging family-crest tapestry, a small porcelain tea-set on a high shelf (decorative), hanging gold-leaf decorative plates, dried flower arrangements in cut-crystal vases on back ledges, drifting motes of dust catching the chandelier light',
-    failureProps: 'velvet armchairs, settees, side tables, books in the foreground, vases on the floor',
-    negativeExtras: 'no aristocrats, no servants, no people',
-  },
-  {
-    title: '50s Diner Booth',
-    horizonContext: "where the diner's chrome counter and jukebox meet the checkered tile floor",
-    floorMaterial: 'classic glossy black-and-white checkered tile floor with subtle reflective sheen catching the neon glow',
-    aboveHorizon:
-      'a vintage chrome diner-counter back-wall with a row of milkshake-glass dispensers and cherry-soda taps, a glowing pink-and-blue Wurlitzer jukebox in the back-right corner, hanging "MILKSHAKES 25¢" hand-painted sign in retro bubble-script, a giant neon "DINER" sign in cursive teal and pink, framed Elvis-era movie-poster reproductions on the side walls in primary colors, hanging strings of fairy lights in red-and-white, a vintage Coca-Cola wall clock with red-rim, hanging red-and-white striped awning across the upper edge, hanging black-and-white framed photos of generic 50s street scenes, a chrome napkin-dispenser display on a back shelf, hanging vintage gas-pump models in cream-and-cherry-red',
-    failureProps: 'booth seats, counter stools, milkshakes, burgers, plates on the floor',
-    negativeExtras: 'no waitresses, no diners, no people',
-  },
-  // ─── Nature / outdoor settings (still pixel-art interior or framed view) ─
-  {
-    title: 'Lighthouse Keeper Quarters',
-    horizonContext: "where the lighthouse's spiral-stair wall and ocean viewport meet the wood-plank floor",
-    floorMaterial: 'aged warm-tone wood-plank floor with faint salt-spray fade patterns and tiny rope-knot inlays in the back corners',
-    aboveHorizon:
-      'a giant brass Fresnel lighthouse-lens lamp center-back glowing warm amber, a tall narrow viewport showing a stormy ocean view with rolling whitecap waves and a single sailing-ship silhouette in the distant horizon, hanging maritime nautical charts pinned to the curved wood-paneled walls, a brass ship-wheel mounted as wall art in the back-left, hanging coiled rope on iron-pegs, hanging brass-ship-bell, a wooden barometer with sweeping pointer needle on the back wall, framed old-photograph of a long-lost ship in sepia-tones, hanging foghorn-loudspeaker in the back-right, drifting seagulls visible through the viewport, lashing rain pixel-streaks against the glass, hanging weathered oil-skin coat by a hook (decorative)',
-    failureProps: 'lighthouse furniture, sea-charts on the floor, fishing nets, rope coiled in foreground',
-    negativeExtras: 'no keepers, no sailors, no people',
-  },
-  // ─── Meowcert concert stages ─────────────────────────────────────────
-  // The brand-stage trio. Default stage candidates with the MEOWCERT
-  // wordmark in neon as the focal point. Note: image generators often
-  // mangle specific text by a letter or two — regen once or twice to
-  // land a clean wordmark.
-  {
-    title: 'Big Neon Rock Stage',
-    horizonContext: 'where the concert stage backdrop meets the polished stage floor',
-    floorMaterial: 'polished black hardwood stage floor with subtle reflective sheen catching colored neon highlights',
-    aboveHorizon:
-      'a massive glowing neon sign reading "MEOWCERT" dead center-back in chunky pixel block letters, hot pink outer tubing and electric cyan inner glow, mounted against a deep velvet stage curtain backdrop in wine-red. Stage truss spanning the very top of the frame with rows of colored spotlights — magenta, cyan, amber, lime — sending crisscrossing beams down through atmospheric fog. Stacks of Marshall-style amplifiers in the back corners. Hanging cardioid microphones suspended slightly above the stage area. A distant drum riser silhouette deep in the back. Large concert PA speakers framing both edges. Hanging banner pennants in neon orange and magenta along the upper truss. Cables snaking down from the rig. Volumetric light rays piercing through pink-tinted smoke',
-    failureProps: 'amps, speakers, microphone stands, drum risers, cables, instruments',
-    negativeExtras: 'no musicians, no audience',
-  },
-  {
-    title: 'Synthwave Cybershow',
-    horizonContext: 'where the synthwave stage backdrop meets the obsidian floor',
-    floorMaterial: 'glossy obsidian stage floor with a faint pink-magenta grid pattern receding into perspective',
-    aboveHorizon:
-      'a retro-future neon wordmark reading "MEOWCERT" dead center-back in 80s synthwave block lettering — hot pink outer glow, deep purple inner tubing, chrome-metallic edges with a faint reflective gleam. Geometric neon parallax lines radiating outward from the wordmark in pink and cyan. Vintage CRT video wall panels on either side flickering with VHS scan lines and abstract waveforms. Hanging laser arrays in lavender and aqua draped from the truss. Floating triangular wireframe shapes drifting through the air. Plasma globes glowing on tall back-corner pedestals. Neon palm tree silhouettes in the deep distant back. A synthwave sunset gradient — magenta to peach — visible behind everything at the very top of the frame. Holographic glitch artifacts scattered along the truss',
-    failureProps: 'DJ decks, CRT monitors, grid floor extensions, podiums',
-    negativeExtras: 'no DJs, no holographic figures of humans, no audience',
-  },
-  {
-    title: 'Cozy Marquee Theatre',
-    horizonContext: 'where the vintage theatre stage backdrop meets the cherry-wood floor',
-    floorMaterial: 'polished cherry-wood stage floor with subtle grain and a warm amber-tinted reflective sheen',
-    aboveHorizon:
-      'a vintage broadway-style theatre marquee reading "MEOWCERT" dead center-back, lit by warm amber rim-bulbs around the border and a soft neon under-glow in pale pink. A burgundy velvet stage curtain swagged from the truss above, draped in deep elegant folds with gold tasseled tiebacks. Hanging warm tungsten Edison-bulb strings strung in cascades across the upper frame. An upright piano silhouette in the back-left corner and a brass standing microphone in the back-right (both decorative — no performers). Antique sconces with flickering candle-style amber bulbs on the side walls. Ornate carved wooden trim along the very top edge of the proscenium. A small framed vintage poster reading "TONIGHT" tacked to one side. Tiny dust motes drifting through the warm spotlight pools',
-    failureProps: 'pianos, microphone stands, music stands, posters, cushions, instruments',
-    negativeExtras: 'no performers, no audience',
-  },
+
+
 ];
 
 // ─── Music vibes (Suno format — single-line, 130 BPM, no vocals) ─────────
@@ -931,43 +773,115 @@ function bgPromptFromTheme(theme) {
   return [
     BG_HEADER,
     '',
-    `**Composition rule (read this first — ⚠️ THIS IS THE MOST IMPORTANT INSTRUCTION):** Image is 1024 × 1856 portrait (16:29 aspect, exactly matching the in-game canvas). The decorated scene occupies ONLY the top 1/5 of the image (image y 0 to 371). The horizon line ${theme.horizonContext} sits at image y ≈ 371 (one-fifth of the way down the 1856-tall portrait). Below that line (image y 371 to 1856) is a COMPLETELY EMPTY ${theme.floorMaterial} — that's the bottom 4/5 of the image, a clear floor that fills the in-game playfield. Above the line (image y 0 to 371) is the densely decorated ${theme.title.toLowerCase()} packed into the upper region. ⚠️ The 1/5 rule is the single most-violated instruction — re-read it before generating.`,
+    `**Composition rule (read this first — ⚠️ THIS IS THE MOST IMPORTANT INSTRUCTION):** Image is 1024 × 1856 portrait (16:29 aspect, exactly matching the in-game canvas). The decorated scene occupies ONLY the top 1/5 of the image (image y 0 to 371). The horizon line ${theme.horizonContext} sits at image y ≈ 371 (one-fifth of the way down the 1856-tall portrait). Below that line (image y 371 to 1856) is a COMPLETELY EMPTY ${theme.floorMaterial} — that\'s the bottom 4/5 of the image, a clear floor that fills the in-game playfield. Above the line (image y 0 to 371) is the densely decorated ${theme.title.toLowerCase()} packed into the upper region. ⚠️ The 1/5 rule is the single most-violated instruction — re-read it before generating.`,
     '',
-    `**Above the horizon (image y 0 to 371 ONLY — the top 1/5):** ${theme.aboveHorizon}. Pack this upper region densely with no large empty zones — the decorated band is narrow so prioritize: foreground props at the bottom of the band, mid-ground in the middle, ceiling / sky / distant atmosphere at the very top. Reminder: every single prop listed must sit ABOVE image y 371.`,
+    `**Scale rule (critical for in-game readability):** The game seats three pixel-art cats on the floor right at the horizon line. Each cat is roughly 50 source pixels tall — about 1/35 of the 1856-tall image. Decoration in the top 1/5 must be sized so a cat-sized character (≈50 px tall) standing in front of it reads NATURALLY — not as a giant looming over the cats, not as a doll-sized miniature the cat would step over. Use these reference scales: small furniture (chairs, end tables, low shelves) → about cat-height to 1.5× cat-height; large furniture (bookshelves, ovens, machines) → 2-3× cat-height MAX; hanging decor (lamps, posters) → cat-eye to ceiling level; counters and bars → upper-cat-height (the cat\'s nose just clears the counter). AVOID: a single oversized object dominating the decoration band so the cat would look like a mouse beside it; AVOID: tiny doll-house-scale props that read smaller than the cat. Pack the band with multiple items at varied small-to-medium scales rather than one giant centerpiece.`,
+    '',
+    `**Aesthetic rule (tone):** Bright, cute, friendly cartoon pixel art — Stardew Valley / Animal Crossing / Studio Ghibli vibes. Soft rounded silhouettes where possible, warm saturated palette, cheerful and welcoming atmosphere. NOT realistic, NOT grimdark, NOT gritty. Pastel accents and chibi-friendly proportions over photoreal detail. NO TEXT, NO SIGNS, NO BANNERS, NO TYPOGRAPHY anywhere in the image — the scene should feel atmospheric and pictorial, never branded or labeled. (If a sign appears, treat it as a failure — there are NO words in this art.)`,
+    '',
+    `**Above the horizon (image y 0 to 371 ONLY — the top 1/5):** ${theme.aboveHorizon}. Pack this upper region densely with no large empty zones — the decorated band is narrow so prioritize: foreground props at the bottom of the band, mid-ground in the middle, ceiling / sky / distant atmosphere at the very top. Reminder: every single prop listed must sit ABOVE image y 371. All props sized per the scale rule above — multiple small-to-medium items, no giant centerpieces. NO text or signage anywhere.`,
     '',
     `**Below the horizon (image y 371 to 1856 — the bottom 4/5):** clean flat ${theme.floorMaterial}. NO props, NO objects, NO decoration of any kind. Completely empty — this is the entire bottom four-fifths of the image and it must read as one continuous empty floor. If you are tempted to add a prop here, DO NOT — move it above y 371 or omit it.`,
     '',
-    `**FAILURE MODE — do NOT do this:** do not put any ${theme.failureProps}, or any other objects below image y 371 (the game draws the cats on top of the floor — the bg must NOT include cat seating). Do not let the decoration leak past the top 1/5 of the image. Do not leave the upper region sparse. Do not put the horizon line significantly lower than y 371 — the floor needs the full bottom four-fifths of the image.`,
+    `**FAILURE MODE — do NOT do this:** do not put any ${theme.failureProps}, or any other objects below image y 371 (the game draws the cats on top of the floor — the bg must NOT include cat seating). Do not let the decoration leak past the top 1/5. Do not leave the upper region sparse. Do not put the horizon line significantly lower than y 371 — the floor needs the full bottom four-fifths. Do not draw oversized or miniaturized decoration. Do not render in a grimdark / photoreal / realistic style — keep it cute pixel art. Do not add ANY text, signs, banners, or letters.`,
     '',
-    `No cats, no characters, no people${theme.negativeExtras ? ', ' + theme.negativeExtras : ''}, no animals anywhere in the scene. Chunky pixel art, not smooth illustration.`,
+    `No cats, no characters, no people${theme.negativeExtras ? ', ' + theme.negativeExtras : ''}, no animals anywhere in the scene. No text, no signs, no letters of any kind. Chunky pixel art, not smooth illustration. Cute cartoon vibe, not realistic.`,
     '',
-    `⚠️ FINAL REMINDER (last chance before generation): The TOP 20% (image y 0 to 371) contains ALL the decoration. The BOTTOM 80% (image y 371 to 1856) is EMPTY FLOOR. If your draft has anything in the bottom 80% other than floor texture, redo it. This rule overrides every other instruction — when in doubt, push detail UP, leave the floor BARE.`,
+    `⚠️ FINAL REMINDER (last chance before generation): The TOP 20% (image y 0 to 371) contains ALL the decoration, sized for cat-height characters (≈50 px tall) to look natural in front, rendered in cute friendly pixel-art, with NO text/signs anywhere. The BOTTOM 80% (image y 371 to 1856) is EMPTY FLOOR — corner to corner, edge to edge. If your draft has anything in the bottom 80% other than floor texture, redo it. If anything looks giant or grimdark or has visible text, redo it. When in doubt, push detail UP, keep the floor BARE, keep it CUTE, keep it WORDLESS.`,
   ].join('\n');
+}
+
+function visibleThemes() {
+  return BG_THEMES.filter((t) => !hiddenTitles.has(t.title));
+}
+
+function totalPages() {
+  return Math.max(1, Math.ceil(visibleThemes().length / BG_PROMPTS_PER_PAGE));
 }
 
 function renderBackgrounds() {
   const list = document.getElementById('bg-list');
   list.innerHTML = '';
-  const themes = pickN(BG_THEMES, BG_PROMPTS_PER_BATCH);
-  for (const theme of themes) {
+  // Custom (user-generated) cards always pinned at the top, every page.
+  for (const card of customCards) list.appendChild(card);
+
+  const themes = visibleThemes();
+  const pages = totalPages();
+  if (currentPage >= pages) currentPage = pages - 1;
+  if (currentPage < 0) currentPage = 0;
+  const start = currentPage * BG_PROMPTS_PER_PAGE;
+  const pageThemes = themes.slice(start, start + BG_PROMPTS_PER_PAGE);
+  for (const theme of pageThemes) {
     list.appendChild(buildBgCard(theme));
   }
+  renderPager(pages, themes.length);
+  renderHiddenBar();
 }
 
-function buildBgCard(theme) {
+function renderPager(pages, total) {
+  const pager = document.getElementById('bg-pager');
+  pager.innerHTML = '';
+  if (pages <= 1 && total <= BG_PROMPTS_PER_PAGE) return; // no nav needed
+
+  const prev = document.createElement('button');
+  prev.textContent = '← Prev';
+  prev.disabled = currentPage === 0;
+  prev.addEventListener('click', () => { currentPage--; persistPage(); renderBackgrounds(); });
+  pager.appendChild(prev);
+
+  const meta = document.createElement('span');
+  meta.className = 'page-meta';
+  const start = currentPage * BG_PROMPTS_PER_PAGE + 1;
+  const end = Math.min((currentPage + 1) * BG_PROMPTS_PER_PAGE, total);
+  meta.textContent = `${start}–${end} of ${total}  ·  page ${currentPage + 1} / ${pages}`;
+  pager.appendChild(meta);
+
+  const next = document.createElement('button');
+  next.textContent = 'Next →';
+  next.disabled = currentPage >= pages - 1;
+  next.addEventListener('click', () => { currentPage++; persistPage(); renderBackgrounds(); });
+  pager.appendChild(next);
+}
+
+function persistPage() {
+  try { localStorage.setItem(PAGE_STORAGE_KEY, String(currentPage)); } catch {}
+}
+
+function renderHiddenBar() {
+  const bar = document.getElementById('hidden-bar');
+  const count = hiddenTitles.size;
+  document.getElementById('hidden-count').textContent = String(count);
+  bar.classList.toggle('empty', count === 0);
+}
+
+function hideTheme(title) {
+  hiddenTitles.add(title);
+  saveHidden(hiddenTitles);
+  renderBackgrounds();
+  toast(`hidden — ${hiddenTitles.size} total`);
+}
+
+function showAllAgain() {
+  if (hiddenTitles.size === 0) return;
+  hiddenTitles.clear();
+  saveHidden(hiddenTitles);
+  renderBackgrounds();
+  toast('all themes restored');
+}
+
+function buildBgCard(theme, { custom = false } = {}) {
   const card = document.createElement('div');
   card.className = 'bg-card';
 
   const title = document.createElement('h3');
   title.className = 'title';
-  title.textContent = theme.title;
+  title.textContent = custom ? `${theme.title}  ·  custom` : theme.title;
   card.appendChild(title);
 
   const fullPrompt = bgPromptFromTheme(theme);
 
   const body = document.createElement('div');
   body.className = 'body';
-  // Render **bold** segments as <b> while preserving newlines via white-space.
   body.innerHTML = fullPrompt
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
@@ -977,6 +891,24 @@ function buildBgCard(theme) {
   hint.className = 'copy-hint';
   hint.textContent = 'tap to copy';
   card.appendChild(hint);
+
+  // Hide-toggle — preserved in localStorage. Custom (session) cards just
+  // get a × to drop them from this session.
+  const hideBtn = document.createElement('button');
+  hideBtn.className = 'hide-btn';
+  hideBtn.textContent = custom ? '× drop' : '✓ done';
+  hideBtn.title = custom ? 'remove from this session' : 'hide — preserved, restore via "Show all again"';
+  hideBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (custom) {
+      const idx = customCards.indexOf(card);
+      if (idx >= 0) customCards.splice(idx, 1);
+      renderBackgrounds();
+    } else {
+      hideTheme(theme.title);
+    }
+  });
+  card.appendChild(hideBtn);
 
   card.addEventListener('click', () => copy(fullPrompt, card, 'background prompt copied'));
   return card;
@@ -1036,8 +968,8 @@ function toast(msg) {
   toast._t = setTimeout(() => el.classList.remove('show'), 1500);
 }
 
-document.getElementById('regen-bg').addEventListener('click', renderBackgrounds);
 document.getElementById('regen-music').addEventListener('click', renderMusic);
+document.getElementById('show-all').addEventListener('click', showAllAgain);
 
 // ─── Custom theme form ──────────────────────────────────────────────────
 // Tim types an idea + supporting details, the generator wraps them in
@@ -1066,10 +998,11 @@ function readCustomTheme() {
 
 function generateCustomTheme() {
   const theme = readCustomTheme();
-  const list = document.getElementById('bg-list');
-  const card = buildBgCard(theme);
-  // Prepend so the custom theme is the first card the user sees.
-  list.prepend(card);
+  const card = buildBgCard(theme, { custom: true });
+  // Pin to the in-memory custom list so it survives page changes within
+  // this session. Newest first.
+  customCards.unshift(card);
+  renderBackgrounds();
   card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   toast('custom prompt generated — tap to copy');
 }
