@@ -140,9 +140,10 @@ export class CommentComposeModal {
     const taContainerH = 56;
     const taContainerW = panelW - 32;
     const taContainerX = panelX + 16;
-    this.scene.add
+    const taBoxRect = this.scene.add
       .rectangle(taContainerX + taContainerW / 2, taContainerY + taContainerH / 2, taContainerW, taContainerH, 0x2c1856, 1)
       .setStrokeStyle(1, 0xc0a0e6, 0.45);
+    this.container.add(taBoxRect);
     const freeTextLabel = this.scene.add
       .text(taContainerX + 8, taContainerY + 6, 'SAY SOMETHING (optional)', {
         fontFamily: 'Pixeloid Sans, sans-serif',
