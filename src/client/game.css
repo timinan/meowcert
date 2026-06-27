@@ -32,3 +32,12 @@ body {
   width: 100%;
   height: 100%;
 }
+
+/* Tell the browser NOT to bilinear-smooth when CSS-stretching the canvas
+   from design pixels (320x580) up to device pixels. The Phaser-rendered
+   content keeps whatever filter it was drawn with (cats: NEAREST from
+   the Preloader setFilter, everything else: default LINEAR). Without
+   this, retina screens re-soften every pixel inside the canvas. */
+#game-container canvas {
+  image-rendering: pixelated;
+}
