@@ -246,14 +246,15 @@ export class CommentComposeModal {
     // closure has something to point at without branching everywhere.
     const previewText = { setText: (_: string): void => {} };
 
-    // Layout order: Input → POST/SKIP (immediately under) → gift chip.
-    // POST/SKIP are the primary action and must stay above the iOS
-    // keyboard fold; the gift chip (a secondary opt-in) can sit
-    // further down where the keyboard would cover it.
-    const btnRowY = taContainerY + taContainerH + 32;       // POST + SKIP center
-    const giftToggleY = btnRowY + 22 + 16;                   // gift chip top
-    // (was: giftToggleY = taContainerY + taContainerH + 14 — kept above
-    //  shape for the gift chip + sub-panel layout below).
+    // Layout order: Input → gift chip → POST/SKIP → gift sub-panel.
+    // Tim's preferred layout: "post should be below giving gifts."
+    // Gift chip is always visible right under the input. POST/SKIP
+    // sit BELOW the chip so the user reads them as the bottom-row
+    // commit action. Gift sub-panel renders BELOW the buttons when
+    // expanded — overflows panel slightly in that case but it's an
+    // opt-in expanded state and most users won't open it.
+    const giftToggleY = taContainerY + taContainerH + 14;   // gift chip top
+    const btnRowY = giftToggleY + 28 + 18;                  // POST + SKIP center (below chip)
     const giftChip = this.scene.add
       .rectangle(panelX + 16 + 70, giftToggleY + 14, 140, 28, 0x2c1856, 1)
       .setStrokeStyle(1, 0xc0a0e6, 0.55)
