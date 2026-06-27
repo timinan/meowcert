@@ -77,6 +77,15 @@ export class VisitPost extends Scene {
    *  chart fetch lands, stopped on cleanup. */
   private music: MusicSystem | null = null;
 
+  /** Solid dark scrim that covers the default 'stage' bg until
+   *  loadVisit() lands the per-post stage snapshot. Without this, the
+   *  splash paints 'stage' first and then visibly swaps to the post's
+   *  real bg when the fetch resolves — Tim's flicker complaint:
+   *  "background loaded another bg and then switch to the proper one."
+   *  Sits at depth -90 (above bg at -100, below HUD/cats). Destroyed
+   *  in loadVisit() once the real bg is in place. */
+  private loadingScrim: GameObjects.Rectangle | null = null;
+
   constructor() {
     super(SceneKeys.VisitPost);
   }
@@ -101,6 +110,13 @@ export class VisitPost extends Scene {
     // Start with a default background; swap in owner's choice when the
     // visit fetch lands. Splash never goes blank.
     this.bg.setBackground('stage');
+    // Loading scrim — solid dark fill covering the default 'stage' bg
+    // until loadVisit() resolves with the real one. Destroyed there.
+    const { width, height } = this.scale;
+    this.loadingScrim = this.add
+      .rectangle(0, 0, width, height, 0x0b041a, 1)
+      .setOrigin(0, 0)
+      .setDepth(-90);
 
     this.buildHud();
     this.buildInfoPanel();
@@ -143,6 +159,10 @@ export class VisitPost extends Scene {
     this.visit = data;
     // Update bg + seat cats once we know the owner's stage config.
     this.bg.setBackground(data.stage.activeBackground);
+    // Real bg is now painted — tear down the loading scrim so the
+    // post's stage is visible.
+    this.loadingScrim?.destroy();
+    this.loadingScrim = null;
     this.seatOwnerCats();
     // Refresh author label.
     this.authorText.setText(`Created by u/${data.ownerUsername}`);
