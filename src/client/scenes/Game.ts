@@ -3114,25 +3114,32 @@ export class Game extends Scene {
       this.cats[laneId]?.playMeow(Balance.catReactionMs);
       this.cats[laneId]?.pulseEffectHit();
       this.flashLaneEffect(laneId);
+      // Engagement tint reflects the GRADE of the engaging tap — perfect
+      // gets the cyan flash, great gets the mint. Previously always used
+      // Balance.holdActiveTint (mint) regardless of grade — Tim: "the
+      // tails for both the side and holds are not picking up the color
+      // if the tap is perfect it always uses the great color." Mirrors
+      // the same perfect/great palette flashTarget + showHitFeedback use.
+      const engagedTint = grade === 'perfect' ? 0x4dffff : 0x4dffb4;
       if (note!.isHold) {
         // Hold engaged. Don't consume — tickHolds + releaseHoldIfAny
         // own the lifecycle from here. Per-step bonus accumulates while
         // the player keeps the lane pressed. holdLastEffectMs seeds the
         // recurring lane-effect cadence (see tickHolds). Tail color
-        // flips to the mint "success" tint so the column visibly
-        // signals "you're doing it right, keep holding".
+        // flips to the perfect/great tint so the column visibly signals
+        // both "you're doing it right" + the engaging tap's grade.
         note!.holdActive = true;
         note!.holdLastEffectMs = this.time.now - this.startTimeMs;
-        note!.setHoldTint(Balance.holdActiveTint);
+        note!.setHoldTint(engagedTint);
       } else if (note!.isSlide && pointer) {
         // Slide engaged. Lock to this pointer id; scene-level pointermove
         // tracks the head's local x until pointerup decides success/miss.
-        // Tube tint flips to the same mint "great" color a tap hit
-        // flashes so the player gets immediate "you caught it" feedback.
+        // Tube tint flips to the engage-grade color (perfect cyan / great
+        // mint) for immediate "you caught it" feedback at the right tier.
         note!.slideActive = true;
         note!.slidePointerId = pointer.id;
         note!.slideEngageMs = this.time.now;
-        note!.setSlideEngagedTint(Balance.holdActiveTint);
+        note!.setSlideEngagedTint(engagedTint);
       } else {
         note!.consumed = true;
         note!.recycle();
