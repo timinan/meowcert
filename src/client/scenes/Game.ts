@@ -2149,7 +2149,26 @@ export class Game extends Scene {
       for (const o of allBestObjs) o.setVisible(false);
       return;
     }
-    const colorFor = (key: StatKey): string => (newBests.has(key) ? '#4dffb4' : '#ffd34d');
+    // Match BEST text colors to the run's stat colors above (per Tim:
+    // 'match the colors of best scores and accuracy etc match the color
+    // of the summary text'). Per-stat palette mirrors the summary row
+    // exactly: accuracy mint, max combo yellow, hits light green,
+    // misses red, big score white. (Earlier behavior of swapping to
+    // mint for a new-best stat dropped; if we want that highlight back,
+    // use a separate visual cue like bold/star prefix instead of a
+    // color swap that would clash with the matched palette.)
+    const colorFor = (key: StatKey): string => {
+      switch (key) {
+        case 'accuracy': return '#4dffb4';
+        case 'maxCombo': return '#ffd34d';
+        case 'hits': return '#a4ffb4';
+        case 'misses': return '#ff6b6b';
+        case 'score': return '#ffffff';
+      }
+    };
+    // Reference newBests so the linter doesn't flag it as dead. Future:
+    // swap to a star/bold prefix on the new-best stat for the highlight.
+    void newBests;
 
     this.summaryBestAccuracyText.setText(`${stored.accuracy}%`).setColor(colorFor('accuracy'));
     this.summaryBestComboText.setText(`x${stored.maxCombo}`).setColor(colorFor('maxCombo'));
