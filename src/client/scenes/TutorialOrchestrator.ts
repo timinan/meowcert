@@ -188,7 +188,7 @@ export class TutorialOrchestrator extends Scene {
             label: entry.displayName,
           };
         }),
-        centerY: 460,
+        centerY: 420,
         allowReselect: true,
         onPick: (stageId) => {
           this.applyLiveStageBg(stageId as BackgroundId);
@@ -217,7 +217,7 @@ export class TutorialOrchestrator extends Scene {
             label: entry?.name ?? breed,
           };
         }),
-        centerY: 460,
+        centerY: 420,
         allowReselect: true,
         onPick: (breed) => {
           this.applyLiveCat(breed as CatBreed);
@@ -276,7 +276,7 @@ export class TutorialOrchestrator extends Scene {
     this.confirmButton?.destroy(true);
     if (!this.pendingPickerSelection) return;
     const { width, height } = this.scale;
-    const btnY = height - 60;
+    const btnY = height - 40;
     const btnW = 220;
     const btnH = 52;
     const container = this.add.container(0, 0);
@@ -644,19 +644,19 @@ export class TutorialOrchestrator extends Scene {
   }
 
   /** Render the picked cat in the middle of the canvas, ABOVE the
-   *  picker cards. y=350 (bottom-anchored origin) so the cat occupies
-   *  ~235-350 at 2.0× scale, sitting between Butters' bubble (top zone
-   *  ends ~210) and the picker (cards centered at y=460 = 396-524). */
+   *  picker cards. Per Tim's drawn-overlay feedback: preview moved up
+   *  and scale reduced so it fits between Butters' feet (y≈220) and
+   *  the picker cards (centerY 420 → top ≈ 361). */
   private applyLiveCat(breed: CatBreed): void {
     this.seatedCatBreed = breed;
     this.seatedCat?.destroy();
     const { width } = this.scale;
     const x = width / 2;
-    const y = 350;
+    const y = 325; // bottom-anchored — sprite fills ~229–325 at scale 1.5
     this.seatedCat = this.add
       .sprite(x, y, AssetKeys.Atlas.Cats, `${breed}_idle_00`)
       .setOrigin(0.5, 1)
-      .setScale(2.0)
+      .setScale(1.5)
       .setDepth(-100);
   }
 
