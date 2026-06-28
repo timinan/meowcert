@@ -64,6 +64,16 @@
   justify-content: center;
   position: relative;
   overflow: hidden;
+  /* Fade the bottom 18% of the captured image to transparent so it
+     blends into the .splash-bg layer below without a hard seam. The
+     captured image and .splash-bg show the same bg PNG but cropped
+     differently (Phaser camera vs CSS cover/center), so they don't
+     align pixel-perfect at the bottom edge — without this fade Tim's
+     screenshot showed an obvious horizontal "cut" line where the two
+     crops met. mask-image renders this at the DOM level so it works
+     even though the captured JPEG has no alpha channel of its own. */
+  -webkit-mask-image: linear-gradient(to bottom, black 82%, transparent);
+  mask-image: linear-gradient(to bottom, black 82%, transparent);
 }
 .marquee-fallback {
   font-size: 28px;
