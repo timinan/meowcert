@@ -722,15 +722,18 @@ export class Game extends Scene {
     container.add(divider);
 
     // Final score label + value — pushed below the gate text (which now
-    // sits at cy-104 right under the title).
-    const scoreLabel = this.add.text(cx, cy - 80, 'FINAL SCORE', {
+    // sits at cy-104 right under the title). Extra 10px breathing room
+    // between the gate text bottom (2-line max) and the FINAL SCORE
+    // label so the bottom of "Better luck next time…" doesn't kiss the
+    // top of "FINAL SCORE".
+    const scoreLabel = this.add.text(cx, cy - 70, 'FINAL SCORE', {
       ...fontBase,
       fontSize: '10px',
       color: '#c0a0e6',
     }).setOrigin(0.5, 0);
     container.add(scoreLabel);
 
-    this.summaryScoreText = this.add.text(cx, cy - 66, '0', {
+    this.summaryScoreText = this.add.text(cx, cy - 56, '0', {
       ...fontBase,
       fontStyle: 'bold',
       fontSize: '32px',
@@ -743,7 +746,7 @@ export class Game extends Scene {
     // just inferring it from the percentage. statsY drives bestDividerY
     // / bestRowY / bestScoreBig position via the chain below — tweak
     // statsY alone to re-balance the BEST section spacing.
-    const statsY = cy - 22;
+    const statsY = cy - 14;
     const statLabels = ['ACCURACY', 'MAX COMBO', 'HITS', 'MISSES'];
     const margin = 8;
     const slotW = (panelW - margin * 2) / 4;
@@ -907,7 +910,7 @@ export class Game extends Scene {
     ]);
 
     this.summaryBestScoreBig = this.add
-      .text(cx, bestRowY + 18, '', {
+      .text(cx, bestRowY + 12, '', {
         ...fontBase,
         fontStyle: 'bold',
         fontSize: '17px',
@@ -2166,17 +2169,17 @@ export class Game extends Scene {
         case 'score': return '#ffffff';
       }
     };
-    // Prefix the value with ★ on stats this run just set a new best for.
-    // Replaces the old mint-color highlight (which would clash with the
-    // per-stat palette match we now do). Score also gets the star when
-    // the run beat the stored best score.
-    const star = (key: StatKey, v: string): string => newBests.has(key) ? `★ ${v}` : v;
+    // newBests intentionally unused here — the "new high score" cue
+    // moved to a single line on the success gate text (see showSummary).
+    // Keeping the per-cell highlight off avoids clashing with the
+    // per-stat palette match.
+    void newBests;
 
-    this.summaryBestAccuracyText.setText(star('accuracy', `${stored.accuracy}%`)).setColor(colorFor('accuracy'));
-    this.summaryBestComboText.setText(star('maxCombo', `x${stored.maxCombo}`)).setColor(colorFor('maxCombo'));
-    this.summaryBestHitsText.setText(star('hits', String(stored.hits))).setColor(colorFor('hits'));
-    this.summaryBestMissesText.setText(star('misses', String(stored.misses))).setColor(colorFor('misses'));
-    this.summaryBestScoreBig.setText(star('score', stored.score.toLocaleString())).setColor(colorFor('score'));
+    this.summaryBestAccuracyText.setText(`${stored.accuracy}%`).setColor(colorFor('accuracy'));
+    this.summaryBestComboText.setText(`x${stored.maxCombo}`).setColor(colorFor('maxCombo'));
+    this.summaryBestHitsText.setText(String(stored.hits)).setColor(colorFor('hits'));
+    this.summaryBestMissesText.setText(String(stored.misses)).setColor(colorFor('misses'));
+    this.summaryBestScoreBig.setText(stored.score.toLocaleString()).setColor(colorFor('score'));
 
     for (const o of allBestObjs) o.setVisible(true);
   }
