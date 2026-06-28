@@ -183,6 +183,7 @@
 
     <div class="btn-row">
       <button class="btn btn-secondary" id="reset-btn">Reset shift + scale</button>
+      <button class="btn btn-secondary" id="save-thumb-btn" title="Regenerate the small picker thumbnail (200x360 PNG)">💾 Save Thumb</button>
       <button class="btn btn-danger" id="delete-btn">Delete</button>
     </div>
 
@@ -494,6 +495,25 @@ document.getElementById('reset-btn').addEventListener('click', () => {
   themes[activeSlug].bgScale = 1;
   setActive(activeSlug);
   scheduleSave();
+});
+
+document.getElementById('save-thumb-btn').addEventListener('click', async () => {
+  if (!activeSlug) return;
+  const btn = document.getElementById('save-thumb-btn');
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ Saving…';
+  try {
+    const r = await fetch('/save-thumb/' + activeSlug, { method: 'POST' });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'save-thumb failed');
+    setStatus('ok', 'thumb saved → ' + j.path + ' (' + j.bytes + 'B)');
+  } catch (e) {
+    setStatus('err', 'thumb save failed: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
 });
 
 document.getElementById('delete-btn').addEventListener('click', () => {

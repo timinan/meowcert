@@ -820,6 +820,46 @@ async function handleDescribeBg(req, res) {
   });
 }
 
+/**
+ * Regenerate a single theme's picker thumbnail from the on-disk bg PNG.
+ * Same shape as the tools/gen-thumbs.mjs backfill — 200x360 cover-fit,
+ * 128-color palette, max-effort compression. Idempotent: overwrites any
+ * existing thumb so the calibrator user can re-save after replacing a
+ * bg image.
+ */
+async function handleSaveThumb(res, slug) {
+  if (!/^[a-z0-9][a-z0-9_-]{0,60}$/.test(slug)) {
+    res.writeHead(400, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ ok: false, error: `bad slug: ${slug}` }));
+    return;
+  }
+  try {
+    const src = path.join(BG_UPLOAD_DIR, `${slug}-bg.png`);
+    try {
+      await fs.access(src);
+    } catch {
+      res.writeHead(404, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: `bg not found: ${slug}-bg.png` }));
+      return;
+    }
+    const thumbsDir = path.join(BG_UPLOAD_DIR, 'thumbs');
+    await fs.mkdir(thumbsDir, { recursive: true });
+    const dst = path.join(thumbsDir, `${slug}-thumb.png`);
+    await sharp(src)
+      .resize(200, 360, { fit: 'cover', position: 'centre' })
+      .png({ palette: true, colours: 128, quality: 80, compressionLevel: 9, effort: 10 })
+      .toFile(dst);
+    const stat = await fs.stat(dst);
+    const rel = path.relative(PROJECT_ROOT, dst);
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, path: rel, bytes: stat.size }));
+    console.log(`[save-thumb:${slug}] wrote ${stat.size}B → ${rel}`);
+  } catch (e) {
+    res.writeHead(500, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ ok: false, error: e.message }));
+  }
+}
+
 async function handleBgUpload(req, res, slug) {
   if (!/^[a-z][a-z0-9_-]{0,30}$/.test(slug)) {
     res.writeHead(400, { 'content-type': 'application/json' });
@@ -1096,6 +1136,17 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && req.url?.startsWith('/upload-bg/')) {
       const slug = req.url.replace(/^\/upload-bg\//, '').split('?')[0];
       await handleBgUpload(req, res, slug);
+      return;
+    }
+
+    // --- POST /save-thumb/<slug> --------------------------------------
+    // Regenerate the picker thumbnail for a single theme. Reads the
+    // current bg PNG from disk, runs the same sharp resize the
+    // tools/gen-thumbs.mjs backfill script uses, writes to
+    // public/assets/themes/thumbs/<slug>-thumb.png. No body required.
+    if (req.method === 'POST' && req.url?.startsWith('/save-thumb/')) {
+      const slug = req.url.replace(/^\/save-thumb\//, '').split('?')[0];
+      await handleSaveThumb(res, slug);
       return;
     }
 
