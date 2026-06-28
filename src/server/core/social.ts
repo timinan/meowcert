@@ -66,6 +66,16 @@ const PLAYS_KEY = (postId: string): string => `meowcert:plays:${postId}`;
 // Posts that pre-date this storage (or where the pin failed) have no
 // entry; the /play handler skips the auto-reply in that case.
 const PINNED_COMMENT_KEY = (postId: string): string => `meowcert:post-pinned-comment:${postId}`;
+// Per-post passing-play counter (INCR on every play where accuracy >=
+// 75%, including owner self-plays — Tim's call to include owner in
+// overall stats). Distinct from PLAYS_KEY (total submissions) and
+// zCard(LB_KEY) (unique passing players).
+const PASSES_KEY = (postId: string): string => `meowcert:passes:${postId}`;
+// First non-owner visitor who passed the post. Set once when the
+// criteria first hits (visitor passed + visitor !== owner + key
+// unset). Owner self-passes don't qualify so the host can't claim
+// the "first pass" badge on their own post.
+const FIRST_PASSER_KEY = (postId: string): string => `meowcert:first-passer:${postId}`;
 
 // -- Leaderboard ------------------------------------------------------
 
@@ -130,6 +140,60 @@ export async function getPinnedCommentId(
 ): Promise<string | null> {
   const id = await redis.get(PINNED_COMMENT_KEY(postId));
   return id ?? null;
+}
+
+/** INCR the passing-play counter. Caller must check pass status —
+ *  this helper just increments unconditionally. Returns new value. */
+export async function incrementPassCount(
+  redis: SocialRedis,
+  postId: string,
+): Promise<number> {
+  return await redis.incrBy(PASSES_KEY(postId), 1);
+}
+
+export async function getPassCount(
+  redis: SocialRedis,
+  postId: string,
+): Promise<number> {
+  const raw = await redis.get(PASSES_KEY(postId));
+  const n = raw != null ? Number(raw) : NaN;
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
+/** Set the first-passer key IF NOT already set. Caller must check
+ *  visitor passed + visitor !== owner before calling — this helper
+ *  just guards against overwriting an existing first-passer. */
+export async function setFirstPasserIfUnset(
+  redis: SocialRedis,
+  postId: string,
+  visitor: string,
+): Promise<void> {
+  const existing = await redis.get(FIRST_PASSER_KEY(postId));
+  if (existing) return;
+  await redis.set(FIRST_PASSER_KEY(postId), visitor);
+}
+
+export async function getFirstPasser(
+  redis: SocialRedis,
+  postId: string,
+): Promise<string | null> {
+  const v = await redis.get(FIRST_PASSER_KEY(postId));
+  return v ?? null;
+}
+
+/** Sum every player's PB score on the leaderboard. Used by the pinned
+ *  mod-comment summary's "combined score" line. Includes owner — Tim's
+ *  call. zRange returns all entries; we just add scores. */
+export async function fetchCombinedScore(
+  redis: SocialRedis,
+  postId: string,
+): Promise<number> {
+  // 0..-1 with by:'rank' returns the full sorted set in Devvit.
+  // We don't care about order here; just want every score for the sum.
+  const rows = await redis.zRange(LB_KEY(postId), 0, -1, { by: 'rank' });
+  let total = 0;
+  for (const { score } of rows) total += score;
+  return total;
 }
 
 /** Fetch the top N entries for a post + the requesting visitor's rank
