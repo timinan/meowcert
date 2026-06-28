@@ -264,9 +264,12 @@ publish.post('/chart', async (c) => {
       const pinnedId = await redis.get(`meowcert:post-pinned-comment:${post.id}`);
       if (pinnedId) {
         const lb = await fetchLeaderboard(redis, post.id, null);
-        const nonOwnerTop = lb.top.find((e) => e.visitor !== username);
-        const topPlayer = nonOwnerTop
-          ? { username: nonOwnerTop.visitor, score: nonOwnerTop.score }
+        // Top INCLUDES owner — creator is default top until a non-owner
+        // beats them. isCreator drives the '(creator)' suffix in the
+        // formatter. Per Tim's call.
+        const topEntry = lb.top[0];
+        const topPlayer = topEntry
+          ? { username: topEntry.visitor, score: topEntry.score, isCreator: topEntry.visitor === username }
           : null;
         const firstPasser = await getFirstPasser(redis, post.id);
         const passCount = await getPassCount(redis, post.id);
@@ -282,6 +285,15 @@ publish.post('/chart', async (c) => {
           combinedScore,
           topPlayer,
           firstPasser,
+        });
+        console.info('[publish] computing pinned summary', {
+          pinnedId,
+          totalPlays: lb.totalPlays,
+          passCount,
+          combinedScore,
+          topPlayer,
+          firstPasser,
+          bodyLen: summaryBody.length,
         });
         const comment = await reddit.getCommentById(pinnedId);
         await comment.edit({ text: summaryBody, runAs: 'APP' });

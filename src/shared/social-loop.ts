@@ -157,11 +157,11 @@ export interface PinnedSummaryStats {
   totalPlays: number;
   passCount: number;
   combinedScore: number;
-  /** Highest-PB non-owner entry — null if no non-owner has played yet
-   *  (test-only window where only the owner has self-played). Excludes
-   *  the owner intentionally so they can't claim "best player" on
-   *  their own post. */
-  topPlayer: { username: string; score: number } | null;
+  /** Highest-PB entry on the leaderboard, INCLUDING the owner. Owner
+   *  is the default top until a non-owner beats them. `isCreator` is
+   *  set true when topPlayer.username === ownerUsername so the
+   *  formatter can render '(creator)' beside their name. */
+  topPlayer: { username: string; score: number; isCreator: boolean } | null;
   /** First non-owner visitor who passed — null until a non-owner
    *  passes. Owner self-passes never qualify. */
   firstPasser: string | null;
@@ -188,7 +188,7 @@ export function formatPinnedSummary(s: PinnedSummaryStats): string {
     ? Math.round((s.passCount / s.totalPlays) * 100)
     : 0;
   const topLine = s.topPlayer
-    ? `🥇 Top player: u/${s.topPlayer.username} — **${s.topPlayer.score.toLocaleString()}**`
+    ? `🥇 Top player: u/${s.topPlayer.username}${s.topPlayer.isCreator ? ' (creator)' : ''} — **${s.topPlayer.score.toLocaleString()}**`
     : '🥇 Top player: —';
   const firstLine = s.firstPasser
     ? `🐱 First pass: u/${s.firstPasser}`

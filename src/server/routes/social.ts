@@ -216,9 +216,12 @@ social.post('/play', async (c) => {
     // failure does not break the play submission.
     try {
       const lbForSummary = await fetchLeaderboard(r, body.postId, null);
-      const nonOwnerTop = lbForSummary.top.find((e) => e.visitor !== body.owner);
-      const topPlayer = nonOwnerTop
-        ? { username: nonOwnerTop.visitor, score: nonOwnerTop.score }
+      // Top player INCLUDES owner — creator is the default top until a
+      // non-owner beats them. isCreator flags ownership so the formatter
+      // appends '(creator)' to their name. Per Tim's call.
+      const topEntry = lbForSummary.top[0];
+      const topPlayer = topEntry
+        ? { username: topEntry.visitor, score: topEntry.score, isCreator: topEntry.visitor === body.owner }
         : null;
       const firstPasser = await getFirstPasser(r, body.postId);
       const passCount = await getPassCount(r, body.postId);
@@ -240,6 +243,15 @@ social.post('/play', async (c) => {
         combinedScore,
         topPlayer,
         firstPasser,
+      });
+      console.info('[social/play] computing pinned summary', {
+        pinnedId,
+        totalPlays: lbForSummary.totalPlays,
+        passCount,
+        combinedScore,
+        topPlayer,
+        firstPasser,
+        bodyLen: summaryBody.length,
       });
       const comment = await reddit.getCommentById(pinnedId);
       await comment.edit({ text: summaryBody, runAs: 'APP' });
