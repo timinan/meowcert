@@ -69,20 +69,37 @@ export class TutorialCatOverlay {
       .setScale(catScale);
     this.container.add(accessorySprite);
 
-    // -- Speech bubble ------------------------------------------------
-    // Borderless white rounded rect with a tail pointing at Butters'
-    // head (per the second round of feedback — Tim asked for the tail
-    // back, attached to Butters specifically).
+    // -- Dialogue text + auto-sized speech bubble ---------------------
+    // Per Tim: bubble must always be the height of the text — no
+    // whitespace under it. Approach: render the text first to measure
+    // its height, then draw the bubble + tail sized to fit.
     const bubbleX = catX + 50;
     const bubbleY = 28;
     const bubbleW = Math.min(width - bubbleX - 12, 230);
-    const bubbleH = 152;
+    const bubblePadding = 16;
     const bubbleRadius = 16;
 
+    const text = this.scene.add
+      .text(bubbleX + bubblePadding, bubbleY + bubblePadding, dialogue, {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontSize: '11px',
+        color: TEXT_COLOR,
+        wordWrap: { width: bubbleW - bubblePadding * 2 },
+        lineSpacing: 2,
+      })
+      .setOrigin(0, 0);
+
+    // Use measured text height + symmetric padding for the bubble's
+    // height. Floor 60 so a one-line beat still has a sensible shape.
+    const bubbleH = Math.max(60, text.height + bubblePadding * 2);
+
+    // Bubble background drawn underneath the text.
     const bubbleGfx = this.scene.add.graphics();
     bubbleGfx.fillStyle(SPEECH_BUBBLE_COLOR, 1);
     bubbleGfx.fillRoundedRect(bubbleX, bubbleY, bubbleW, bubbleH, bubbleRadius);
     this.container.add(bubbleGfx);
+    // Re-add text on top so it renders above the bubble fill.
+    this.container.add(text);
 
     // Tail — filled triangle at bubble's bottom-left area, tip pointing
     // down-left at Butters' head. Same fill as the bubble so the two
@@ -101,18 +118,6 @@ export class TutorialCatOverlay {
       tailTipX, tailTipY,
     );
     this.container.add(tailGfx);
-
-    // -- Dialogue text -----------------------------------------------
-    const text = this.scene.add
-      .text(bubbleX + 16, bubbleY + 16, dialogue, {
-        fontFamily: 'Pixeloid Sans, sans-serif',
-        fontSize: '11px',
-        color: TEXT_COLOR,
-        wordWrap: { width: bubbleW - 32 },
-        lineSpacing: 2,
-      })
-      .setOrigin(0, 0);
-    this.container.add(text);
 
     // -- Continue button ---------------------------------------------
     if (opts.onContinue) {

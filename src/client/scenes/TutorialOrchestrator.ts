@@ -188,7 +188,7 @@ export class TutorialOrchestrator extends Scene {
             label: entry.displayName,
           };
         }),
-        centerY: height * 0.62,
+        centerY: 460,
         allowReselect: true,
         onPick: (stageId) => {
           this.applyLiveStageBg(stageId as BackgroundId);
@@ -217,7 +217,7 @@ export class TutorialOrchestrator extends Scene {
             label: entry?.name ?? breed,
           };
         }),
-        centerY: height * 0.62,
+        centerY: 460,
         allowReselect: true,
         onPick: (breed) => {
           this.applyLiveCat(breed as CatBreed);
@@ -643,17 +643,16 @@ export class TutorialOrchestrator extends Scene {
     this.equippedCosmeticSprites.push(sprite);
   }
 
-  /** Render the picked cat in the middle-center of the canvas, on top
-   *  of the stage bg. Replaces any existing seated cat. */
+  /** Render the picked cat in the middle of the canvas, ABOVE the
+   *  picker cards. y=350 (bottom-anchored origin) so the cat occupies
+   *  ~235-350 at 2.0× scale, sitting between Butters' bubble (top zone
+   *  ends ~210) and the picker (cards centered at y=460 = 396-524). */
   private applyLiveCat(breed: CatBreed): void {
     this.seatedCatBreed = breed;
     this.seatedCat?.destroy();
-    const { width, height } = this.scale;
-    // Position roughly where the player would expect the center-stage
-    // cat — about 60% down from the top so it sits in the lower half
-    // of the canvas, below the tutorial-cat overlay zone.
+    const { width } = this.scale;
     const x = width / 2;
-    const y = height * 0.62;
+    const y = 350;
     this.seatedCat = this.add
       .sprite(x, y, AssetKeys.Atlas.Cats, `${breed}_idle_00`)
       .setOrigin(0.5, 1)
