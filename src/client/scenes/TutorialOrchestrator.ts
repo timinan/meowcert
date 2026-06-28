@@ -1,4 +1,4 @@
-import { Scene, GameObjects } from 'phaser';
+import { Scene } from 'phaser';
 import { SceneKeys } from '@/constants/scenes';
 import {
   nextTutorialStep,
@@ -9,6 +9,7 @@ import {
   setTutorialStep,
   completeOnboarding,
 } from '@/services/state-client';
+import { TutorialCatOverlay } from '@/ui/tutorial-cat';
 import type { PlayerState } from '@/../shared/state';
 
 interface InitData {
@@ -54,6 +55,7 @@ export class TutorialOrchestrator extends Scene {
   /** Index into multi-line dialogue (for `dressing-walkthrough` and
    *  `play-tutorial`). 0 = first line. Reset to 0 on step advance. */
   private dialogueIndex = 0;
+  private overlay: TutorialCatOverlay | undefined;
 
   constructor() {
     super(SceneKeys.TutorialOrchestrator);
@@ -81,66 +83,42 @@ export class TutorialOrchestrator extends Scene {
   private renderStep(): void {
     // Tear down the previous step's children.
     this.children.removeAll(true);
+    this.overlay?.destroy();
+    this.overlay = undefined;
 
     const { width, height } = this.scale;
 
-    // Deep purple backdrop. Tutorial cat overlay arrives in Phase 4.
+    // Deep purple backdrop. The TutorialCatOverlay sits on top.
     this.add.rectangle(0, 0, width, height, 0x261540, 1).setOrigin(0, 0);
 
-    // Step indicator (debug-ish — replaced with the cat sprite in Phase 4).
+    // Step indicator — kept small + dim in the corner during the
+    // skeleton phases. Useful for QA + screenshots. Tomorrow's polish
+    // pass can remove or replace.
     this.add
-      .text(width / 2, 24, `[ tutorial step: ${this.currentStep} ]`, {
+      .text(width - 12, 12, this.currentStep, {
         fontFamily: 'Pixeloid Sans, sans-serif',
-        fontSize: '10px',
-        color: '#c0a0e6',
+        fontSize: '8px',
+        color: '#6f5a91',
       })
-      .setOrigin(0.5, 0);
+      .setOrigin(1, 0);
 
-    // Render the current dialogue line.
     const lines = getTutorialDialogue(this.currentStep);
     const rawLine = lines[Math.min(this.dialogueIndex, lines.length - 1)] ?? '';
     const line = personalize(rawLine, this.posterUsername);
-    this.add
-      .text(width / 2, height * 0.4, line, {
-        fontFamily: 'Pixeloid Sans, sans-serif',
-        fontSize: '14px',
-        color: '#ffffff',
-        align: 'center',
-        wordWrap: { width: width - 48 },
-      })
-      .setOrigin(0.5);
-
-    this.renderContinueButton();
-  }
-
-  private renderContinueButton(): void {
-    const { width, height } = this.scale;
-    const btnY = height * 0.78;
-
-    const lines = getTutorialDialogue(this.currentStep);
     const hasMoreDialogue = this.dialogueIndex < lines.length - 1;
-    const label = hasMoreDialogue ? 'Next →' : 'Continue →';
+    const continueLabel = hasMoreDialogue ? 'Next →' : 'Continue →';
 
-    const bg = this.add
-      .rectangle(width / 2, btnY, 220, 56, 0xffd34d, 1)
-      .setInteractive({ useHandCursor: true });
-    bg.setStrokeStyle(2, 0x1a0a2e, 1);
-    this.add
-      .text(width / 2, btnY, label, {
-        fontFamily: 'Pixeloid Sans, sans-serif',
-        fontStyle: 'bold',
-        fontSize: '18px',
-        color: '#1a0a2e',
-      })
-      .setOrigin(0.5);
-
-    bg.on('pointerdown', () => {
-      if (hasMoreDialogue) {
-        this.dialogueIndex += 1;
-        this.renderStep();
-      } else {
-        void this.advance();
-      }
+    this.overlay = new TutorialCatOverlay(this);
+    this.overlay.show(line, {
+      continueLabel,
+      onContinue: () => {
+        if (hasMoreDialogue) {
+          this.dialogueIndex += 1;
+          this.renderStep();
+        } else {
+          void this.advance();
+        }
+      },
     });
   }
 
