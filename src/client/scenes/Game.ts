@@ -2062,8 +2062,14 @@ export class Game extends Scene {
     if (passed) {
       this.summaryTitleText.setText('SHOW COMPLETE!');
       this.summaryTitleText.setColor('#ffd34d');
+      // Always set a gate text on win so the panel doesn't have an
+      // empty stripe below the BEST score row (mirrors the fail case
+      // which always shows a message). testMode = author rehearsal;
+      // visitor = player on someone's post. Different framings.
       this.summaryGateText.setText(
-        this.testMode ? 'Nice — your show is ready to post.' : '',
+        this.testMode
+          ? 'Nice — your show is ready to post.'
+          : 'Great show! Tap Done to wrap up.',
       );
       this.summaryGateText.setColor('#a4ffb4');
       this.summaryRightBg.setVisible(true);
