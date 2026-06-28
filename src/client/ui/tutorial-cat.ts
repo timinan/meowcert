@@ -17,7 +17,8 @@ import { AssetKeys } from '@/constants/assets';
  * pick — present in the cats atlas as `cat6_idle_00`.
  */
 
-const HOST_BREED_FRAME = 'cat6_idle_00';
+const HOST_BREED_FRAME = 'cat13_idle_00';
+const HOST_ACCESSORY_FRAME = 'cosmetic_c2_idle_00'; // Grey Glasses
 const SPEECH_BUBBLE_COLOR = 0xfff8e7;
 const TEXT_COLOR = '#1a0a2e';
 const CONTINUE_FILL = 0xffd34d;
@@ -61,6 +62,16 @@ export class TutorialCatOverlay {
       .setOrigin(0.5, 1)
       .setScale(catScale);
     this.container.add(catSprite);
+
+    // Grey glasses accessory — Butters' tutorial-host signature. Stacked
+    // sprite at the same anchor so it rides the cat's bottom-center
+    // origin. Cosmetics atlas + cat atlas use matching 91 × 64 frames
+    // so the accessory aligns out of the box.
+    const accessorySprite = this.scene.add
+      .sprite(catX, catY, AssetKeys.Atlas.Cosmetics, HOST_ACCESSORY_FRAME)
+      .setOrigin(0.5, 1)
+      .setScale(catScale);
+    this.container.add(accessorySprite);
 
     // -- Speech bubble ------------------------------------------------
     // Borderless white rounded rect — per Tim's screenshot feedback
