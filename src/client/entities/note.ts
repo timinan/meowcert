@@ -67,6 +67,14 @@ export class Note extends GameObjects.Container {
    *  grade perfect-vs-great based on tap-in timing instead of release
    *  timing (the release happens much later, after the drag completes). */
   slideEngageMs = 0;
+  /** Grade the engaging tap got (perfect vs great) at slide engage time
+   *  — measured by tap POSITION against the fuzzball, same as a tap
+   *  note. completeSlide reads this so the slide inherits the engage
+   *  grade rather than recomputing from release timing. Tim's rule:
+   *  'we will not punish players for where their slide ends as its a
+   *  very difficult move' — as long as they engaged perfect, completing
+   *  the slide preserves perfect. */
+  slideEngageGrade: 'perfect' | 'great' | null = null;
 
   /** Slide-and-return: drag to target and back to source. Adjacent-lane
    *  only. The outbound leg keeps the tube fully visible; the return
@@ -273,6 +281,7 @@ export class Note extends GameObjects.Container {
       this.slidePointerId = -1;
       this.slideTargetLane = -1;
       this.slideEngageMs = 0;
+      this.slideEngageGrade = null;
       this.slideTube.setVisible(false);
       this.slideArrow.setVisible(false);
     }
@@ -317,6 +326,7 @@ export class Note extends GameObjects.Container {
     this.slidePointerId = -1;
     this.slideTargetLane = -1;
     this.slideEngageMs = 0;
+    this.slideEngageGrade = null;
   }
 
   /** Set the head ball's local x within the container. Game calls this
@@ -424,10 +434,15 @@ export class Note extends GameObjects.Container {
   updateHoldVisuals(laneTopY: number, _targetY: number, disappearY: number, jitterPx: number): void {
     // Head + letters: visible only when the container is fully within
     // [laneTopY, disappearY]. Anything above laneTopY = hide the head
-    // so no fuzzball renders in the cat-stage area.
+    // so no fuzzball renders in the cat-stage area. ALSO hide the head
+    // while a hold is engaged — setHoldTint() initially hides the ball
+    // on engage, but the per-frame update was re-setting visibility
+    // from position alone, so the head reappeared on the next frame.
+    // Tim: "the fuzzballs for hold should disappear on tap and only
+    // the tail remains and slowing eaten up as they drop."
     const headPast = this.y > disappearY;
     const headAbove = this.y < laneTopY;
-    const showHead = !headPast && !headAbove;
+    const showHead = !headPast && !headAbove && !this.holdActive;
     this.ball.setVisible(showHead);
     this.letters.setVisible(showHead);
 

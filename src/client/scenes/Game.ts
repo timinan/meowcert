@@ -1935,12 +1935,12 @@ export class Game extends Scene {
     const targetLane: LaneId = n.isSlideReturn
       ? n.laneId
       : ((n.slideTargetLane >= 0 ? n.slideTargetLane : n.laneId) as LaneId);
-    const engageDt = n.slideEngageMs > 0
-      ? Math.abs(n.slideEngageMs - n.hitAtMs)
-      : Balance.perfectWindowMs + 1; // unknown engage → fall back to great
-    const grade: 'perfect' | 'great' = engageDt <= Balance.perfectWindowMs
-      ? 'perfect'
-      : 'great';
+    // Inherit the grade from the engage tap (saved on note.slideEngageGrade
+    // when the player tapped the source fuzzball). Tim's rule: the swipe
+    // landing doesn't change the grade — perfect engage = perfect complete,
+    // great engage = great complete. Falls back to 'great' for the rare
+    // case the engage grade wasn't captured (defensive only).
+    const grade: 'perfect' | 'great' = n.slideEngageGrade ?? 'great';
     this.score.registerHit(grade);
     this.showHitFeedback(targetLane, grade);
     this.flashTarget(targetLane, grade);
@@ -3140,9 +3140,14 @@ export class Game extends Scene {
         // tracks the head's local x until pointerup decides success/miss.
         // Tube tint flips to the engage-grade color (perfect cyan / great
         // mint) for immediate "you caught it" feedback at the right tier.
+        // Stash the engage grade so completeSlide preserves it instead
+        // of recomputing from release timing — Tim: "the slide actions
+        // always results in great after a swipe when they should be
+        // getting the same as the color of the tapped fuzzballs."
         note!.slideActive = true;
         note!.slidePointerId = pointer.id;
         note!.slideEngageMs = this.time.now;
+        note!.slideEngageGrade = grade === 'perfect' ? 'perfect' : 'great';
         note!.setSlideEngagedTint(engagedTint);
       } else {
         note!.consumed = true;
