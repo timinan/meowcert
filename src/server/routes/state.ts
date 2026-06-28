@@ -5,11 +5,14 @@ import { pullBox, applyPullToState } from '../core/box-pull';
 import {
   BACKGROUND_CATALOG,
   BOX_CATALOG,
+  CAT_CATALOG,
+  makeInstanceId,
   type BackgroundId,
   type BoxId,
   type ThemeId,
   type SeatId,
   type CosmeticId,
+  type CatBreed,
 } from '../../shared/state';
 import type { TutorialStepId } from '../../shared/tutorial-types';
 
@@ -168,6 +171,43 @@ state.post('/tutorial-step', async (c) => {
   player.tutorialStep = body.step;
   await save(redis, player);
   return c.json({ state: player });
+});
+
+/** POST /api/tutorial/seed-starter-cat — body: { breed }.
+ *  Tutorial's pick-cat step calls this with the player's choice. Server:
+ *    1. If the player doesn't already own an instance of `breed`, mint
+ *       one (id + default name from catalog) and append to ownedCats.
+ *    2. Seat that instance in seat-center.
+ *    3. Clear any other seats so the lone starter cat is the only one
+ *       on stage (DEV mode's pre-seeded 3 cats get unseated; their
+ *       instances stay in ownedCats so DEV swaps still work — only the
+ *       seatedCats map changes).
+ *  Returns the updated PlayerState. */
+state.post('/tutorial/seed-starter-cat', async (c) => {
+  const { breed } = (await c.req.json()) as { breed: CatBreed };
+  const username = await currentUsername();
+  const player = await loadOrInit(redis, username);
+
+  // 1. Find or create an instance of the picked breed.
+  let instance = player.ownedCats.find((c) => c.breed === breed);
+  if (!instance) {
+    const catalogEntry = CAT_CATALOG.find((e) => e.id === breed);
+    if (!catalogEntry) {
+      return c.json({ ok: false, reason: 'unknown_breed' }, 400);
+    }
+    instance = {
+      id: makeInstanceId(),
+      breed,
+      name: catalogEntry.name,
+    };
+    player.ownedCats.push(instance);
+  }
+
+  // 2. Seat in center; 3. clear the others.
+  player.seatedCats = { 'seat-center': instance.id };
+
+  await save(redis, player);
+  return c.json({ ok: true, state: player });
 });
 
 /** POST /api/house/theme — body: { themeId }. */

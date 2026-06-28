@@ -1,16 +1,28 @@
 import { Scene } from 'phaser';
 import { SceneKeys } from '@/constants/scenes';
+import { AssetKeys } from '@/constants/assets';
 import {
   nextTutorialStep,
+  STARTER_CATS,
+  STARTER_STAGES,
   type TutorialStepId,
 } from '@/../shared/tutorial-types';
 import { getTutorialDialogue, personalize } from '@/../shared/tutorial-script';
 import {
   setTutorialStep,
   completeOnboarding,
+  setBackground,
+  seedStarterCat,
 } from '@/services/state-client';
 import { TutorialCatOverlay } from '@/ui/tutorial-cat';
-import type { PlayerState } from '@/../shared/state';
+import { Picker } from '@/ui/picker';
+import {
+  BACKGROUND_CATALOG,
+  CAT_CATALOG,
+  type BackgroundId,
+  type CatBreed,
+  type PlayerState,
+} from '@/../shared/state';
 
 interface InitData {
   playerState?: PlayerState | null;
@@ -56,6 +68,7 @@ export class TutorialOrchestrator extends Scene {
    *  `play-tutorial`). 0 = first line. Reset to 0 on step advance. */
   private dialogueIndex = 0;
   private overlay: TutorialCatOverlay | undefined;
+  private picker: Picker<string> | undefined;
 
   constructor() {
     super(SceneKeys.TutorialOrchestrator);
@@ -85,6 +98,8 @@ export class TutorialOrchestrator extends Scene {
     this.children.removeAll(true);
     this.overlay?.destroy();
     this.overlay = undefined;
+    this.picker?.destroy();
+    this.picker = undefined;
 
     const { width, height } = this.scale;
 
@@ -106,8 +121,51 @@ export class TutorialOrchestrator extends Scene {
     const rawLine = lines[Math.min(this.dialogueIndex, lines.length - 1)] ?? '';
     const line = personalize(rawLine, this.posterUsername);
     const hasMoreDialogue = this.dialogueIndex < lines.length - 1;
-    const continueLabel = hasMoreDialogue ? 'Next →' : 'Continue →';
 
+    // Steps that show a picker INSTEAD of a Continue button. Dialogue
+    // still renders (the tutorial cat says what's happening), but the
+    // primary interaction is tapping a card.
+    if (this.currentStep === 'pick-stage') {
+      this.overlay = new TutorialCatOverlay(this);
+      this.overlay.show(line, {}); // no Continue — picker drives advance
+      this.picker = new Picker(this, {
+        items: STARTER_STAGES.map((id) => {
+          const entry = BACKGROUND_CATALOG[id as BackgroundId];
+          return {
+            id,
+            imageKey: `${entry.backdropKey}-thumb`,
+            label: entry.displayName,
+          };
+        }),
+        onPick: (stageId) => {
+          void this.handleStagePick(stageId as BackgroundId);
+        },
+      });
+      return;
+    }
+
+    if (this.currentStep === 'pick-cat') {
+      this.overlay = new TutorialCatOverlay(this);
+      this.overlay.show(line, {});
+      this.picker = new Picker(this, {
+        items: STARTER_CATS.map((breed) => {
+          const entry = CAT_CATALOG.find((c) => c.id === breed);
+          return {
+            id: breed,
+            imageKey: AssetKeys.Atlas.Cats,
+            frame: `${breed}_idle_00`,
+            label: entry?.name ?? breed,
+          };
+        }),
+        onPick: (breed) => {
+          void this.handleCatPick(breed as CatBreed);
+        },
+      });
+      return;
+    }
+
+    // Default: dialogue + Continue.
+    const continueLabel = hasMoreDialogue ? 'Next →' : 'Continue →';
     this.overlay = new TutorialCatOverlay(this);
     this.overlay.show(line, {
       continueLabel,
@@ -120,6 +178,26 @@ export class TutorialOrchestrator extends Scene {
         }
       },
     });
+  }
+
+  private async handleStagePick(stageId: BackgroundId): Promise<void> {
+    try {
+      const updated = await setBackground(stageId);
+      this.playerState = updated;
+    } catch (e) {
+      console.warn('[tutorial] setBackground failed (continuing anyway)', e);
+    }
+    await this.advance();
+  }
+
+  private async handleCatPick(breed: CatBreed): Promise<void> {
+    try {
+      const updated = await seedStarterCat(breed);
+      this.playerState = updated;
+    } catch (e) {
+      console.warn('[tutorial] seedStarterCat failed (continuing anyway)', e);
+    }
+    await this.advance();
   }
 
   // -----------------------------------------------------------------------

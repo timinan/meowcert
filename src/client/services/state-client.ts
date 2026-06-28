@@ -95,6 +95,20 @@ export async function setTutorialStep(step: TutorialStepId | null): Promise<Play
   return data.state;
 }
 
+/** Persist the tutorial pick-cat selection: seats the picked breed in
+ *  seat-center (creating the instance if needed) and clears the other
+ *  seats so the lone starter cat is the only one on stage. */
+export async function seedStarterCat(breed: string): Promise<PlayerState> {
+  const r = await fetch('/api/tutorial/seed-starter-cat', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ breed }),
+  });
+  if (!r.ok) throw new Error(`seedStarterCat ${r.status}`);
+  const data = (await r.json()) as { state: PlayerState };
+  return data.state;
+}
+
 export async function setTheme(themeId: ThemeId): Promise<PlayerState> {
   const r = await fetch('/api/house/theme', {
     method: 'POST',
