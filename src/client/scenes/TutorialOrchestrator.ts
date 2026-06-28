@@ -266,7 +266,7 @@ export class TutorialOrchestrator extends Scene {
     // stage (full bg + cat in center seat, other 2 lanes empty). The
     // next step (play-tutorial-intro) renders on top of that view.
     if (this.currentStep === 'rehearsal-intro') {
-      this.renderHamburgerMock();
+      this.renderHamburgerMock('REHEARSE');
       this.overlay = new TutorialCatOverlay(this);
       this.overlay.show(line, {
         continueLabel: 'Continue →',
@@ -275,6 +275,23 @@ export class TutorialOrchestrator extends Scene {
           this.busy = true;
           this.switchToRehearsalStage();
           this.busy = false;
+          void this.advance();
+        },
+      });
+      this.renderSkipLinkIfUnlocked();
+      return;
+    }
+
+    // stage-set-confirm: same hamburger menu pattern as rehearsal-intro
+    // but PUT ON A SHOW highlighted — that's the gateway Butters is
+    // saying you can come back to any time.
+    if (this.currentStep === 'stage-set-confirm') {
+      this.renderHamburgerMock('PUT ON A SHOW');
+      this.overlay = new TutorialCatOverlay(this);
+      this.overlay.show(line, {
+        continueLabel: 'Continue →',
+        onContinue: () => {
+          if (this.busy) return;
           void this.advance();
         },
       });
@@ -706,28 +723,30 @@ export class TutorialOrchestrator extends Scene {
       .setDepth(-100);
   }
 
-  /** Mocked hamburger drawer for the rehearsal-intro step. Renders a
-   *  vertical list of menu items (PUT ON A SHOW / REHEARSE / etc) with
-   *  REHEARSE highlighted in yellow — the visual cue Butters' bubble
-   *  points at. Drawn into stepUI so it tears down on transition.
-   *  This is a STATIC MOCK — not an interactive drawer. The actual
-   *  drawer lives in Decorate scene and is the next-step destination. */
-  private renderHamburgerMock(): void {
-    const { width, height } = this.scale;
+  /** Mocked hamburger drawer + hamburger icon (top-right). Renders a
+   *  vertical list of menu items styled to match the real in-game
+   *  drawer but shrunken for the tutorial overlay. `highlight` picks
+   *  which item gets the yellow border + yellow text. Used by:
+   *  - stage-set-confirm with 'PUT ON A SHOW' (the gateway to changing
+   *    stage / cosmetics / cats later).
+   *  - rehearsal-intro with 'REHEARSE' (the entry point Butters is
+   *    pointing at to head into the rehearsal). */
+  private renderHamburgerMock(highlight: 'PUT ON A SHOW' | 'REHEARSE'): void {
+    const { width } = this.scale;
     // Centered narrow column resembling the real drawer's footprint.
     const drawerW = 200;
-    const drawerH = 280;
+    const drawerH = 260;
     const drawerX = width / 2;
-    const drawerY = height * 0.55;
+    const drawerY = 380;
     const drawerBg = this.add
       .rectangle(drawerX, drawerY, drawerW, drawerH, 0x1a0a2e, 0.95)
       .setStrokeStyle(2, 0xc678ff, 1);
     this.stepUI?.add(drawerBg);
 
-    // Header bar.
-    const headerY = drawerY - drawerH / 2 + 20;
+    // Header bar — matches real drawer style.
+    const headerY = drawerY - drawerH / 2 + 18;
     const header = this.add
-      .text(drawerX, headerY, '☰ MENU', {
+      .text(drawerX, headerY, 'MENU', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
         fontSize: '11px',
@@ -736,31 +755,53 @@ export class TutorialOrchestrator extends Scene {
       .setOrigin(0.5);
     this.stepUI?.add(header);
 
-    // Menu items — REHEARSE highlighted, others dimmed.
-    const items: Array<{ label: string; highlighted: boolean }> = [
-      { label: 'PUT ON A SHOW', highlighted: false },
-      { label: 'REHEARSE', highlighted: true },
-      { label: 'CATCH A SHOW', highlighted: false },
-      { label: 'INBOX', highlighted: false },
-      { label: 'SETTINGS', highlighted: false },
+    // Menu items.
+    const items = [
+      'PUT ON A SHOW',
+      'REHEARSE',
+      'CATCH A SHOW',
+      'INBOX',
+      'SETTINGS',
     ];
-    const itemStartY = drawerY - drawerH / 2 + 56;
-    const itemGap = 42;
-    items.forEach((item, i) => {
+    const itemStartY = drawerY - drawerH / 2 + 50;
+    const itemGap = 40;
+    items.forEach((label, i) => {
       const itemY = itemStartY + i * itemGap;
+      const isHi = label === highlight;
       const cellBg = this.add
-        .rectangle(drawerX, itemY, drawerW - 24, 34, item.highlighted ? 0x4a2c7a : 0x2c1856, 1)
-        .setStrokeStyle(2, item.highlighted ? 0xffd34d : 0xc0a0e6, item.highlighted ? 1 : 0.4);
+        .rectangle(drawerX, itemY, drawerW - 24, 32, isHi ? 0x4a2c7a : 0x2c1856, 1)
+        .setStrokeStyle(2, isHi ? 0xffd34d : 0xc0a0e6, isHi ? 1 : 0.4);
       const cellText = this.add
-        .text(drawerX, itemY, item.label, {
+        .text(drawerX, itemY, label, {
           fontFamily: 'Pixeloid Sans, sans-serif',
           fontStyle: 'bold',
-          fontSize: '11px',
-          color: item.highlighted ? '#ffd34d' : '#c0a0e6',
+          fontSize: '10px',
+          color: isHi ? '#ffd34d' : '#c0a0e6',
         })
         .setOrigin(0.5);
       this.stepUI?.add([cellBg, cellText]);
     });
+
+    // Hamburger icon top-right — visual hint that this menu lives
+    // behind the ☰ button in the real game. Depth above the tutorial-
+    // cat overlay (2000) so it stays visible if Butters' bubble
+    // sneaks under it.
+    const iconX = width - 24;
+    const iconY = 28;
+    const iconBg = this.add
+      .rectangle(iconX, iconY, 32, 32, 0xffd34d, 1)
+      .setStrokeStyle(2, 0x1a0a2e, 1)
+      .setDepth(2500);
+    const iconText = this.add
+      .text(iconX, iconY, '☰', {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontStyle: 'bold',
+        fontSize: '16px',
+        color: '#1a0a2e',
+      })
+      .setOrigin(0.5)
+      .setDepth(2501);
+    this.stepUI?.add([iconBg, iconText]);
   }
 
   /** Transition the orchestrator's live preview from the merch layout
@@ -797,8 +838,8 @@ export class TutorialOrchestrator extends Scene {
    *   cosmetics for him." */
   private switchToMerchLayout(): void {
     if (!this.seatedCat) return;
-    const merchY = 480;
-    const merchScale = 2.4;
+    const merchY = 460;
+    const merchScale = 2.2;
     this.seatedCat.setY(merchY);
     this.seatedCat.setScale(merchScale);
     // Stacked cosmetic sprites ride the same anchor.
