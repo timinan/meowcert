@@ -33,10 +33,8 @@ export const TUTORIAL_DIALOGUE: Record<TutorialStepId, string | string[]> = {
     "let's see what's in the cosmetic box…",
   'box-effect':
     "and now the effect box…",
-  'dressing-walkthrough': [
-    "tap your cat to dress them up.",
-    "tap your new hat to put it on.",
-  ],
+  'stage-set-confirm':
+    "your stage is set! you can always come back here when you've got more merch, hired more bandmembers, or even found cooler places for your gigs — change them up any time.",
   'play-tutorial-intro':
     "your stage is set! let's rehearse for your first show. we'll be pspspsing the cat — they prefer little ps sounds over loud claps.",
   'play-tutorial': [

@@ -20,8 +20,8 @@ describe('nextTutorialStep', () => {
     expect(nextTutorialStep('pick-cat')).toBe('merch-intro');
   });
 
-  it('box-effect → dressing-walkthrough', () => {
-    expect(nextTutorialStep('box-effect')).toBe('dressing-walkthrough');
+  it('box-effect → stage-set-confirm', () => {
+    expect(nextTutorialStep('box-effect')).toBe('stage-set-confirm');
   });
 
   it('route-a-outro → complete', () => {

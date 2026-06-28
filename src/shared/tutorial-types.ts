@@ -21,7 +21,7 @@ export type TutorialStepId =
   | 'merch-intro'
   | 'box-cosmetic'
   | 'box-effect'
-  | 'dressing-walkthrough'
+  | 'stage-set-confirm'
   | 'play-tutorial-intro'
   | 'play-tutorial'
   | 'editor-tour-intro'
@@ -37,7 +37,7 @@ export const TUTORIAL_STEP_ORDER: readonly TutorialStepId[] = [
   'merch-intro',
   'box-cosmetic',
   'box-effect',
-  'dressing-walkthrough',
+  'stage-set-confirm',
   'play-tutorial-intro',
   'play-tutorial',
   'editor-tour-intro',

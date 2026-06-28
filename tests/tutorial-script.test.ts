@@ -27,8 +27,8 @@ describe('TUTORIAL_DIALOGUE', () => {
     expect(getTutorialDialogue('play-tutorial').length).toBe(10);
   });
 
-  it('dressing-walkthrough has the two beats', () => {
-    expect(getTutorialDialogue('dressing-walkthrough').length).toBe(2);
+  it('stage-set-confirm exists (replaces dressing-walkthrough — the orchestrator now handles auto-equip itself)', () => {
+    expect(getTutorialDialogue('stage-set-confirm').length).toBeGreaterThan(0);
   });
 });
 
