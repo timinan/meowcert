@@ -2112,15 +2112,21 @@ export class Game extends Scene {
     this.summary.setVisible(true);
   }
 
-  /** Per-stat personal-best row. Visible in all rehearsal modes (test
-   *  mode + drawer rehearse) as long as the chart has both audioKey +
+  /** Per-stat personal-best row. Visible in stage rehearsal (drawer
+   *  rehearse) + visitor mode as long as the chart has both audioKey +
    *  difficulty — scratch charts have no difficulty so they skip
    *  best-tracking (would be misleading since they're authored ad-hoc).
+   *  Editor rehearsal (testMode) is INTENTIONALLY excluded — the author
+   *  is iterating on a chart and their WIP rehearsal scores would
+   *  pollute the stored bests for that song+difficulty bucket. The
+   *  publish path seeds the leaderboard with the author's rehearsal
+   *  score separately (via /api/publish + /api/social/play), so the
+   *  author's "official" score lands when they actually post the show.
    *  Only passing runs get recorded as bests; failing runs still display
    *  the previously stored row for reference. Returns the set of stats
-   *  that this run set a new best for (empty on fail or first-time
-   *  rows). Caller uses the size to gate the NEW HIGH SCORE line on the
-   *  success gate text. */
+   *  that this run set a new best for (empty on fail, testMode, or
+   *  first-time rows). Caller uses the size to gate the NEW HIGH SCORE
+   *  line on the success gate text. */
   private updateBestScoreLine(passed: boolean): Set<StatKey> {
     const chart = this.playChart;
     const audioKey = chart?.audioKey;
@@ -2134,7 +2140,7 @@ export class Game extends Scene {
       this.summaryBestMissesText,
       this.summaryBestScoreBig,
     ];
-    if (!audioKey || !difficulty) {
+    if (this.testMode || !audioKey || !difficulty) {
       for (const o of allBestObjs) o.setVisible(false);
       return new Set<StatKey>();
     }
