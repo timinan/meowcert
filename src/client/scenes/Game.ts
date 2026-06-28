@@ -2166,15 +2166,17 @@ export class Game extends Scene {
         case 'score': return '#ffffff';
       }
     };
-    // Reference newBests so the linter doesn't flag it as dead. Future:
-    // swap to a star/bold prefix on the new-best stat for the highlight.
-    void newBests;
+    // Prefix the value with ★ on stats this run just set a new best for.
+    // Replaces the old mint-color highlight (which would clash with the
+    // per-stat palette match we now do). Score also gets the star when
+    // the run beat the stored best score.
+    const star = (key: StatKey, v: string): string => newBests.has(key) ? `★ ${v}` : v;
 
-    this.summaryBestAccuracyText.setText(`${stored.accuracy}%`).setColor(colorFor('accuracy'));
-    this.summaryBestComboText.setText(`x${stored.maxCombo}`).setColor(colorFor('maxCombo'));
-    this.summaryBestHitsText.setText(String(stored.hits)).setColor(colorFor('hits'));
-    this.summaryBestMissesText.setText(String(stored.misses)).setColor(colorFor('misses'));
-    this.summaryBestScoreBig.setText(stored.score.toLocaleString()).setColor(colorFor('score'));
+    this.summaryBestAccuracyText.setText(star('accuracy', `${stored.accuracy}%`)).setColor(colorFor('accuracy'));
+    this.summaryBestComboText.setText(star('maxCombo', `x${stored.maxCombo}`)).setColor(colorFor('maxCombo'));
+    this.summaryBestHitsText.setText(star('hits', String(stored.hits))).setColor(colorFor('hits'));
+    this.summaryBestMissesText.setText(star('misses', String(stored.misses))).setColor(colorFor('misses'));
+    this.summaryBestScoreBig.setText(star('score', stored.score.toLocaleString())).setColor(colorFor('score'));
 
     for (const o of allBestObjs) o.setVisible(true);
   }
