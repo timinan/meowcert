@@ -3112,34 +3112,27 @@ export class Game extends Scene {
     // commit to a judgment so spamming the lane costs combo.
     const scaleY = this.scale.height / L.DESIGN_H;
     const targetY = L.HIT_LINE_Y * scaleY;
+    // Single set of windows for every note type — taps, holds, and
+    // slides all share the same perfect (15) and asymmetric great
+    // (60 way in / 30 way out). Previously slides had wider perfect
+    // (37) and exit (60) windows because the gesture is harder than a
+    // tap and players start the drag early; after the HIT_LINE moved up
+    // 30 px (commit ae680c1) the slide windows started feeling too
+    // generous on the way down. Tim's call: tighten the slide engage
+    // criteria to match the others.
     const perfectDistance = 15;
-    // Slides (single, double, slide-and-return) get a much wider perfect
-    // window — the gesture is harder than a single tap and players
-    // naturally start the drag early. Midpoint between perfect (15) and
-    // great (60) = 37, so a slide tap up to 37 px from the target still
-    // grades perfect instead of great. Encourages "start early rather
-    // than late" without giving away free perfects on regular taps.
-    const slidePerfectDistance = 37;
     // Asymmetric great window: more forgiving on the way IN, tighter on
     // the way OUT. Tapping a ball that has already half-cleared the
     // fuzzball is treated harshly — should grade as miss.
     const enterMaxHitDistance = 60;
     const exitMaxHitDistance = 30;
-    // Slides get a wider exit window too — the tap is the START of a
-    // multi-step gesture, so a slightly late tap still has time to drag
-    // through. Symmetric 60 above / 60 below vs taps + holds' 60 / 30.
-    // Pairs with the wider auto-miss line in checkMisses so engagement
-    // and auto-miss windows line up.
-    const slideExitMaxHitDistance = 60;
 
     let grade: 'perfect' | 'great' | 'miss' = 'miss';
     if (note) {
       const dySigned = note.y - targetY;
       const absDy = Math.abs(dySigned);
-      const perfectWin = note.isSlide ? slidePerfectDistance : perfectDistance;
-      const exitWin = note.isSlide ? slideExitMaxHitDistance : exitMaxHitDistance;
-      const greatWindow = dySigned <= 0 ? enterMaxHitDistance : exitWin;
-      if (absDy <= perfectWin) grade = 'perfect';
+      const greatWindow = dySigned <= 0 ? enterMaxHitDistance : exitMaxHitDistance;
+      if (absDy <= perfectDistance) grade = 'perfect';
       else if (absDy <= greatWindow) grade = 'great';
     }
 
@@ -3239,14 +3232,13 @@ export class Game extends Scene {
     // OUT than on the way in. Auto-miss fires once the ball center is
     // ~30 px past the target (more than half the ball outside the fuzz
     // circle), even though the entry-side great window stays at 60 px.
+    // Slides used to have a wider 60-px below-target auto-miss line to
+    // pair with the wider slide engage exit window — both dropped now
+    // that slides use the same engage criteria as taps. Aligning the
+    // two prevents the case where a slide ball is graded MISS by the
+    // tap path while the auto-miss hasn't fired yet (would leave the
+    // note visible after a MISS feedback flash).
     const missY = targetY + 30;
-    // Slides (single, double, slide-and-return) get a wider auto-miss
-    // line — the gesture takes longer than a tap, so the player needs a
-    // little more fall room to engage it before it auto-misses. Same
-    // 60-px below-target threshold for both 1-lane and 2-lane variants
-    // so they feel equally forgiving. Once engaged, slideActive bypasses
-    // the check entirely (see below).
-    const slideMissY = targetY + 60;
     let anyMissed = false;
     for (let i = 0; i < this.notes.length; i++) {
       const n = this.notes[i]!;
@@ -3260,8 +3252,7 @@ export class Game extends Scene {
       // line (off-screen) since the gesture takes longer than a tap.
       // Released slides fall through to the normal miss check.
       if (n.isSlide && n.slideActive) continue;
-      const noteMissY = n.isSlide ? slideMissY : missY;
-      if (n.y > noteMissY) {
+      if (n.y > missY) {
         this.score.registerHit('miss');
         // Same miss-buzz as a tap-but-missed grade so the player feels
         // a consistent "you lost that note" signal whether they tapped
