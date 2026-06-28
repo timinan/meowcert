@@ -250,6 +250,28 @@ export class TutorialOrchestrator extends Scene {
       return;
     }
 
+    // Rehearsal-intro: a mocked hamburger drawer with REHEARSE
+    // highlighted. Butters narrates from above. On Continue the
+    // orchestrator transitions to a Decorate-like "ready to rehearse"
+    // stage (full bg + cat in center seat, other 2 lanes empty). The
+    // next step (play-tutorial-intro) renders on top of that view.
+    if (this.currentStep === 'rehearsal-intro') {
+      this.renderHamburgerMock();
+      this.overlay = new TutorialCatOverlay(this);
+      this.overlay.show(line, {
+        continueLabel: 'Continue →',
+        onContinue: () => {
+          if (this.busy) return;
+          this.busy = true;
+          this.switchToRehearsalStage();
+          this.busy = false;
+          void this.advance();
+        },
+      });
+      this.renderSkipLinkIfUnlocked();
+      return;
+    }
+
     // Default: dialogue + Continue.
     const continueLabel = hasMoreDialogue ? 'Next →' : 'Continue →';
     this.overlay = new TutorialCatOverlay(this);
@@ -668,6 +690,90 @@ export class TutorialOrchestrator extends Scene {
       .setOrigin(0.5, 1)
       .setScale(1.7)
       .setDepth(-100);
+  }
+
+  /** Mocked hamburger drawer for the rehearsal-intro step. Renders a
+   *  vertical list of menu items (PUT ON A SHOW / REHEARSE / etc) with
+   *  REHEARSE highlighted in yellow — the visual cue Butters' bubble
+   *  points at. Drawn into stepUI so it tears down on transition.
+   *  This is a STATIC MOCK — not an interactive drawer. The actual
+   *  drawer lives in Decorate scene and is the next-step destination. */
+  private renderHamburgerMock(): void {
+    const { width, height } = this.scale;
+    // Centered narrow column resembling the real drawer's footprint.
+    const drawerW = 200;
+    const drawerH = 280;
+    const drawerX = width / 2;
+    const drawerY = height * 0.55;
+    const drawerBg = this.add
+      .rectangle(drawerX, drawerY, drawerW, drawerH, 0x1a0a2e, 0.95)
+      .setStrokeStyle(2, 0xc678ff, 1);
+    this.stepUI?.add(drawerBg);
+
+    // Header bar.
+    const headerY = drawerY - drawerH / 2 + 20;
+    const header = this.add
+      .text(drawerX, headerY, '☰ MENU', {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontStyle: 'bold',
+        fontSize: '11px',
+        color: '#c0a0e6',
+      })
+      .setOrigin(0.5);
+    this.stepUI?.add(header);
+
+    // Menu items — REHEARSE highlighted, others dimmed.
+    const items: Array<{ label: string; highlighted: boolean }> = [
+      { label: 'PUT ON A SHOW', highlighted: false },
+      { label: 'REHEARSE', highlighted: true },
+      { label: 'CATCH A SHOW', highlighted: false },
+      { label: 'INBOX', highlighted: false },
+      { label: 'SETTINGS', highlighted: false },
+    ];
+    const itemStartY = drawerY - drawerH / 2 + 56;
+    const itemGap = 42;
+    items.forEach((item, i) => {
+      const itemY = itemStartY + i * itemGap;
+      const cellBg = this.add
+        .rectangle(drawerX, itemY, drawerW - 24, 34, item.highlighted ? 0x4a2c7a : 0x2c1856, 1)
+        .setStrokeStyle(2, item.highlighted ? 0xffd34d : 0xc0a0e6, item.highlighted ? 1 : 0.4);
+      const cellText = this.add
+        .text(drawerX, itemY, item.label, {
+          fontFamily: 'Pixeloid Sans, sans-serif',
+          fontStyle: 'bold',
+          fontSize: '11px',
+          color: item.highlighted ? '#ffd34d' : '#c0a0e6',
+        })
+        .setOrigin(0.5);
+      this.stepUI?.add([cellBg, cellText]);
+    });
+  }
+
+  /** Transition the orchestrator's live preview from the merch layout
+   *  (one big cat lower-center) to the "ready to rehearse" stage — a
+   *  Decorate-style row of 3 seats with the player's cat in the
+   *  middle and the outer 2 empty per Tim's brief: "set the stage how
+   *  it would normally be with the bg and cats in their usual position
+   *  placed in the center for now and other 2 lanes empty." Tears down
+   *  the drawer mock + Butters overlay so play-tutorial-intro renders
+   *  on top of the staged scene. */
+  private switchToRehearsalStage(): void {
+    if (!this.seatedCat) return;
+    // Decorate-style center-seat position. Cat sits roughly where the
+    // real game seats the middle cat (~y=210 design-px-bottom at the
+    // Game scene's 1.4× seated scale).
+    const stageY = 235;
+    const stageScale = 1.4;
+    this.seatedCat.setY(stageY);
+    this.seatedCat.setScale(stageScale);
+    for (const cs of this.equippedCosmeticSprites) {
+      cs.setPosition(this.seatedCat.x, stageY);
+      cs.setScale(stageScale);
+    }
+    // Effect: tear down + leave to re-apply (the player's effect rides
+    // on the cat instance; the actual rehearsal scene re-renders).
+    this.activeEffectHandle?.destroy();
+    this.activeEffectHandle = undefined;
   }
 
   /** Reposition the seated cat (and any stacked cosmetic sprites +

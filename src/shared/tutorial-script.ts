@@ -34,7 +34,9 @@ export const TUTORIAL_DIALOGUE: Record<TutorialStepId, string | string[]> = {
   'box-effect':
     "and now the effect box…",
   'stage-set-confirm':
-    "your stage is set! you can always come back here when you've got more merch, hired more bandmembers, or even found cooler places for your gigs — change them up any time.",
+    "your stage is set! you can always come back here when you've got more merch, hired more bandmembers, or even found cooler venues for your gigs — change them up any time.",
+  'rehearsal-intro':
+    "now let's get to rehearsing. you'll find REHEARSE in here whenever you want to practice. tap it to head to the stage.",
   'play-tutorial-intro':
     "your stage is set! let's rehearse for your first show. we'll be pspspsing the cat — they prefer little ps sounds over loud claps.",
   'play-tutorial': [

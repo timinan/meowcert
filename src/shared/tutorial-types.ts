@@ -22,6 +22,7 @@ export type TutorialStepId =
   | 'box-cosmetic'
   | 'box-effect'
   | 'stage-set-confirm'
+  | 'rehearsal-intro'
   | 'play-tutorial-intro'
   | 'play-tutorial'
   | 'editor-tour-intro'
@@ -38,6 +39,7 @@ export const TUTORIAL_STEP_ORDER: readonly TutorialStepId[] = [
   'box-cosmetic',
   'box-effect',
   'stage-set-confirm',
+  'rehearsal-intro',
   'play-tutorial-intro',
   'play-tutorial',
   'editor-tour-intro',

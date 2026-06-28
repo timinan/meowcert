@@ -39,7 +39,7 @@ describe('nextTutorialStep', () => {
 
 describe('TUTORIAL_STEP_ORDER', () => {
   it('contains exactly 14 steps', () => {
-    expect(TUTORIAL_STEP_ORDER.length).toBe(14);
+    expect(TUTORIAL_STEP_ORDER.length).toBe(15);
   });
 
   it('starts with intro', () => {
