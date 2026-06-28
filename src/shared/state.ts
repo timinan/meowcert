@@ -689,10 +689,13 @@ export function createFreshPlayerState(username: string = ''): PlayerState {
     equippedCosmetics,
     equippedCosmeticTypes,
     bestScore: 0,
-    // Skip the Welcome tutorial — players land straight in Decorate.
-    // (DEV ONLY — flip to `false` + `tutorialStep: null` before shipping
-    // so fresh accounts run the new TutorialOrchestrator flow.)
-    onboardingDone: true,
+    // 2026-06-28 overnight: tutorial in active development — fresh
+    // state lands in TutorialOrchestrator (Preloader checks
+    // !onboardingDone). DEV_RESET_ON_LOAD = true ensures every page
+    // refresh wipes and re-runs. Flip both to `true` / production-
+    // appropriate defaults before shipping per the dev-flag-cleanup
+    // step in the session-state roadmap.
+    onboardingDone: false,
     tutorialStep: null,
     updatedAt: Date.now(),
     house: {
