@@ -22,11 +22,11 @@ import type { TutorialStepId } from './tutorial-types';
 
 export const TUTORIAL_DIALOGUE: Record<TutorialStepId, string | string[]> = {
   'intro':
-    "hey, I'm Butters — I'm here to show you the ropes before you go off on your own. we're putting on a meowcert — a show for people to enjoy — and I'll help you get set up.",
+    "hey, I'm Butters — I'll show you the ropes before you go off on your own. we are here to put on a meowcert for all to enjoy.",
   'pick-stage':
-    "first, let's pick a stage for your show. don't worry — you can earn the others later from a Background Box.",
+    "first, let's pick a venue for your show. don't worry — there will be cooler venues for you to perform at later, but for now pick one of the 3 available.",
   'pick-cat':
-    "now pick your first cat. you'll hire more bandmembers as you earn coins from hosting and attending shows.",
+    "next, pick your first bandmember. you'll be able to hire more bandmembers as you earn rewards from hosting and attending shows.",
   'merch-intro':
     "let's check the merch table — looks like you've got two boxes to open. one for cosmetics (hats, bows, accessories) and one for effects (sparkles, flames, particle flair that makes your cats stand out).",
   'box-cosmetic':

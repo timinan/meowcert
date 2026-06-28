@@ -306,6 +306,13 @@ export class TutorialOrchestrator extends Scene {
           this.pendingPickerSelection = undefined;
           this.confirmButton?.destroy(true);
           this.confirmButton = undefined;
+          // Tear the picker down NOW so it doesn't sit under the
+          // name-choice modal / next step's UI. (stepUI would clear it
+          // on the next renderStep anyway, but during the cat-pick
+          // showNameChoice we don't transition steps — the modal
+          // overlays the existing picker if we don't kill it here.)
+          this.picker?.destroy();
+          this.picker = undefined;
           if (this.currentStep === 'pick-cat') {
             // Cat-pick has the name-or-keep modal as a gate before
             // advancing to merch-intro.
@@ -460,18 +467,21 @@ export class TutorialOrchestrator extends Scene {
     }
     const defaultName = seatedInstance.name;
 
-    // Dim backdrop + panel — gated on the stepUI container so it tears
-    // down with the next step transition.
+    // Dim backdrop + panel — pushed DOWN per Tim's feedback so the
+    // modal sits below Butters' bubble instead of overlapping. Center
+    // the panel at y=410 (down from height/2 = 290) — leaves the top
+    // ~220px free for Butters + bubble.
     const { width, height } = this.scale;
     const dim = this.add.rectangle(0, 0, width, height, 0x000000, 0.5).setOrigin(0, 0).setDepth(2500);
     const panelW = Math.min(280, width - 40);
     const panelH = 200;
+    const panelCy = 410;
     const panel = this.add
-      .rectangle(width / 2, height / 2, panelW, panelH, 0x1a0a2e, 1)
+      .rectangle(width / 2, panelCy, panelW, panelH, 0x1a0a2e, 1)
       .setStrokeStyle(2, 0xc678ff, 1)
       .setDepth(2500);
     const title = this.add
-      .text(width / 2, height / 2 - 70, `Meet ${defaultName}!`, {
+      .text(width / 2, panelCy - 70, `Meet ${defaultName}!`, {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
         fontSize: '14px',
@@ -480,7 +490,7 @@ export class TutorialOrchestrator extends Scene {
       .setOrigin(0.5)
       .setDepth(2501);
     const body = this.add
-      .text(width / 2, height / 2 - 30, `${defaultName} is a fine name — but if\nyou'd like to call them something\nelse, tap Rename.`, {
+      .text(width / 2, panelCy - 30, `${defaultName} is a fine name — but if\nyou'd like to call them something\nelse, tap Rename.`, {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontSize: '10px',
         color: '#c0a0e6',
@@ -490,7 +500,7 @@ export class TutorialOrchestrator extends Scene {
       .setOrigin(0.5)
       .setDepth(2501);
 
-    const btnY = height / 2 + 50;
+    const btnY = panelCy + 50;
     const keepBg = this.add
       .rectangle(width / 2 - 70, btnY, 120, 40, 0xffd34d, 1)
       .setStrokeStyle(2, 0x1a0a2e, 1)
@@ -656,7 +666,7 @@ export class TutorialOrchestrator extends Scene {
     this.seatedCat = this.add
       .sprite(x, y, AssetKeys.Atlas.Cats, `${breed}_idle_00`)
       .setOrigin(0.5, 1)
-      .setScale(1.5)
+      .setScale(1.7)
       .setDepth(-100);
   }
 
