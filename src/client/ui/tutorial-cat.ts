@@ -19,7 +19,6 @@ import { AssetKeys } from '@/constants/assets';
 
 const HOST_BREED_FRAME = 'cat6_idle_00';
 const SPEECH_BUBBLE_COLOR = 0xfff8e7;
-const SPEECH_BUBBLE_STROKE = 0xc678ff;
 const TEXT_COLOR = '#1a0a2e';
 const CONTINUE_FILL = 0xffd34d;
 const CONTINUE_TEXT = '#1a0a2e';
@@ -51,13 +50,12 @@ export class TutorialCatOverlay {
     this.container.setDepth(2000);
 
     // -- Host cat sprite ----------------------------------------------
-    // Anchored top-left of the screen so it shares the top zone with
-    // the speech bubble and stays out of the way of pickers / box-open
-    // animations / Continue button below. Origin bottom-center so we
+    // Top-left, moved down a touch to fill more vertical space and
+    // line up beside the speech bubble. Origin bottom-center so we
     // position by the cat's feet.
-    const catScale = 1.6;
-    const catX = 56;
-    const catY = 28 + 64 * catScale; // top margin 28 + sprite height
+    const catScale = 1.7;
+    const catX = 60;
+    const catY = 56 + 64 * catScale; // top margin + scaled height
     const catSprite = this.scene.add
       .sprite(catX, catY, AssetKeys.Atlas.Cats, HOST_BREED_FRAME)
       .setOrigin(0.5, 1)
@@ -65,74 +63,27 @@ export class TutorialCatOverlay {
     this.container.add(catSprite);
 
     // -- Speech bubble ------------------------------------------------
-    // Rounded white bubble with a thick purple stroke + a chunky tail
-    // pointing at the cat. Per Tim's reference screenshots — wants the
-    // cute pixel-game speech-bubble vibe (rounded corners, hand-drawn
-    // tail).
+    // Borderless white rounded rect — per Tim's screenshot feedback
+    // ("get rid of the border of the text box and the speech arrow
+    // part"). Just the bubble shape + dialogue text. No tail.
     const bubbleX = catX + 36;
-    const bubbleY = 28;
+    const bubbleY = 36;
     const bubbleW = Math.min(width - bubbleX - 16, 240);
-    const bubbleH = 152;
-    const bubbleRadius = 14;
-    const strokeW = 3;
+    const bubbleH = 168;
+    const bubbleRadius = 16;
 
     const bubbleGfx = this.scene.add.graphics();
     bubbleGfx.fillStyle(SPEECH_BUBBLE_COLOR, 1);
     bubbleGfx.fillRoundedRect(bubbleX, bubbleY, bubbleW, bubbleH, bubbleRadius);
-    bubbleGfx.lineStyle(strokeW, SPEECH_BUBBLE_STROKE, 1);
-    bubbleGfx.strokeRoundedRect(bubbleX, bubbleY, bubbleW, bubbleH, bubbleRadius);
     this.container.add(bubbleGfx);
-
-    // Tail — chunky filled triangle pointing down-left toward the cat's
-    // head. Drawn as fillTriangle so it inherits the same fill color +
-    // separately strokeTriangled with the same purple border. Notch
-    // overlap on the bubble bottom is intentional (covers the seam).
-    const tailTipX = catX + 20;
-    const tailTipY = catY - 56; // up around cat's head
-    const tailBaseX = bubbleX + 20;
-    const tailBaseY = bubbleY + bubbleH - 2;
-    const tailWide = 22;
-
-    const tailGfx = this.scene.add.graphics();
-    tailGfx.fillStyle(SPEECH_BUBBLE_COLOR, 1);
-    tailGfx.fillTriangle(
-      tailBaseX, tailBaseY,
-      tailBaseX + tailWide, tailBaseY,
-      tailTipX, tailTipY,
-    );
-    tailGfx.lineStyle(strokeW, SPEECH_BUBBLE_STROKE, 1);
-    // Stroke only the two outer edges of the tail (skip the top — the
-    // bubble bottom already strokes that). Two line segments.
-    tailGfx.beginPath();
-    tailGfx.moveTo(tailBaseX, tailBaseY);
-    tailGfx.lineTo(tailTipX, tailTipY);
-    tailGfx.strokePath();
-    tailGfx.beginPath();
-    tailGfx.moveTo(tailBaseX + tailWide, tailBaseY);
-    tailGfx.lineTo(tailTipX, tailTipY);
-    tailGfx.strokePath();
-    this.container.add(tailGfx);
-
-    // Small cover-rect to hide the bubble's bottom stroke between the
-    // two tail base points (so the bubble + tail read as one continuous
-    // shape rather than a tail OVERLAID on a closed rect).
-    const seamCover = this.scene.add.rectangle(
-      tailBaseX + tailWide / 2,
-      tailBaseY,
-      tailWide - 4,
-      strokeW + 2,
-      SPEECH_BUBBLE_COLOR,
-      1,
-    ).setOrigin(0.5, 0.5);
-    this.container.add(seamCover);
 
     // -- Dialogue text -----------------------------------------------
     const text = this.scene.add
-      .text(bubbleX + 14, bubbleY + 14, dialogue, {
+      .text(bubbleX + 16, bubbleY + 16, dialogue, {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontSize: '11px',
         color: TEXT_COLOR,
-        wordWrap: { width: bubbleW - 28 },
+        wordWrap: { width: bubbleW - 32 },
         lineSpacing: 2,
       })
       .setOrigin(0, 0);
