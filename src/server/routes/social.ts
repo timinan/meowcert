@@ -146,29 +146,12 @@ social.post('/play', async (c) => {
       await pushInboxEvent(r, body.owner, commentEvent);
     }
   }
-  // Reddit comment submission — OUTSIDE the self-play skip so the host
-  // can comment on own posts (testing visibility + future use cases like
-  // host welcomes / host responses). Inbox event above is still self-play
-  // skipped because the owner shouldn't see their own runs as inbox items.
-  if (body.commentBody && body.commentBody.trim().length > 0) {
-    try {
-      // Devvit's submitComment uses `id` (parent thing-id, t3_ or t1_) —
-      // NOT `postId`. The reddit-api.mdx doc example shows `postId` but
-      // it's outdated; every other doc (media-uploads.mdx, interactive-
-      // posts, the API class reference) + the runtime API itself uses
-      // `id`. Sending `postId` made `options.id` undefined on the server
-      // side and surfaced as a `TypeError: "string" must be a string,
-      // received undefined` from inside Devvit's submitComment.
-      await reddit.submitComment({
-        id: body.postId,
-        text: body.commentBody,
-        runAs: 'USER',
-      });
-      console.info('[social/play] reddit.submitComment OK', { postId: body.postId, visitor });
-    } catch (err) {
-      console.error('[social/play] reddit.submitComment failed (continuing)', err);
-    }
-  }
+  // (Old root-level free-text reddit.submitComment removed — Tim's call:
+  // "there should be only 1 new post added under the mod post... right
+  // now there is a bug that if you post a comment it adds two comments
+  // under the mod post." Free-text now lives inside the single
+  // nested-reply comment below, formatted via formatStatsComment with
+  // the player's text appended as a blockquote.)
 
   // Pass-count + first-passer tracking — feeds the pinned-comment
   // summary. Owner plays count toward the pass counter (Tim's call for
@@ -193,11 +176,10 @@ social.post('/play', async (c) => {
   const pinnedId = await getPinnedCommentId(r, body.postId);
   if (pinnedId) {
     try {
-      const lb = await fetchLeaderboard(r, body.postId, visitor);
-      const topIdx = lb.top.findIndex((e) => e.visitor === visitor);
-      const rank = topIdx >= 0 ? topIdx + 1 : lb.yourRank;
-      const totalPlayers = lb.top.length >= 10 ? lb.totalPlays : lb.top.length;
-      const text = formatStatsComment(summary, rank, totalPlayers);
+      // ONE comment per play, posted under the pinned root. Includes
+      // stats + tip/gift line + the visitor's free-text (in blockquote)
+      // if they typed one. Replaces the previous two-comment design.
+      const text = formatStatsComment(summary, body.commentBody ?? '');
       await reddit.submitComment({
         id: pinnedId,
         text,

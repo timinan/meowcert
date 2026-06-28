@@ -118,32 +118,46 @@ export function buildCommentBody(summary: PlaySummary, freeText: string = ''): s
     : stats;
 }
 
-/** Markdown stats block posted as an auto-reply under the post's
- *  bot-pinned root comment on every play. Distinct from
- *  buildCommentBody (which is the free-text + stats body of the
- *  visitor's root-level comment). Format mirrors the Nuzzle convention
- *  Tim referenced — table-style for clean alignment under a stickied
- *  thread, headline emoji + tier badge so it scans fast in a feed. */
+/** ONE comment posted as an auto-reply under the post's bot-pinned
+ *  root on every play. Replaces what was previously two separate
+ *  comments (root-level free-text from the visitor + nested stats
+ *  reply) — Tim's call: "there should be only 1 new post added under
+ *  the mod post... if they do post a comment what their comment
+ *  should look like... stats... tipped x gold or gifted gifts... then
+ *  their comment at the bottom".
+ *
+ *  Layout (compact, score+accuracy only — Tim: "thats it"):
+ *    🏆 **I completed this show!**   (or ❌ **I didn't pass this show**)
+ *    🎯 Score: **X** · ✨ Accuracy: Y%
+ *    🎁 Tipped Z gold   (only if gift in summary)
+ *    > [player's typed text]   (only if freeText)
+ */
 export function formatStatsComment(
   summary: PlaySummary,
-  rank: number | null,
-  totalPlayers: number,
+  freeText: string = '',
 ): string {
-  const tierLabel = summary.tier === 'fail' ? 'DIDN\'T PASS' : summary.tier.toUpperCase();
+  const passed = summary.tier !== 'fail';
+  const header = passed
+    ? '🏆 **I completed this show!**'
+    : '❌ **I didn\'t pass this show**';
   const accPct = Math.round(summary.accuracy * 100);
-  const rankCell = rank != null && totalPlayers > 0
-    ? `#${rank} of ${totalPlayers}`
-    : '—';
-  return (
-    `🏆 **I played this show!**\n\n` +
-    `| Stat | Value |\n` +
-    `|---|---|\n` +
-    `| 🎯 Score | **${summary.score.toLocaleString()}** |\n` +
-    `| ✨ Accuracy | ${accPct}% |\n` +
-    `| 🔥 Max Combo | x${summary.maxCombo} |\n` +
-    `| 🏅 Tier | ${tierLabel} |\n` +
-    `| 📊 Rank | ${rankCell} |\n`
-  );
+  const statsLine = `🎯 Score: **${summary.score.toLocaleString()}** · ✨ Accuracy: ${accPct}%`;
+  const giftLine = summary.gift
+    ? `🎁 ${summary.gift.coins > 0 ? `Tipped ${summary.gift.coins.toLocaleString()} gold` : ''}${
+        summary.gift.coins > 0 && summary.gift.itemInstanceIds.length > 0 ? ' · ' : ''
+      }${summary.gift.itemInstanceIds.length > 0 ? `Gifted ${summary.gift.itemInstanceIds.length} cosmetic${summary.gift.itemInstanceIds.length === 1 ? '' : 's'}` : ''}`
+    : '';
+  const trimmedText = freeText.trim();
+  // Blockquote (>) gives the player's comment visual distinction +
+  // indentation; Reddit renders it as a left-bordered offset block.
+  // Reddit doesn't have a native "smaller font" markdown — blockquote
+  // is the conventional way to set off quoted/secondary text.
+  const textBlock = trimmedText.length > 0
+    ? `> ${trimmedText.split('\n').join('\n> ')}`
+    : '';
+  return [header, statsLine, giftLine, textBlock]
+    .filter((s) => s.length > 0)
+    .join('\n\n');
 }
 
 /** Stats payload for the per-post pinned mod comment. Server reads
