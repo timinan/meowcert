@@ -77,33 +77,50 @@ export class BackgroundManager {
     const drawH = h - offsetY;
     const entry = BACKGROUND_CATALOG[this.active];
 
-    if (entry && this.scene.textures.exists(entry.backdropKey)) {
-      // Per-bg vertical shift + scale read from the calibrator-driven
-      // catalog. shiftUp moves the image up in design pixels so the
-      // source's platforms land at the cat-seat row. bgScale zooms the
-      // image (anchored at center) — > 1 crops in on the platforms,
-      // < 1 leaves empty space at the edges.
-      const e = entry as typeof entry & { bgShiftUp?: number; bgScale?: number };
-      const shiftDesign = e.bgShiftUp ?? 0;
-      const bgScale = e.bgScale ?? 1;
-      const scaleY = h / 580;
-      const shift = shiftDesign * scaleY;
-      const scaledW = w * bgScale;
-      const scaledH = drawH * bgScale;
-      // Center horizontally; center vertically inside the original draw box,
-      // then apply the upward shift.
-      const x = (w - scaledW) / 2;
-      const y = offsetY + (drawH - scaledH) / 2 - shift;
-      const img = this.scene.add
-        .image(x, y, entry.backdropKey)
-        .setOrigin(0, 0);
-      img.displayWidth = scaledW;
-      img.displayHeight = scaledH;
-      this.container.add(img);
-      return;
+    if (entry) {
+      // Try the full bg first, then fall back to the picker thumbnail
+      // (eager-loaded by Preloader, ~18 KB) while the full bg lazy-loads.
+      // The thumb is the same image at a quarter resolution + uses the
+      // EXACT same shift/scale math, so the swap from thumb → full bg is
+      // a sharpening rather than a layout shift. Without this fallback
+      // the band reads as a flat purple wall during the load.
+      const fullKey = entry.backdropKey;
+      const thumbKey = `${fullKey}-thumb`;
+      const tex = this.scene.textures.exists(fullKey)
+        ? fullKey
+        : this.scene.textures.exists(thumbKey)
+          ? thumbKey
+          : null;
+      if (tex) {
+        // Per-bg vertical shift + scale read from the calibrator-driven
+        // catalog. shiftUp moves the image up in design pixels so the
+        // source's platforms land at the cat-seat row. bgScale zooms the
+        // image (anchored at center) — > 1 crops in on the platforms,
+        // < 1 leaves empty space at the edges.
+        const e = entry as typeof entry & { bgShiftUp?: number; bgScale?: number };
+        const shiftDesign = e.bgShiftUp ?? 0;
+        const bgScale = e.bgScale ?? 1;
+        const scaleY = h / 580;
+        const shift = shiftDesign * scaleY;
+        const scaledW = w * bgScale;
+        const scaledH = drawH * bgScale;
+        // Center horizontally; center vertically inside the original draw box,
+        // then apply the upward shift.
+        const x = (w - scaledW) / 2;
+        const y = offsetY + (drawH - scaledH) / 2 - shift;
+        const img = this.scene.add
+          .image(x, y, tex)
+          .setOrigin(0, 0);
+        img.displayWidth = scaledW;
+        img.displayHeight = scaledH;
+        this.container.add(img);
+        return;
+      }
     }
 
-    // Texture missing — solid color fallback so the lane stays readable.
+    // Neither full bg nor thumb loaded — solid color fallback so the
+    // lane stays readable. Only hits for ids missing from the catalog
+    // or thumbs that 404'd at Preloader time.
     const fallback = this.scene.add
       .rectangle(0, offsetY, w, drawH, 0x3b2a5c)
       .setOrigin(0, 0);
