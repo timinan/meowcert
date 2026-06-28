@@ -92,16 +92,35 @@
   margin-top: 4px;
   border-top: 1px solid rgba(192, 160, 230, 0.25);
   padding-top: 6px;
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
 }
 
-.lb-stats {
-  font-weight: 400;
-  letter-spacing: 0.5px;
-  color: #8a72b2;
-  text-transform: none;
+/* Plays banner — social-proof headline above the play CTA. Big yellow
+   count + small label so the eye lands on the number first. Same
+   max-width as the play button so they read as a paired CTA block. */
+.plays-banner {
+  width: calc(100% - 16px);
+  max-width: 364px;
+  margin: 12px 0 0;
+  padding: 8px 14px;
+  background: #1a0a2e;
+  border: 2px solid #ffd34d;
+  border-radius: 0;
+  text-align: center;
+  font-family: "Pixeloid Sans", "Courier New", Menlo, monospace;
+}
+.plays-banner-count {
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffd34d;
+  letter-spacing: 1px;
+}
+.plays-banner-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #c0a0e6;
+  letter-spacing: 2px;
+  margin-left: 6px;
+  text-transform: uppercase;
 }
 
 .lb-updated {

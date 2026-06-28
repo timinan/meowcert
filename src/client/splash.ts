@@ -30,8 +30,10 @@ const lbEls = [
   document.getElementById('lb-3') as HTMLLIElement | null,
 ];
 const yourBestEl = document.getElementById('your-best') as HTMLDivElement | null;
-const statsEl = document.getElementById('lb-stats') as HTMLSpanElement | null;
 const updatedEl = document.getElementById('lb-updated') as HTMLDivElement | null;
+const playsBannerEl = document.getElementById('plays-banner') as HTMLDivElement | null;
+const playsBannerCountEl = document.getElementById('plays-banner-count') as HTMLSpanElement | null;
+const playsBannerLabelEl = document.getElementById('plays-banner-label') as HTMLSpanElement | null;
 const startButton = document.getElementById('start-button') as HTMLButtonElement | null;
 
 startButton?.addEventListener('click', (e) => {
@@ -114,11 +116,15 @@ function renderVisit(d: VisitData): void {
 
 function renderLeaderboard(d: LeaderboardData): void {
   const top = d.top ?? [];
-  if (statsEl) {
-    // Prefer server-counted total plays (every submission counts) over
-    // top.length (unique players, since the board is PB-only).
-    const plays = d.totalPlays ?? top.length;
-    statsEl.textContent = plays === 1 ? '1 play' : `${plays} plays`;
+  // Plays count moved to the prominent banner above the play CTA — used
+  // to be a small caption in the leaderboard header, Tim wanted it more
+  // visible as social proof. Prefer server-counted total plays (every
+  // submission counts) over top.length (unique players, PB-only).
+  const plays = d.totalPlays ?? top.length;
+  if (playsBannerEl && playsBannerCountEl && playsBannerLabelEl) {
+    playsBannerCountEl.textContent = plays.toLocaleString();
+    playsBannerLabelEl.textContent = plays === 1 ? 'play' : 'plays';
+    playsBannerEl.style.display = '';
   }
   for (let i = 0; i < 3; i++) {
     const li = lbEls[i];

@@ -27,7 +27,6 @@
       <div class="song" id="song"></div>
       <div class="lb-header">
         TOP SCORES
-        <span class="lb-stats" id="lb-stats"></span>
       </div>
       <ol class="lb">
         <li id="lb-1">1. —</li>
@@ -39,6 +38,14 @@
            every 10 s and tick-updates this line every second so it's
            visible that the data is live. -->
       <div class="lb-updated" id="lb-updated"></div>
+    </div>
+
+    <!-- Plays banner — high-visibility social-proof line above the CTA.
+         Hidden until splash.ts gets the first leaderboard response so
+         scaffold/unmapped posts don't show "0 plays". -->
+    <div class="plays-banner" id="plays-banner" style="display: none;">
+      <span class="plays-banner-count" id="plays-banner-count">0</span>
+      <span class="plays-banner-label" id="plays-banner-label">plays</span>
     </div>
 
     <button class="play-button" id="start-button">
