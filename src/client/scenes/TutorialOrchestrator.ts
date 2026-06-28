@@ -103,6 +103,10 @@ export class TutorialOrchestrator extends Scene {
   /** Active effect handle (e.g. particle emitter for sparkles).
    *  Destroyed before applying a new effect. */
   private activeEffectHandle: { destroy(): void } | undefined;
+  /** For picker steps (pick-stage, pick-cat): tracks the currently
+   *  previewed selection. Confirm button only enables once this is
+   *  set; advancing clears it. */
+  private pendingPickerSelection: string | undefined;
 
   constructor() {
     super(SceneKeys.TutorialOrchestrator);
@@ -167,12 +171,14 @@ export class TutorialOrchestrator extends Scene {
     const line = personalize(rawLine, this.posterUsername);
     const hasMoreDialogue = this.dialogueIndex < lines.length - 1;
 
-    // Steps that show a picker INSTEAD of a Continue button. Dialogue
-    // still renders (the tutorial cat says what's happening), but the
-    // primary interaction is tapping a card.
+    // Picker steps: tapping a card previews the choice live; an
+    // explicit Confirm button at the bottom locks the selection in
+    // and advances. Re-tapping a different card swaps the preview.
+    // Per Tim's screenshot feedback round 2 — "give a preview of the
+    // selection and add a button at the bottom to confirm same with cats".
     if (this.currentStep === 'pick-stage') {
       this.overlay = new TutorialCatOverlay(this);
-      this.overlay.show(line, {}); // no Continue — picker drives advance
+      this.overlay.show(line, {});
       this.picker = new Picker(this, {
         items: STARTER_STAGES.map((id) => {
           const entry = BACKGROUND_CATALOG[id as BackgroundId];
@@ -182,8 +188,17 @@ export class TutorialOrchestrator extends Scene {
             label: entry.displayName,
           };
         }),
+        centerY: height * 0.62,
+        allowReselect: true,
         onPick: (stageId) => {
-          void this.handleStagePick(stageId as BackgroundId);
+          this.applyLiveStageBg(stageId as BackgroundId);
+          // Server write fires on every preview so a refresh mid-pick
+          // doesn't lose the last seen choice. Best-effort.
+          setBackground(stageId as BackgroundId).catch((e) =>
+            console.warn('[tutorial] setBackground failed (preview only)', e),
+          );
+          this.pendingPickerSelection = stageId;
+          this.renderConfirmButton();
         },
       });
       return;
@@ -202,8 +217,17 @@ export class TutorialOrchestrator extends Scene {
             label: entry?.name ?? breed,
           };
         }),
+        centerY: height * 0.62,
+        allowReselect: true,
         onPick: (breed) => {
-          void this.handleCatPick(breed as CatBreed);
+          this.applyLiveCat(breed as CatBreed);
+          // Server write — seat in middle. Fire-and-forget; advance
+          // happens on Confirm.
+          seedStarterCat(breed as CatBreed).catch((e) =>
+            console.warn('[tutorial] seedStarterCat failed (preview only)', e),
+          );
+          this.pendingPickerSelection = breed;
+          this.renderConfirmButton();
         },
       });
       return;
@@ -242,6 +266,60 @@ export class TutorialOrchestrator extends Scene {
       },
     });
     this.renderSkipLinkIfUnlocked();
+  }
+
+  /** Bottom-of-screen Confirm button used by picker steps (pick-stage,
+   *  pick-cat). Initially absent — renders once `pendingPickerSelection`
+   *  is set, advances on tap. */
+  private confirmButton: Phaser.GameObjects.Container | undefined;
+  private renderConfirmButton(): void {
+    this.confirmButton?.destroy(true);
+    if (!this.pendingPickerSelection) return;
+    const { width, height } = this.scale;
+    const btnY = height - 60;
+    const btnW = 220;
+    const btnH = 52;
+    const container = this.add.container(0, 0);
+    const bg = this.add
+      .rectangle(width / 2, btnY, btnW, btnH, 0xffd34d, 1)
+      .setStrokeStyle(2, 0x1a0a2e, 1)
+      .setInteractive({ useHandCursor: true });
+    const text = this.add
+      .text(width / 2, btnY, 'Continue →', {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontStyle: 'bold',
+        fontSize: '16px',
+        color: '#1a0a2e',
+      })
+      .setOrigin(0.5);
+    container.add([bg, text]);
+    bg.on('pointerdown', () => {
+      if (this.busy) return;
+      this.busy = true;
+      this.tweens.add({
+        targets: [bg, text],
+        scale: 0.96,
+        duration: 80,
+        yoyo: true,
+        onComplete: () => {
+          this.busy = false;
+          this.pendingPickerSelection = undefined;
+          this.confirmButton?.destroy(true);
+          this.confirmButton = undefined;
+          if (this.currentStep === 'pick-cat') {
+            // Cat-pick has the name-or-keep modal as a gate before
+            // advancing to merch-intro.
+            const breed = this.seatedCatBreed;
+            if (breed) this.showNameChoice(breed);
+            else void this.advance();
+          } else {
+            void this.advance();
+          }
+        },
+      });
+    });
+    this.confirmButton = container;
+    this.stepUI?.add(container);
   }
 
   /** Render a small "skip tutorial" link in top-right. Only visible
@@ -362,29 +440,9 @@ export class TutorialOrchestrator extends Scene {
     this.scene.start(SceneKeys.Decorate, { playerState: this.playerState });
   }
 
-  private async handleStagePick(stageId: BackgroundId): Promise<void> {
-    try {
-      const updated = await setBackground(stageId);
-      this.playerState = updated;
-    } catch (e) {
-      console.warn('[tutorial] setBackground failed (continuing anyway)', e);
-    }
-    this.applyLiveStageBg(stageId);
-    await this.advance();
-  }
-
-  private async handleCatPick(breed: CatBreed): Promise<void> {
-    try {
-      const updated = await seedStarterCat(breed);
-      this.playerState = updated;
-    } catch (e) {
-      console.warn('[tutorial] seedStarterCat failed (continuing anyway)', e);
-    }
-    this.applyLiveCat(breed);
-    // Show the name-or-keep choice. Picker drove us here; this modal
-    // gates the next advance.
-    this.showNameChoice(breed);
-  }
+  // (Legacy `handleStagePick` / `handleCatPick` removed — picker steps
+  //  now drive preview-then-confirm. See `renderConfirmButton` for the
+  //  advance gate.)
 
   /** Tutorial-only naming flow per Tim:
    *  "as if they are good with the original name or would you like to

@@ -34,11 +34,20 @@ interface PickerOptions<T> {
    *  to fill-the-canvas-minus-margins. */
   cardW?: number;
   cardH?: number;
+  /** Y position for the picker row's vertical center. Defaults to
+   *  42% of canvas height (legacy intro placement). */
+  centerY?: number;
+  /** When true (default false), allows re-tapping a different card to
+   *  change selection. When false, the first tap is final and the
+   *  picker locks after the tap-pulse. */
+  allowReselect?: boolean;
 }
 
 const CARD_FILL = 0x261540;
 const CARD_STROKE = 0xc678ff;
+const CARD_STROKE_SELECTED = 0xffd34d;
 const CARD_FILL_HOVER = 0x382057;
+const CARD_FILL_SELECTED = 0x4a2c7a;
 const LABEL_COLOR = '#ffffff';
 const PULSE_TINT = 0xffd34d;
 
@@ -54,6 +63,9 @@ export class Picker<T extends string> {
     this.build();
   }
 
+  private selectedId: string | undefined;
+  private cardChromeBySlot: Array<{ card: GameObjects.Rectangle; sprite: GameObjects.Image | GameObjects.Sprite; label: GameObjects.Text; id: string }> = [];
+
   private build(): void {
     const { width, height } = this.scene.scale;
     const items = this.opts.items;
@@ -65,7 +77,7 @@ export class Picker<T extends string> {
     const cardH = this.opts.cardH ?? Math.floor(cardW * 1.35);
     const totalW = cardW * items.length + gap * (items.length - 1);
     const startX = (width - totalW) / 2;
-    const y = height * 0.42;
+    const y = this.opts.centerY ?? height * 0.42;
 
     this.container = this.scene.add.container(0, 0);
     this.container.setDepth(1500);
@@ -122,15 +134,19 @@ export class Picker<T extends string> {
         card.setFillStyle(CARD_FILL, 1);
       });
 
+      this.cardChromeBySlot.push({ card, sprite, label, id: item.id });
+
       // Selection
       card.on('pointerdown', () => {
         if (this.busy) return;
-        this.busy = true;
+        const allowReselect = this.opts.allowReselect ?? false;
+        if (!allowReselect) {
+          this.busy = true;
+        }
         // Pulse animation — quick yellow tint + scale punch before
         // firing the callback. Reads as "selected, locking in".
         // Scale-by-multiplier (not absolute) so the sprite's fit-scale
         // is preserved through the pulse.
-        card.setFillStyle(PULSE_TINT, 1);
         const cardOrigScale = card.scaleX;
         const spriteOrigScale = sprite.scaleX;
         const labelOrigScale = label.scaleX;
@@ -145,10 +161,26 @@ export class Picker<T extends string> {
             sprite.setScale(spriteOrigScale * t);
             label.setScale(labelOrigScale * t);
           },
-          onComplete: () => this.opts.onPick(item.id),
+          onComplete: () => {
+            this.selectedId = item.id;
+            // Repaint card chromes to reflect selection state.
+            this.applySelectionChrome();
+            this.opts.onPick(item.id);
+          },
         });
       });
     });
+  }
+
+  /** After a card is tapped, re-paint every card chrome so the selected
+   *  one gets the yellow stroke + lighter fill, and the others go back
+   *  to defaults. Called automatically by the tap handler. */
+  private applySelectionChrome(): void {
+    for (const chrome of this.cardChromeBySlot) {
+      const isSelected = chrome.id === this.selectedId;
+      chrome.card.setStrokeStyle(2, isSelected ? CARD_STROKE_SELECTED : CARD_STROKE, 1);
+      chrome.card.setFillStyle(isSelected ? CARD_FILL_SELECTED : CARD_FILL, 1);
+    }
   }
 
   destroy(): void {
