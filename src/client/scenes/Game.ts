@@ -58,6 +58,9 @@ export class Game extends Scene {
    *  else's posted show). Re-enables Post Comment + finalizePlay path
    *  that's otherwise dormant in plain drawer rehearsal. */
   private visitorMode = false;
+  /** Drawer-Rehearse-forces-SongPicker flag. Read from scene.start data
+   *  in init; consumed in create's chart-availability gate. */
+  private forcePicker = false;
   /** Owner of the post being visited — used as the chart's authorId
    *  when the player submits a play. Empty string in non-visitor flows. */
   private visitOwnerUsername = '';
@@ -253,6 +256,13 @@ export class Game extends Scene {
       equippedCosmetics: Record<string, Record<string, string>>;
       equippedCosmeticTypes: Record<string, string>;
     } | null;
+    /** Set true by drawer REHEARSE handlers so the scene ALWAYS opens
+     *  SongPicker instead of auto-playing whatever's in playerState.chart.
+     *  Drawer Rehearse is explicit "I want to pick a song"; without this
+     *  flag, replaying your own posted chart through drawer Rehearse
+     *  auto-plays it (because your playerState.chart IS the post's chart)
+     *  and the user can't pick a new song. */
+    forcePicker?: boolean;
   }): void {
     this.playerState = data?.playerState ?? null;
     this.testMode = data?.testMode === true;
@@ -261,6 +271,7 @@ export class Game extends Scene {
     this.visitPostId = data?.visitPostId ?? '';
     this.visitPostBg = data?.visitPostBg ?? '';
     this.visitPostStage = data?.visitPostStage ?? null;
+    this.forcePicker = data?.forcePicker === true;
     // Clear the visitor-mode hand-off registry entries on any non-visitor
     // entry. VisitPost stamps `hostChart` + `hostUsername` on the registry
     // for the visitor PLAY flow; without this clear, drawer REHEARSE
@@ -378,8 +389,20 @@ export class Game extends Scene {
       // moment the scene boots.
       await this.initChartPlayer();
       void this.beginRound();
+    } else if (this.forcePicker) {
+      // Drawer REHEARSE always wants SongPicker — explicit "I want to
+      // pick a song" intent. Without this branch, a player who just
+      // visited their own post would have their playerState.chart
+      // (which IS the post's chart) auto-replay, with no way to pick
+      // something new from the drawer. Tim's repro: "open a post...
+      // play it... select go to your stage... click rehearse... the
+      // old song and chart replays rather than letting the user
+      // select new one."
+      this.showSongPicker();
     } else if (hasRegistryChart || hasStateChart) {
-      // Drawer REHEARSE or visitor PLAY: chart is in hand, run it.
+      // Visitor PLAY (registry chart from VisitPost) or editor-internal
+      // drawer Rehearse (playerState.chart from author's WIP): chart
+      // is in hand, run it.
       await this.initChartPlayer();
       void this.beginRound();
     } else {
@@ -1234,7 +1257,7 @@ export class Game extends Scene {
           description: 'Pawractice makes purrfect',
           icon: '🎵',
           key: SceneKeys.Game,
-          onTap: () => this.scene.start(SceneKeys.Game, { playerState: this.playerState }),
+          onTap: () => this.scene.start(SceneKeys.Game, { playerState: this.playerState, forcePicker: true }),
         },
         {
           label: 'PUT ON A SHOW',

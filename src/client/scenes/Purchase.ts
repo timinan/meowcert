@@ -69,7 +69,7 @@ export class Purchase extends Scene {
           description: 'Pawractice makes purrfect',
           icon: '🎵',
           key: SceneKeys.Game,
-          onTap: () => this.scene.start(SceneKeys.Game, { playerState: this.playerState }),
+          onTap: () => this.scene.start(SceneKeys.Game, { playerState: this.playerState, forcePicker: true }),
         },
         {
           label: 'PUT ON A SHOW',

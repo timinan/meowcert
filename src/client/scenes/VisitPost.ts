@@ -274,7 +274,7 @@ export class VisitPost extends Scene {
           description: 'Practice on your own time',
           icon: '🎵',
           key: SceneKeys.Game,
-          onTap: () => this.scene.start(SceneKeys.Game, { playerState: this.playerState }),
+          onTap: () => this.scene.start(SceneKeys.Game, { playerState: this.playerState, forcePicker: true }),
         },
         {
           label: 'PUT ON A SHOW',
