@@ -9,9 +9,15 @@ import {
   transferGift,
   setPostOwner,
   incrementPlayCount,
+  getPinnedCommentId,
   type SocialRedis,
 } from '../core/social';
-import { classifyScore, type PlaySummary, type InboxEvent } from '../../shared/social-loop';
+import {
+  classifyScore,
+  formatStatsComment,
+  type PlaySummary,
+  type InboxEvent,
+} from '../../shared/social-loop';
 
 /**
  * Server routes for the social loop:
@@ -156,6 +162,40 @@ social.post('/play', async (c) => {
       console.error('[social/play] reddit.submitComment failed (continuing)', err);
     }
   }
+
+  // Auto-stats reply under the bot-pinned root — fires on EVERY play
+  // (pass/fail/PB/repeat/self-play all post). Visitor-authored so the
+  // comment shows in their account history (Nuzzle convention). Best-
+  // effort: a failure here MUST NOT block the play submission — the
+  // leaderboard write, inbox event, free-text comment, and play counter
+  // already landed above. Skipped silently for posts with no pinned
+  // root (pre-dates pinned-comment storage, or publish-time pin failed).
+  try {
+    const pinnedId = await getPinnedCommentId(r, body.postId);
+    if (pinnedId) {
+      // Fetch the visitor's current rank + total players AFTER the lb
+      // write above. yourRank is server-computed for visitors NOT in
+      // the top N; for top-N visitors, derive rank from their index
+      // in the top list. totalPlayers approximation: top.length when
+      // not at cap, else totalPlays (close enough for the comment).
+      const lb = await fetchLeaderboard(r, body.postId, visitor);
+      const topIdx = lb.top.findIndex((e) => e.visitor === visitor);
+      const rank = topIdx >= 0 ? topIdx + 1 : lb.yourRank;
+      const totalPlayers = lb.top.length >= 10 ? lb.totalPlays : lb.top.length;
+      const text = formatStatsComment(summary, rank, totalPlayers);
+      await reddit.submitComment({
+        id: pinnedId,
+        text,
+        runAs: 'USER',
+      });
+      console.info('[social/play] auto-stats reply posted under', pinnedId);
+    } else {
+      console.info('[social/play] no pinned root for', body.postId, '— skipping auto-stats');
+    }
+  } catch (err) {
+    console.error('[social/play] auto-stats reply failed (continuing)', err);
+  }
+
   return c.json({
     ok: true,
     tier,
