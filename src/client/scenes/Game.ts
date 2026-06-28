@@ -2076,9 +2076,15 @@ export class Game extends Scene {
       // empty stripe below the BEST score row (mirrors the fail case
       // which always shows a message). testMode = author rehearsal;
       // visitor = player on someone's post. Different framings.
+      // Three modes, three wordings — each points at the right-side
+      // button. testMode → PUT ON A SHOW (publish). visitorMode → Done
+      // (close + return to host's post). drawer-rehearse → Change Song
+      // (back to SongPicker), paired with Play Again on the left.
       const baseMsg = this.testMode
         ? 'Nice — your show is ready to post.'
-        : 'Great show! Tap Done to wrap up.';
+        : this.visitorMode
+          ? 'Great show! Tap Done to wrap up.'
+          : 'Great show! Play it again or pick a new song.';
       // Any new personal best on this run (any of accuracy / maxCombo /
       // hits / misses / score) triggers the celebratory line. Two lines
       // max — fits the panel without pushing FINAL SCORE around.
