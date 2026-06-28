@@ -224,27 +224,24 @@ export async function fetchCombinedScore(
 
 /** incrBy(score) the combined-score counter for this post. Called on
  *  EVERY play submission (pass, fail, PB, repeat, self-play) AND from
- *  the publish creator-seed. On the very first write for a post, seeds
- *  the counter from the existing PB-sum so the displayed value doesn't
- *  drop from "sum of all PBs so far" to "score of just this play" when
- *  legacy posts cross the migration boundary. Returns the new counter
- *  value so callers can log it. */
+ *  the publish creator-seed. Purely additive — no seed-on-first-write.
+ *  A prior version tried to seed the counter from the existing PB-sum
+ *  on first write to protect legacy posts from a visible regression,
+ *  but it double-counted on publish: submitLeaderboardScore runs
+ *  before incrementCombinedScore there, so the LB already contained
+ *  the creator's just-written PB at seed time and we ended up adding
+ *  the score twice (21,838 = 2 × 10,919 on a fresh-published post,
+ *  Tim's repro). Plain additive logic is order-independent.
+ *  Legacy posts (created before this counter existed) keep showing
+ *  the PB-sum via fetchCombinedScore's fallback until their first
+ *  new /play, at which point the counter starts at that play's score.
+ *  Accepted regression — no real legacy posts in hackathon scope. */
 export async function incrementCombinedScore(
   redis: SocialRedis,
   postId: string,
   score: number,
 ): Promise<number> {
-  // Don't allow negative scores to skew the counter — guard at the
-  // boundary even though shared types should already enforce >= 0.
   if (!Number.isFinite(score) || score < 0) return await fetchCombinedScore(redis, postId);
-  const existing = await redis.get(COMBINED_SCORE_KEY(postId));
-  if (existing == null) {
-    // First write for this post — seed from the historical PB-sum so
-    // the displayed combined doesn't visibly regress. After this single
-    // round-trip every subsequent call is a single incrBy.
-    const seed = await sumPbScores(redis, postId);
-    return await redis.incrBy(COMBINED_SCORE_KEY(postId), seed + score);
-  }
   return await redis.incrBy(COMBINED_SCORE_KEY(postId), score);
 }
 
