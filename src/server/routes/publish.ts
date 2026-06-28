@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { redis, reddit, context } from '@devvit/web/server';
 import { loadOrInit } from '../core/player-state';
-import { setPostOwner, submitLeaderboardScore } from '../core/social';
+import { setPostOwner, submitLeaderboardScore, setPinnedCommentId } from '../core/social';
 import { classifyScore } from '../../shared/social-loop';
 
 /**
@@ -103,6 +103,28 @@ publish.post('/chart', async (c) => {
     // leaderboard / inbox endpoints can route to the right author the
     // first time a visitor opens the post.
     await setPostOwner(redis, post.id, username);
+
+    // Bot-pinned root comment — the anchor that auto-stats comments
+    // nest under on every play (Nuzzle-style social loop). Posted as
+    // APP + distinguished as mod + stickied. Best-effort: failure
+    // here MUST NOT block the publish — post still ships, the /play
+    // handler just skips the auto-stats reply for this post (its
+    // `getPinnedCommentId` returns null). App is auto-mod in the
+    // installed sub so distinguish(true) works without extra perms.
+    try {
+      const pinned = await reddit.submitComment({
+        id: post.id,
+        text:
+          '🏆 **Champions Who Played This Show**\n\n' +
+          '*Stats from every play land below. Tap the post to play and your run gets auto-posted here.*',
+        runAs: 'APP',
+      });
+      await pinned.distinguish(true); // makeSticky = true
+      await setPinnedCommentId(redis, post.id, pinned.id);
+      console.info(`[publish] pinned root comment ${pinned.id} for ${post.id}`);
+    } catch (err) {
+      console.error('[publish] pinned root comment creation failed (continuing publish)', err);
+    }
 
     // Snapshot the chart at publish time under a per-post key so the
     // VisitPost splash always serves the exact chart that was posted.
