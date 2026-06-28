@@ -261,6 +261,17 @@ export class Game extends Scene {
     this.visitPostId = data?.visitPostId ?? '';
     this.visitPostBg = data?.visitPostBg ?? '';
     this.visitPostStage = data?.visitPostStage ?? null;
+    // Clear the visitor-mode hand-off registry entries on any non-visitor
+    // entry. VisitPost stamps `hostChart` + `hostUsername` on the registry
+    // for the visitor PLAY flow; without this clear, drawer REHEARSE
+    // (or any other re-entry into Game) after a visit would silently
+    // pick up the previous show's chart + skip SongPicker. Tim's repro:
+    // "after you play someone else show then when you first go rehearse
+    // it skips the song selection and just plays what the previous show was."
+    if (!this.visitorMode) {
+      this.registry.set('hostChart', undefined);
+      this.registry.set('hostUsername', undefined);
+    }
     // Editor passes its current scrollOffset here so rehearsal starts
     // at the author's working page (chart + music both seek). Defaults
     // to 0 = start at the top.
