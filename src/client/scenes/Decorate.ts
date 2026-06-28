@@ -86,13 +86,18 @@ export class Decorate extends Scene {
   private tabCatsBtnBg!: GameObjects.Rectangle;
   private tabBgBtnBg!: GameObjects.Rectangle;
   private trayContainer!: GameObjects.Container;
+  /** Source scene the user navigated from — when set, a back chip
+   *  renders top-left and returns there. Used by the post-POST page-3
+   *  menu in Game so visitors can back out to where they came from. */
+  private fromScene: string | null = null;
 
   constructor() {
     super(SceneKeys.Decorate);
   }
 
-  init(data: { playerState?: PlayerState | null }): void {
+  init(data: { playerState?: PlayerState | null; fromScene?: string }): void {
     this.playerState = data?.playerState ?? null;
+    this.fromScene = data?.fromScene ?? null;
     this.cats = [];
     this.catZones = [];
     this.removeBadges = [];
@@ -155,8 +160,39 @@ export class Decorate extends Scene {
     // Bottom panel
     this.buildPanel();
 
+    this.maybeDrawBackChip();
+
     // Shutdown cleanup
     this.events.on(Scenes.Events.SHUTDOWN, () => this.cleanup());
+  }
+
+  /** Top-left BACK chip — rendered only when init received a fromScene.
+   *  Returns the visitor to the scene they came from (currently used by
+   *  the post-POST page-3 menu in Game). High depth so it always sits
+   *  above any other UI in the scene. */
+  private maybeDrawBackChip(): void {
+    if (!this.fromScene) return;
+    const x = 38;
+    const y = TopHud.HEIGHT + 18;
+    const bg = this.add
+      .rectangle(x, y, 56, 24, 0x2c1856, 1)
+      .setStrokeStyle(1, 0xc0a0e6, 0.6)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(2100);
+    const txt = this.add
+      .text(x, y, '← BACK', {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontStyle: 'bold',
+        fontSize: '10px',
+        color: '#c0a0e6',
+      })
+      .setOrigin(0.5)
+      .setDepth(2101);
+    bg.on('pointerover', () => bg.setFillStyle(0x3d2566, 1));
+    bg.on('pointerout', () => bg.setFillStyle(0x2c1856, 1));
+    bg.on('pointerdown', () => {
+      this.scene.start(this.fromScene!, { playerState: this.playerState });
+    });
   }
 
   // ---------------------------------------------------------------------------

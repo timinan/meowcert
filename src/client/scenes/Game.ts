@@ -1100,7 +1100,13 @@ export class Game extends Scene {
       // scene.start carries playerState — visitor's own state, so Decorate
       // boots with the visitor's cats + bg, not the host's. The host's
       // visitPostStage is Game-scene-local and dies with the teardown.
-      this.scene.start(SceneKeys.Decorate, { playerState: this.playerState });
+      // fromScene lets Decorate render a back chip that brings them back
+      // to Game (which will boot fresh, registry already cleared on
+      // non-visitor entry).
+      this.scene.start(SceneKeys.Decorate, {
+        playerState: this.playerState,
+        fromScene: SceneKeys.Game,
+      });
     });
 
     this.summaryPage3ShowsBg = this.add
@@ -1119,7 +1125,10 @@ export class Game extends Scene {
     this.summaryPage3ShowsBg.on('pointerover', () => this.summaryPage3ShowsBg.setFillStyle(0x3d2566, 1));
     this.summaryPage3ShowsBg.on('pointerout', () => this.summaryPage3ShowsBg.setFillStyle(0x2c1856, 1));
     this.summaryPage3ShowsBg.on('pointerdown', () => {
-      this.scene.start(SceneKeys.VisitShows, { playerState: this.playerState });
+      this.scene.start(SceneKeys.VisitShows, {
+        playerState: this.playerState,
+        fromScene: SceneKeys.Game,
+      });
     });
 
     container.add(page3);
