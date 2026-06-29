@@ -1466,21 +1466,47 @@ export class TutorialOrchestrator extends Scene {
     letters.setDisplaySize(54, 54);
     sprite.add(letters);
     if (type === 'hold' && opts?.holdEndAt) {
+      // Hold tail — TileSprite of TailBody (tile-able tube body) +
+      // TailCap on top. Same textures the real Note class uses for
+      // hold notes. Added BEFORE ball so the head ball renders above.
       const tailH = Math.max(0, (opts.holdEndAt - hitAt) * fallSpeedPxPerMs);
-      const tail = this.add.rectangle(0, -tailH / 2 - 12, 30, tailH, color, 0.75);
-      sprite.add(tail);
+      const tailWidth = 44;
+      const tailBody = this.add.tileSprite(0, -tailH / 2, tailWidth, tailH, AssetKeys.Image.TailBody);
+      tailBody.setTint(color);
+      const tailCap = this.add.image(0, -tailH, AssetKeys.Image.TailCap);
+      tailCap.setDisplaySize(tailWidth, 32);
+      tailCap.setOrigin(0.5, 1);
+      tailCap.setTint(color);
+      sprite.addAt(tailBody, 0);
+      sprite.addAt(tailCap, 0);
     } else if (type === 'slide' && opts?.slideTargetLane !== undefined) {
+      // Slide tube — MeowcertTubeWhite stretched horizontally from
+      // source to target. Same texture the real Note class uses.
       const targetX = L.laneCenterX(opts.slideTargetLane, width);
       const deltaX = targetX - cx;
-      const arrow = this.add.rectangle(deltaX / 2, 0, Math.abs(deltaX), 16, color, 0.55);
-      sprite.add(arrow);
+      const tube = this.add.image(deltaX / 2, 0, AssetKeys.Image.MeowcertTubeWhite);
+      tube.setDisplaySize(Math.abs(deltaX), 64);
+      tube.setTint(color);
+      tube.setAlpha(0.85);
+      if (deltaX < 0) tube.setFlipX(true);
+      sprite.addAt(tube, 0);
     } else if (type === 'slide-return' && opts?.slideTargetLane !== undefined) {
+      // Slide-return — same tube but a second tube layered for the
+      // return leg (small visual cue the player has to drag back).
       const targetX = L.laneCenterX(opts.slideTargetLane, width);
       const deltaX = targetX - cx;
-      const arrow = this.add.rectangle(deltaX / 2, 0, Math.abs(deltaX), 16, color, 0.45);
-      const ret = this.add.rectangle(deltaX / 2, 8, Math.abs(deltaX), 8, 0xffffff, 0.7);
-      sprite.add(arrow);
-      sprite.add(ret);
+      const tube = this.add.image(deltaX / 2, 0, AssetKeys.Image.MeowcertTubeWhite);
+      tube.setDisplaySize(Math.abs(deltaX), 64);
+      tube.setTint(color);
+      tube.setAlpha(0.85);
+      if (deltaX < 0) tube.setFlipX(true);
+      const returnTube = this.add.image(deltaX / 2, 14, AssetKeys.Image.MeowcertTubeWhite);
+      returnTube.setDisplaySize(Math.abs(deltaX), 24);
+      returnTube.setTint(0xffffff);
+      returnTube.setAlpha(0.55);
+      if (deltaX > 0) returnTube.setFlipX(true);
+      sprite.addAt(tube, 0);
+      sprite.addAt(returnTube, 0);
     }
 
     const now = this.time.now;
