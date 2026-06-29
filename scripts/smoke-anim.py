@@ -197,8 +197,13 @@ html_out = f"""<!doctype html>
   .hdr h1 {{ margin: 0; font-size: 16px; color: #ffd34d; }}
   .sub {{ color: #c0a0e6; font-size: 12px; margin-top: 4px; }}
   .navbtn {{ display: inline-block; padding: 4px 12px; margin: 0 4px; background: #261540; color: #ffd34d;
-            text-decoration: none; border-radius: 4px; border: 1px solid #341c5a; font-size: 12px; }}
+            text-decoration: none; border-radius: 4px; border: 1px solid #341c5a; font-size: 12px;
+            cursor: pointer; font-family: inherit; }}
   .navbtn.cur {{ background: #ffd34d; color: #1a0a2e; }}
+  .navbtn.gen {{ background: #4a7c3a; color: #fff; border-color: #6ba85a; margin-left: 16px; }}
+  .navbtn.gen:hover {{ background: #5a9c44; }}
+  .navbtn.gen:disabled {{ opacity: 0.55; cursor: progress; }}
+  .navbtn.gen.err {{ background: #8b2c2c; border-color: #c44; }}
   table {{ border-collapse: separate; border-spacing: 0; }}
   th.corner {{ position: sticky; left: 0; top: 56px; z-index: 90; background: #261540; width: 100px; }}
   th.cos {{ position: sticky; top: 56px; z-index: 80; background: #261540;
@@ -226,9 +231,35 @@ html_out = f"""<!doctype html>
       Runtime-accurate composite: cosmetic anim plays in sync with cat, no offset math.
       Switch animation:
       {' '.join(f'<a class="navbtn{(" cur" if a == ANIM else "")}" href="smoke-anim-{a}.html">{a}</a>' for a in ['idle','hiss','lick','meow'])}
+      <button class="navbtn gen" id="gen-btn" onclick="regenerate()">🔄 Generate (delete + rerun)</button>
     </div>
   </div>
   <table>{hdr_row}{''.join(rows)}</table>
+  <script>
+    // Generate button — wipes all smoke-anim artifacts server-side and
+    // reruns `npm run smoke-test`, then reloads the current page so the
+    // new strips show without manual navigation. Talks to the tools
+    // server's POST /run-smoke-test endpoint.
+    async function regenerate() {{
+      const btn = document.getElementById('gen-btn');
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '⏳ Generating…';
+      btn.classList.remove('err');
+      try {{
+        const res = await fetch('/run-smoke-test', {{ method: 'POST' }});
+        const body = await res.json().catch(() => ({{ ok: false, error: 'bad json' }}));
+        if (!res.ok || !body.ok) throw new Error(body.error || `HTTP ${{res.status}}`);
+        btn.textContent = '✅ Reloading…';
+        location.reload();
+      }} catch (e) {{
+        btn.classList.add('err');
+        btn.textContent = '❌ ' + (e.message || 'failed');
+        btn.disabled = false;
+        setTimeout(() => {{ btn.textContent = original; btn.classList.remove('err'); }}, 5000);
+      }}
+    }}
+  </script>
 </body></html>
 """
 out = ROOT / f'tools/cats/smoke-anim-{ANIM}.html'

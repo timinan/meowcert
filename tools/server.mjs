@@ -870,6 +870,49 @@ async function handleSaveThumb(res, slug) {
   }
 }
 
+/**
+ * POST /run-smoke-test — nuke every existing smoke-anim artifact and
+ * regenerate all 4 anim pages (idle/hiss/lick/meow) from current atlas
+ * + catalog. The smoke test pages render runtime-accurate composites,
+ * so they're the fastest way to eyeball cosmetic positioning bugs
+ * without having to set up state in-game. Run after any catalog drag,
+ * extract:assets, or cat.ts math change.
+ *
+ * Safe to retry — the script's first action per anim is to delete the
+ * old PNGs in tools/cats/smoke-anim-<anim>/. We additionally delete the
+ * .html files and any orphaned anim dirs (e.g. "sleep" from earlier
+ * runs) so the output is exactly the current package.json `smoke-test`
+ * matrix and nothing else.
+ */
+async function handleRunSmokeTest(res) {
+  try {
+    const catsDir = path.join(TOOL_DIR, 'cats');
+    const entries = await fs.readdir(catsDir).catch(() => []);
+    let deleted = 0;
+    for (const name of entries) {
+      if (name.startsWith('smoke-anim-')) {
+        const target = path.join(catsDir, name);
+        await fs.rm(target, { recursive: true, force: true });
+        deleted++;
+      }
+    }
+    console.log(`[run-smoke-test] cleared ${deleted} stale artifact(s) from ${path.relative(PROJECT_ROOT, catsDir)}`);
+    const { stdout } = await runScript('npm', ['run', 'smoke-test']);
+    const summary = stdout
+      .split('\n')
+      .filter((l) => l.startsWith('✓') || l.startsWith('  ...'))
+      .slice(-8)
+      .join(' | ');
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, deleted, summary }));
+    console.log(`[run-smoke-test] regenerated — ${summary}`);
+  } catch (e) {
+    console.warn(`[run-smoke-test] failed: ${e.message}`);
+    res.writeHead(500, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ ok: false, error: e.message }));
+  }
+}
+
 async function handleBgUpload(req, res, slug) {
   if (!/^[a-z][a-z0-9_-]{0,30}$/.test(slug)) {
     res.writeHead(400, { 'content-type': 'application/json' });
@@ -1157,6 +1200,17 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && req.url?.startsWith('/save-thumb/')) {
       const slug = req.url.replace(/^\/save-thumb\//, '').split('?')[0];
       await handleSaveThumb(res, slug);
+      return;
+    }
+
+    // --- POST /run-smoke-test ----------------------------------------
+    // Wipes tools/cats/smoke-anim-*.html + smoke-anim-*/ dirs and runs
+    // `npm run smoke-test` to regenerate all 4 anim pages from current
+    // atlas + catalog. Used by the Generate button on each smoke-anim
+    // page so cosmetic-positioning bugs can be re-checked in seconds
+    // without rebuilding game state.
+    if (req.method === 'POST' && req.url === '/run-smoke-test') {
+      await handleRunSmokeTest(res);
       return;
     }
 
