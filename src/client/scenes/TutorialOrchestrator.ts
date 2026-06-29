@@ -3,6 +3,7 @@ import { SceneKeys } from '@/constants/scenes';
 import { AssetKeys } from '@/constants/assets';
 import * as L from '@/constants/scene-layout';
 import { liftTowardWhite, LANE_BRIGHTNESS_LIFT } from '@/entities/note-colors';
+import { CAT_COLOR_BY_BREED } from '@/constants/cat-colors';
 import {
   nextTutorialStep,
   STARTER_CATS,
@@ -791,6 +792,12 @@ export class TutorialOrchestrator extends Scene {
       .setOrigin(0.5, 1)
       .setScale(this.seatedCat.scaleX)
       .setDepth(-90);
+    // Play the cosmetic's idle anim so it bobs with the cat (Image 30:
+    // "the cosmetic is not animating with the body for this hat").
+    // Cat entity does this lazily per-cosmetic; the orchestrator stacks
+    // raw sprites so it has to bootstrap the loop itself.
+    const cosmeticAnimKey = this.ensureCosmeticIdleAnim(renderId);
+    if (cosmeticAnimKey) sprite.play(cosmeticAnimKey, true);
     if (cosEntry.tint) {
       sprite.setTint(parseInt(cosEntry.tint.replace('#', ''), 16));
     }
@@ -831,13 +838,17 @@ export class TutorialOrchestrator extends Scene {
       : undefined;
     const name = seatedInstance?.name ?? this.seatedCatBreed;
     if (!name) return;
+    // Match Game.seatCats nametag style exactly (Courier New 10px,
+    // white with black stroke, y+4 offset) so the tutorial preview
+    // reads as the actual playfield instead of a different sized label.
+    // Image 30 feedback: "nametag seems overly big on here."
     this.seatedCatNameLabel = this.add
-      .text(this.seatedCat.x, this.seatedCat.y + 8, name.toUpperCase(), {
-        fontFamily: 'Pixeloid Sans, sans-serif',
+      .text(this.seatedCat.x, this.seatedCat.y + 4, name.toUpperCase(), {
+        fontFamily: '"Courier New", monospace',
         fontStyle: 'bold',
-        fontSize: '12px',
+        fontSize: '10px',
         color: '#ffffff',
-        stroke: '#1a0a2e',
+        stroke: '#000000',
         strokeThickness: 3,
       })
       .setOrigin(0.5, 0)
@@ -982,11 +993,14 @@ export class TutorialOrchestrator extends Scene {
    *  Persistent across play-tutorial beats. */
   private switchToRehearsalStage(): void {
     if (!this.seatedCat) return;
-    const { width } = this.scale;
-    // Match Game.seatCats: catY = (TOP_HUD_H + CAT_STAGE_H * 0.78) on
-    // the design canvas, scale 1.4. This puts the cat IN the cat-stage
-    // band just above LANE_TOP_Y.
-    const stageY = L.TOP_HUD_H + L.CAT_STAGE_H * 0.78; // ≈ 184
+    const { width, height } = this.scale;
+    // Match Game.seatCats EXACTLY: catY scales with the canvas, not raw
+    // design coords. Tim's Image 30 feedback ("the cat seems to be
+    // floating"): raw 184 sat too high in iPhone viewports because the
+    // lanes scaled but the cat didn't. Applying scaleY pins the cat to
+    // the cat-stage band the same way the real Game scene does.
+    const scaleY = height / L.DESIGN_H;
+    const stageY = (L.TOP_HUD_H + L.CAT_STAGE_H * 0.78) * scaleY;
     const stageScale = 1.4;
     const centerX = L.laneCenterX(1, width);
 
@@ -1086,8 +1100,11 @@ export class TutorialOrchestrator extends Scene {
 
   /** Draw the 3 lanes + hit targets behind the seated cats, matching
    *  Game.drawLanes' geometry so the tutorial preview reads as the
-   *  actual playfield. Lane tints fall back to LANE_COLORS — the
-   *  Game scene re-samples per-cat tints when rehearsal actually runs. */
+   *  actual playfield. Per-lane tints follow the seated cat at that
+   *  lane (Butters on lane 0, player cat on lane 1, empty seat 2
+   *  inherits from the nearest occupied lane) — Image 30 feedback:
+   *  "the lanes for the tutorial also need to match the color of the
+   *  lane cat." Falls back to LANE_COLORS if neither seat is filled. */
   private drawStageLanes(): void {
     const { width, height } = this.scale;
     const scaleY = height / L.DESIGN_H;
@@ -1097,9 +1114,28 @@ export class TutorialOrchestrator extends Scene {
     const inner = width - L.LANE_GUTTER_PX * 2;
     const colW = (inner - L.LANE_GAP_PX * (L.LANE_COUNT - 1)) / L.LANE_COUNT;
 
+    // Resolve the per-lane tint trio from the actual cats on stage in
+    // the tutorial: Butters on the LEFT seat (cat13), player cat on the
+    // CENTER seat (this.seatedCatBreed), right seat empty. Empty seats
+    // inherit the color of the nearest occupied lane so the right lane
+    // shows the player cat's tint instead of a stranger color.
+    const laneTints: (number | null)[] = [
+      CAT_COLOR_BY_BREED['cat13'] ?? null,
+      this.seatedCatBreed ? (CAT_COLOR_BY_BREED[this.seatedCatBreed] ?? null) : null,
+      null,
+    ];
+    for (let i = 0; i < 3; i++) {
+      if (laneTints[i] !== null) continue;
+      for (let d = 1; d < 3; d++) {
+        const right = i + d, left = i - d;
+        if (right < 3 && laneTints[right] !== null) { laneTints[i] = laneTints[right]; break; }
+        if (left >= 0 && laneTints[left] !== null) { laneTints[i] = laneTints[left]; break; }
+      }
+    }
+
     for (let i = 0; i < L.LANE_COUNT; i++) {
       const cx = L.laneCenterX(i as 0 | 1 | 2, width);
-      const color = L.LANE_COLORS[i]!;
+      const color = laneTints[i] ?? L.LANE_COLORS[i]!;
       const bar = this.add.image(cx, laneTopY + laneH / 2, AssetKeys.Image.RhythmBarBackgroundWhite);
       bar.displayWidth = laneH;
       bar.displayHeight = colW;
