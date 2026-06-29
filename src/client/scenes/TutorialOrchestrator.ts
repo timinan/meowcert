@@ -573,6 +573,18 @@ export class TutorialOrchestrator extends Scene {
             void this.autoEquipCosmetic(pull.itemId, pull.instanceId);
           }
           this.busy = false;
+          // box-cosmetic: PAUSE on a fresh Continue overlay so the
+          // player sees the equipped cosmetic on the cat before being
+          // dropped into the next box's Open Box flow. Without this
+          // pause, a queued OS-level tap can land on the freshly-
+          // rendered box-effect button and skip box 2 entirely (Tim
+          // Image 33 bug). box-effect onDone keeps the auto-advance
+          // since stage-set-confirm is the next section, not another
+          // open-box beat to accidentally fire.
+          if (this.currentStep === 'box-cosmetic') {
+            this.showPostBoxOpenContinue("looking good! now let's open the effects box.");
+            return;
+          }
           void this.advance();
         },
       );
@@ -581,6 +593,24 @@ export class TutorialOrchestrator extends Scene {
       this.busy = false;
       await this.advance();
     }
+  }
+
+  /** After a box-open animation finishes, re-render the dialogue
+   *  overlay with a fresh Continue button so the player can see the
+   *  equipped pull on their cat before tapping forward. The new
+   *  button is a brand-new interactive object, so queued OS taps that
+   *  hit the previous Open button don't carry through. */
+  private showPostBoxOpenContinue(copy: string): void {
+    this.overlay?.destroy();
+    this.overlay = new TutorialCatOverlay(this);
+    this.overlay.show(copy, {
+      continueLabel: 'Continue →',
+      onContinue: () => {
+        if (this.busy) return;
+        void this.advance();
+      },
+    });
+    this.renderSkipLinkIfUnlocked();
   }
 
   private async skipTutorial(): Promise<void> {
