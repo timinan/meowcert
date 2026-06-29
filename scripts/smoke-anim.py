@@ -125,7 +125,11 @@ for ci, cat_id in enumerate(cat_ids):
         # match → shift = 0 for unmodified cosmetics. As the calibrator
         # is edited, target diverges from anchor → cosmetic moves.
         CAT_HEAD_TOP_REF = 12
-        CANVAS_HCENTER = 45
+        # Cat painted center in canvas coords (cat trim x=28, w=44 → center=50).
+        # Matches Cat.CANVAS_HORIZONTAL_CENTER and the calibrator's feetX
+        # reference. Using 45 (canvas centerline) shifts cosmetics 5 px
+        # LEFT of where the calibrator places them.
+        CANVAS_HCENTER = 50
         idle0_name = f'cosmetic_{cos["id"]}_idle_00'
         if idle0_name in cos_frames:
             idle_sss = cos_frames[idle0_name].get('spriteSourceSize', {'x':0,'y':0,'w':0,'h':0})

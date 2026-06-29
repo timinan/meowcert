@@ -677,9 +677,18 @@ export class Cat {
    *  Must match scripts/migrate-cosmetic-offsets.ts CAT_HEAD_TOP_REF.
    *  Public so DressingRoom can mirror the same math for its hero preview. */
   public static readonly CAT_HEAD_TOP_REF = 12;
-  /** Canvas horizontal centerline for the 91-wide cosmetic/cat sprite.
-   *  Match migration script's CANVAS_HORIZONTAL_CENTER. */
-  public static readonly CANVAS_HORIZONTAL_CENTER = 45;
+  /** Catalog offsetX=0 reference — the cat's PAINTED CENTER in canvas
+   *  coords. Cat sprites are trimmed at x=28, w=44 across all breeds,
+   *  so the cat's painted body is centered at canvas X=50, NOT the
+   *  full 91-wide canvas centerline (X=45.5). The cosmetics calibrator
+   *  uses this same painted-center as its offsetX=0 reference
+   *  (`feetX = catX + catW/2` in calibrator.html), so the runtime had
+   *  to match — using 45 here put every cosmetic 5 px LEFT of where
+   *  Tim placed it in the calibrator, which was invisible until the
+   *  DressingRoom fix exposed the gap on head cosmetics like Santa
+   *  Hat. Must match scripts/migrate-cosmetic-offsets.ts +
+   *  scripts/smoke-anim.py — they all read the same catalog values. */
+  public static readonly CANVAS_HORIZONTAL_CENTER = 50;
   /** Half-width of the 91×64 source canvas — used by syncOneCosmetic to
    *  resolve sprite positions relative to the bottom-center anchor that
    *  origin (0.5, 1) sets. 45.5 (not 45) is the actual midpoint of a

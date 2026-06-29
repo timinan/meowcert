@@ -34,7 +34,11 @@ const ATLAS_JSON_PATH = path.join(PROJECT_ROOT, 'public', 'assets', 'atlas', 'co
 // reference means cosmetics are 0-2px lower on cats with deeper head tops.
 // Acceptable variance (sub-pixel-noticeable).
 const CAT_HEAD_TOP_REF = 12;
-const CANVAS_HORIZONTAL_CENTER = 45; // 91-wide canvas centerline (rounded down from 45.5)
+// Cat painted center in canvas coords. Cat sprites trim to x=28, w=44 across
+// all breeds → painted center at canvas X=50. Matches Cat.CANVAS_HORIZONTAL_CENTER
+// and the calibrator's offsetX=0 reference. Using 45 (canvas centerline) puts
+// cosmetics 5 px left of where the calibrator shows them.
+const CANVAS_HORIZONTAL_CENTER = 50;
 
 type CatalogEntry = {
   id: string;
