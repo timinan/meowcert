@@ -207,14 +207,18 @@ export class Cat {
     // Cache where the cosmetic's idle_00 art is centered in its canvas.
     // syncOneCosmetic uses this every frame to compute the screen
     // position so the art CENTER lands at the catalog-specified target.
+    //
+    // Phaser 4's Frame API exposes the trim rectangle directly:
+    //   frame.x, frame.y       = spriteSourceSize.x/y (canvas offset)
+    //   frame.width, frame.height = trimmed dimensions (sourceSize.w/h)
+    // The older `frame.data.spriteSourceSize` path doesn't exist in v4,
+    // so reading from it returned undefined and the fallback collapsed
+    // the anchor to the trim half-size — wrong in-game offsets even though
+    // the dressing-room renderer (which bypasses this math) looked fine.
     const idleTextureFrame = this.scene.textures.get(AssetKeys.Atlas.Cosmetics).get(idleFrame);
-    const ssX = idleTextureFrame.data?.spriteSourceSize?.x ?? 0;
-    const ssY = idleTextureFrame.data?.spriteSourceSize?.y ?? 0;
-    const ssW = idleTextureFrame.data?.spriteSourceSize?.w ?? idleTextureFrame.width;
-    const ssH = idleTextureFrame.data?.spriteSourceSize?.h ?? idleTextureFrame.height;
     this.cosmeticAnchors[slot] = {
-      artCenterX: ssX + ssW / 2,
-      artCenterY: ssY + ssH / 2,
+      artCenterX: idleTextureFrame.x + idleTextureFrame.width / 2,
+      artCenterY: idleTextureFrame.y + idleTextureFrame.height / 2,
     };
     if (entry?.tint) {
       const colorInt = parseInt(entry.tint.replace('#', ''), 16);
