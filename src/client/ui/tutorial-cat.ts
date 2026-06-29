@@ -199,14 +199,15 @@ export class TutorialCatOverlay {
     let bubbleY: number;
     let bubbleW: number;
     if (stageMode) {
+      // Narrower (210 vs 240) and pulled UP into the dead zone above
+      // the lanes per Tim Image 31: "the arrow off textbox should be
+      // here to not cover the lane too much." bubbleY 220 sits the
+      // bubble's top high in the cat-stage band so its body extends
+      // down into the lanes less than before.
+      bubbleW = Math.min(width - sideMargin * 2, 210);
       const cx = opts.stageBubbleCenterX ?? width / 2;
-      bubbleW = Math.min(width - sideMargin * 2, 240);
       bubbleX = Math.max(sideMargin, Math.min(cx - bubbleW / 2, width - sideMargin - bubbleW));
-      // Bubble pushed down from 250 → 295 per Tim Image 30 feedback:
-      // "should have whitespace between top of speech bubble and top
-      // of game" — adds breathing room above the bubble between the
-      // cat-stage band and the bubble's top edge.
-      bubbleY = opts.bubbleY ?? 295;
+      bubbleY = opts.bubbleY ?? 220;
     } else if (hero) {
       bubbleX = sideMargin;
       bubbleY = opts.bubbleY ?? 28;

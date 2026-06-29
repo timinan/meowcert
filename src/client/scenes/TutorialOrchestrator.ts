@@ -124,6 +124,9 @@ export class TutorialOrchestrator extends Scene {
   private stageLaneGfx: Phaser.GameObjects.GameObject[] = [];
   private stageButters: Phaser.GameObjects.Sprite | undefined;
   private stageButtersGlasses: Phaser.GameObjects.Sprite | undefined;
+  /** BUTTERS nametag below the small stage Butters — same scaled style
+   *  as the player cat's nametag. Added per Tim Image 31. */
+  private stageButtersNameLabel: Phaser.GameObjects.Text | undefined;
 
   constructor() {
     super(SceneKeys.TutorialOrchestrator);
@@ -1066,9 +1069,26 @@ export class TutorialOrchestrator extends Scene {
     // Butters' head instead of holding frame 00 while the cat moves.
     const glassesAnimKey = this.ensureCosmeticIdleAnim('c2');
     if (glassesAnimKey) this.stageButtersGlasses.play(glassesAnimKey, true);
-    // Fade Butters in alongside the cat tween for a soft entrance.
+    // BUTTERS nametag below small Butters — same Game.seatCats style
+    // as the player cat's nametag, font scaled by stageScale per Tim
+    // Image 31 ("butters nametag missing"). Faded in with the sprites.
+    this.stageButtersNameLabel?.destroy();
+    const nameFontPx = Math.round(10 * stageScale / 1.4);
+    this.stageButtersNameLabel = this.add
+      .text(buttersX, stageY + 4, 'BUTTERS', {
+        fontFamily: '"Courier New", monospace',
+        fontStyle: 'bold',
+        fontSize: `${nameFontPx}px`,
+        color: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(-89)
+      .setAlpha(0);
+    // Fade Butters + glasses + nametag in alongside the cat tween.
     this.tweens.add({
-      targets: [this.stageButters, this.stageButtersGlasses],
+      targets: [this.stageButters, this.stageButtersGlasses, this.stageButtersNameLabel],
       alpha: 1,
       duration: 360,
       ease: 'Sine.Out',
