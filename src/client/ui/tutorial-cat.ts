@@ -140,16 +140,18 @@ export class TutorialCatOverlay {
       if (accessoryAnimKey) accessorySprite.play(accessoryAnimKey, true);
       this.container.add(accessorySprite);
 
-      // BUTTERS nametag — mirrors the seated-band-member nametag style
-      // from Game.seatCats (Courier New 10px, white with black stroke).
-      // Tim's feedback (Image 30): "let's also give Butters a nametag
-      // through the tutorial." The tail target below uses this to land
-      // 'right under him' instead of crossing his face.
+      // BUTTERS nametag — Game.seatCats style (Courier New, white with
+      // black stroke). Font size scales proportionally with the cat's
+      // scale per Tim Image 31: "nametag size should be proportional
+      // to their body size always. so bigger now when hes in front and
+      // smaller later when hes on the stage." Reference: 10px at the
+      // standard Game.seatCats scale of 1.4.
+      const nameFontPx = Math.round(10 * catScale / 1.4);
       const nameSprite = this.scene.add
         .text(startX, startY + 4, 'BUTTERS', {
           fontFamily: '"Courier New", monospace',
           fontStyle: 'bold',
-          fontSize: '10px',
+          fontSize: `${nameFontPx}px`,
           color: '#ffffff',
           stroke: '#000000',
           strokeThickness: 3,

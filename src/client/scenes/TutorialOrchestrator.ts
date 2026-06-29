@@ -838,15 +838,18 @@ export class TutorialOrchestrator extends Scene {
       : undefined;
     const name = seatedInstance?.name ?? this.seatedCatBreed;
     if (!name) return;
-    // Match Game.seatCats nametag style exactly (Courier New 10px,
-    // white with black stroke, y+4 offset) so the tutorial preview
-    // reads as the actual playfield instead of a different sized label.
-    // Image 30 feedback: "nametag seems overly big on here."
+    // Game.seatCats style (Courier New, white with black stroke) but
+    // font size scales with the cat's current scale per Tim Image 31:
+    // "nametag size should be proportional to their body size always."
+    // Reference: 10px at the standard Game.seatCats scale of 1.4 — so
+    // the merch cat (scale 2.7) gets ~19px and the stage cat (1.4)
+    // stays at the canonical 10px.
+    const nameFontPx = Math.round(10 * this.seatedCat.scaleX / 1.4);
     this.seatedCatNameLabel = this.add
       .text(this.seatedCat.x, this.seatedCat.y + 4, name.toUpperCase(), {
         fontFamily: '"Courier New", monospace',
         fontStyle: 'bold',
-        fontSize: '10px',
+        fontSize: `${nameFontPx}px`,
         color: '#ffffff',
         stroke: '#000000',
         strokeThickness: 3,
