@@ -503,9 +503,27 @@
     "name": "Fire Emoji Head",
     "slot": "head",
     "rarity": "legendary",
-    "offsetX": -5,
+    "offsetX": -4,
     "offsetY": 9,
     "scale": 1.1
+  },
+  {
+    "id": "c58",
+    "name": "Shark Head",
+    "slot": "head",
+    "rarity": "legendary",
+    "offsetX": -5,
+    "offsetY": 11,
+    "scale": 1.2
+  },
+  {
+    "id": "c59",
+    "name": "Shark Head v2",
+    "slot": "head",
+    "rarity": "legendary",
+    "offsetX": -5,
+    "offsetY": 9,
+    "scale": 0.5
   },
   {
     "id": "c60",
