@@ -23,8 +23,10 @@ describe('TUTORIAL_DIALOGUE', () => {
     }
   });
 
-  it('play-tutorial has one line per chart section + the joke + outro (10 total)', () => {
-    expect(getTutorialDialogue('play-tutorial').length).toBe(10);
+  it('play-tutorial has one line per gameplay phase + outro (8 total)', () => {
+    // 8 phases: taps+chords, lane-styling, holds, slides, 2-slides,
+    // double-slides, insane, outro+menu-mock.
+    expect(getTutorialDialogue('play-tutorial').length).toBe(8);
   });
 
   it('stage-set-confirm exists (replaces dressing-walkthrough — the orchestrator now handles auto-equip itself)', () => {

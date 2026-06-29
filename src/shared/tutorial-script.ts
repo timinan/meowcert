@@ -36,20 +36,26 @@ export const TUTORIAL_DIALOGUE: Record<TutorialStepId, string | string[]> = {
   'stage-set-confirm':
     "your stage is set! this is what you'll see when you practice or when you put on a show for others. you can always come back here with this tab on the menu.",
   'rehearsal-intro':
-    "now let's get to rehearsing. you'll find REHEARSE in here whenever you want to practice. tap it to head to the stage.",
+    "now let's get to practicing. you'll find REHEARSE in here whenever you want to head to the stage for some practice.",
   'play-tutorial-intro':
-    "let's rehearse! we'll be pspspsing the performers — they prefer being cheered on that way over loud claps.",
+    "for each show you attend or when you're practicing with your band, we'll be pspspsing the performers — they prefer being cheered on that way over loud claps. you'll see fuzzy balls fall down — that's the optimal time for a lil ps for the kitties. tap them as they get inside the circle.",
   'play-tutorial': [
-    "nice! those are taps. they're the basic note.",
-    "your cat lives in the middle for now, but the side lanes still work — they're ready for when you hire more bandmembers.",
-    "two or three lanes at once? both work — it's just a chord.",
+    // 0 — taps + chord intro (drops chord notes after first tap-only round)
+    "nice! those are taps — the basic note. two or three lanes at once? both work, it's just a chord.",
+    // 1 — lane styling explainer (no notes, Continue advances)
+    "your cat lives in the middle for now, but the side lanes still work — they're ready for when you hire more bandmembers. who you put on stage affects how your lanes look in-game. since i'm here you'll see my lane is set to match me — let me get out my butter effect for you too.",
+    // 2 — holds
     "holds are tap-and-hold — keep your finger down until it ends.",
-    "slides! tap and drag to the next lane.",
-    "you can jump 2 lanes too — same gesture, longer drag.",
-    "and the ◀▶ one — drag out, then drag back. takes practice.",
+    // 3 — slides (1 lane)
+    "slides next! tap and drag to the next lane.",
+    // 4 — slides (2 lanes)
+    "you can slide across 2 lanes too — same gesture, longer drag.",
+    // 5 — double slide
+    "and the double slide ◀▶ — drag out, then drag back. takes practice.",
+    // 6 — insane chart (5s timer)
     "ok! you're ready for an insane run!",
-    "...just kidding 😼. you've got a long way to go before that.",
-    "let's move on to the editor.",
+    // 7 — outro + menu mock w/ PUT ON A SHOW highlighted
+    "...just kidding 😼. you've got a long way to go before that. now i'll show you how to put on a show — let's first head to this tab.",
   ],
   'editor-tour-intro':
     "now let's check out the editor — that's where you'll create your own shows.",
