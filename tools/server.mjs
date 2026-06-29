@@ -947,6 +947,34 @@ async function handleRunCosmeticVariants(res) {
   }
 }
 
+/**
+ * POST /save-variant-selections — persist Tim's ticked cosmetic variants.
+ * Body is the full selections object so this is idempotent (no diffing).
+ * Writes to tools/cosmetics/variants/selections.json. A regen of the
+ * variants page reads this file back so checkmarks survive.
+ */
+async function handleSaveVariantSelections(req, res) {
+  const chunks = [];
+  req.on('data', (c) => chunks.push(c));
+  req.on('end', async () => {
+    try {
+      const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+      if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+        throw new Error('expected an object keyed by cosmetic id');
+      }
+      const target = path.join(TOOL_DIR, 'cosmetics', 'variants', 'selections.json');
+      await fs.writeFile(target, JSON.stringify(body, null, 2));
+      const count = Object.values(body).reduce((acc, arr) => acc + (arr?.length || 0), 0);
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, count }));
+    } catch (e) {
+      console.warn(`[save-variant-selections] ${e.message}`);
+      res.writeHead(400, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: e.message }));
+    }
+  });
+}
+
 async function handleBgUpload(req, res, slug) {
   if (!/^[a-z][a-z0-9_-]{0,30}$/.test(slug)) {
     res.writeHead(400, { 'content-type': 'application/json' });
@@ -1255,6 +1283,17 @@ const server = http.createServer(async (req, res) => {
     // don't leave orphans.
     if (req.method === 'POST' && req.url === '/run-cosmetic-variants') {
       await handleRunCosmeticVariants(res);
+      return;
+    }
+
+    // --- POST /save-variant-selections -------------------------------
+    // Body: { "c18": ["all_red","cluster0_blue",...], "c24": [...] }
+    // Persisted to tools/cosmetics/variants/selections.json so picks
+    // survive page reloads + regenerations. A future
+    // ship-selected-variants script can read this file to know which
+    // tinted cosmetics to add to the catalog.
+    if (req.method === 'POST' && req.url === '/save-variant-selections') {
+      await handleSaveVariantSelections(req, res);
       return;
     }
 
