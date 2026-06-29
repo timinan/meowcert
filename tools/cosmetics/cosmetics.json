@@ -96,7 +96,8 @@
     "rarity": "uncommon",
     "offsetX": -5,
     "offsetY": 38,
-    "scale": 1.1
+    "scale": 1.1,
+    "isStatic": true
   },
   {
     "id": "c12",
@@ -229,9 +230,10 @@
     "name": "Tan Cowboy Hat",
     "slot": "head",
     "rarity": "common",
-    "offsetX": -5,
-    "offsetY": 3,
-    "scale": 1
+    "offsetX": 0,
+    "offsetY": 0,
+    "scale": 1,
+    "isStatic": true
   },
   {
     "id": "c28",

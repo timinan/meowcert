@@ -557,17 +557,31 @@ export class Cat {
     let dx = 0;
     let dy = 0;
 
-    // The cat's per-frame translation offset is applied ONLY to cosmetics
-    // that are explicitly marked `isStatic` in the catalog (set by the
-    // Cosmetic Quick Add upload flow). Hand-animated cosmetics (c1–c43)
-    // keep their per-frame art driving their motion — this branch is a
-    // strict no-op for them.
+    // The cat's per-frame translation offset is applied to cosmetics that
+    // EITHER (a) are flagged `isStatic` in the catalog — single-frame
+    // uploads from Cosmetic Quick Add that have no per-frame art at all —
+    // OR (b) lack their own anim frames for the cat's current anim. Case
+    // (b) catches hand-animated cosmetics with partial coverage (e.g.
+    // c42/c43 necklaces have idle/happy/hiss frames but no lick/meow):
+    // without offsets they'd freeze on the last idle frame while the cat
+    // moves underneath, visually appearing to drift. With offsets they
+    // ride the cat's per-frame motion instead.
     const cosId = this.cosmeticIdForSlot(slot);
     const catalogEntry = cosId
       ? COSMETIC_CATALOG.find((c) => c.id === cosId)
       : undefined;
-    if (catalogEntry?.isStatic) {
-      const catAnimKey = this.sprite.anims.currentAnim?.key;
+    const catAnimKey = this.sprite.anims.currentAnim?.key;
+    let lacksOwnAnimFrames = false;
+    if (cosId && catAnimKey) {
+      const sepIdx = catAnimKey.indexOf('_');
+      if (sepIdx > 0) {
+        const anim = catAnimKey.slice(sepIdx + 1) as CatAnimationState;
+        const renderId = parentIdFor(catalogEntry) ?? cosId;
+        const cosKey = Cat.cosmeticAnimationKey(renderId, anim);
+        lacksOwnAnimFrames = !this.scene.anims.exists(cosKey);
+      }
+    }
+    if (catalogEntry?.isStatic || lacksOwnAnimFrames) {
       const frameIdx = this.sprite.anims.currentFrame?.index;
       let resolved: [number, number] | null = null;
       if (catAnimKey && typeof frameIdx === 'number') {
@@ -587,7 +601,7 @@ export class Cat {
             : frameIdx - 1;
           const off = this.frameOffsets[breed]?.[anim]?.[offsetIdx];
           if (off) {
-            const strength = catalogEntry.motionStrength ?? Cat.motionStrengthForSlot(slot);
+            const strength = catalogEntry?.motionStrength ?? Cat.motionStrengthForSlot(slot);
             resolved = [off[0] * strength, off[1] * strength];
           }
         }
@@ -619,19 +633,22 @@ export class Cat {
     return this.model.equippedCosmetics?.[slot] ?? null;
   }
 
-  /** How strongly a cosmetic in this slot rides the cat's per-frame motion.
-   *  1.0 = exactly tracks the cat's body-center delta. Lower for body items
-   *  (which move less in the source art than the head). Tunable later via a
-   *  per-cosmetic `motionStrength` override in the calibrator if needed. */
+  /** How strongly a cosmetic in this slot rides the cat's per-frame head
+   *  motion. The offsets table tracks the TOP of the head's painted bounds,
+   *  so 1.0 = move 1:1 with the head's crown. Lower values for items that
+   *  sit further down the body, where the cat's actual chest/torso barely
+   *  moves while the head can lift up to 12px during lick/meow. Setting
+   *  these too high makes necklaces / collars jump off the chest onto the
+   *  face. Per-cosmetic `motionStrength` override available in catalog. */
   private static motionStrengthForSlot(slot: string): number {
     switch (slot) {
       case 'head':
       case 'face':
         return 1.0;
       case 'neck':
-        return 0.8;
+        return 0.5;
       case 'body':
-        return 0.4;
+        return 0.2;
       default:
         return 0.6;
     }
@@ -665,6 +682,19 @@ export class Cat {
     if (!sprite) return;
     const entry = COSMETIC_CATALOG.find((c) => c.id === cosmeticId);
     const renderId = parentIdFor(entry) ?? cosmeticId;
+    // isStatic cosmetics ignore per-anim atlas frames even if they exist —
+    // pin to idle so syncOneCosmetic's per-frame offsets do all the
+    // motion. Useful for cosmetics whose hand-drawn anim frames turned
+    // out to be degenerate (e.g. 8 identical lick frames) where the
+    // offset path tracks the cat better than the static art ever could.
+    if (entry?.isStatic) {
+      const idleKey = Cat.cosmeticAnimationKey(renderId, 'idle');
+      this.ensureCosmeticAnimation(renderId, 'idle');
+      if (this.scene.anims.exists(idleKey)) {
+        sprite.play(idleKey, true);
+      }
+      return;
+    }
     const key = Cat.cosmeticAnimationKey(renderId, animation);
     this.ensureCosmeticAnimation(renderId, animation);
     if (this.scene.anims.exists(key)) {

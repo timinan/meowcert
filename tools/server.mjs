@@ -103,6 +103,16 @@ const TOOLS = {
     savePath: path.join(TOOL_DIR, 'cosmetics', 'cosmetics.json'),
     description: 'Upload one PNG → fully integrated cosmetic (static + rides cat motion).',
   },
+  'smoke-test': {
+    label: 'Cosmetic Smoke Test',
+    href: '/tools/cats/smoke-anim-lick.html',
+    // Generated artifact — gitignored. Run `npm run smoke-test` after
+    // any extract/offset/cosmetic-art change to regenerate the 4 pages
+    // (idle/hiss/lick/meow). Defaults to lick since that's the heaviest
+    // deformation case; nav buttons in the page switch animations.
+    savePath: path.join(TOOL_DIR, 'cats', 'smoke-anim-lick.html'),
+    description: 'Every (cat × cosmetic) combo rendered with live CSS animation across idle/hiss/lick/meow. Catches alignment regressions when offsets or cosmetic art change. Run `npm run smoke-test` to (re)generate.',
+  },
 };
 
 const MAX_BACKUPS = 5;

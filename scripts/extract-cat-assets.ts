@@ -661,8 +661,23 @@ async function writeCatFrameOffsets(): Promise<void> {
     if (!m) continue;
     const [, breed, anim, idxStr] = m;
     const idx = parseInt(idxStr!, 10);
-    const cx = f.spriteSourceSize.x + f.spriteSourceSize.w / 2;
-    const cy = f.spriteSourceSize.y + f.spriteSourceSize.h / 2;
+    // Anchor X to a constant (sourceSize/2 = canvas centerline) and Y to
+    // the TOP of the painted bounds (= head's top edge).
+    //
+    // Why X is fixed: spriteSourceSize.x is constant across all frames of
+    // a cat (the body's left edge doesn't move horizontally) — what changes
+    // is `w` as the body extends right (tail flicks, paw lifts). Using
+    // center-X of painted bounds picked up that body extension as false
+    // head motion, dragging static cosmetics side-to-side. A fixed anchor
+    // = zero horizontal motion in the offsets = static cosmetics lock
+    // perfectly to the head.
+    //
+    // Why Y is top: the original center-Y conflated body deformation
+    // (paw lifts, body stretches DOWN during lick/meow) with head motion.
+    // Top-Y tracks the topmost painted row directly = where the head's
+    // crown is = the true vertical landmark for hats / faces.
+    const cx = f.sourceSize.w / 2;
+    const cy = f.spriteSourceSize.y;
     let perAnim = byCatAnim.get(breed!);
     if (!perAnim) {
       perAnim = new Map();
