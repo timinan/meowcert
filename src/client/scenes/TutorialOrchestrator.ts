@@ -1453,8 +1453,18 @@ export class TutorialOrchestrator extends Scene {
     const fallSpeedPxPerMs = (hitY - startY) / FALL_TO_HIT_MS;
 
     const sprite = this.add.container(cx, startY).setDepth(-100);
-    const ball = this.add.circle(0, 0, 22, color, 1).setStrokeStyle(3, 0xffffff, 0.9);
+    // Use the SAME ball texture the real Note class uses
+    // (MeowcertElementBallWhite + the 'ps' letters overlay), tinted by
+    // lane color — Tim Image 37: "are the notes the fuzzy ps too? it
+    // was just like a round circle earlier when i saw." Reads as the
+    // same fuzzy ps the player will see in real shows.
+    const ball = this.add.image(0, 0, AssetKeys.Image.MeowcertElementBallWhite);
+    ball.setDisplaySize(54, 54);
+    ball.setTint(color);
     sprite.add(ball);
+    const letters = this.add.image(0, 0, AssetKeys.Image.MeowcertElementLetters);
+    letters.setDisplaySize(54, 54);
+    sprite.add(letters);
     if (type === 'hold' && opts?.holdEndAt) {
       const tailH = Math.max(0, (opts.holdEndAt - hitAt) * fallSpeedPxPerMs);
       const tail = this.add.rectangle(0, -tailH / 2 - 12, 30, tailH, color, 0.75);
