@@ -300,26 +300,25 @@ export class TutorialCatOverlay {
     const tipX = anchorX + dx * ratio;
     const tipY = anchorY + dy * ratio;
 
-    // -- Capsule-shaped tail: two parallel sides ending in a smooth
-    // half-circle cap (Tim Image 32 drew this exact U shape). NOT a
-    // triangle, NOT a triangle + blob — a stadium silhouette where
-    // the tail has consistent width along its length and the tip
-    // curves smoothly. Constructed as a rectangle (anchor edge → cap
-    // base) plus a fillCircle at the cap center.
-    const tailHalfW = 4;
+    // -- Tapered teardrop tail per Tim Image 33: "filled in starting
+    // wider and the becoming narrow with a rounded tip." Wide base at
+    // the bubble edge (16px) tapers to a narrow tip (6px) with a small
+    // half-circle cap. NOT a constant-width capsule — the previous
+    // shape read as phallic; this one reads as a comma / teardrop.
+    const baseHalfW = 8;  // 16px wide where it joins the bubble
+    const tipHalfW  = 3;  // 6px wide just before the rounded cap
     const ux = fullDist > 0 ? dx / fullDist : 0;
     const uy = fullDist > 0 ? dy / fullDist : 0;
-    // Perpendicular to the tail axis.
     const px = -uy;
     const py = ux;
-    const baseLeftX  = anchorX + px * tailHalfW;
-    const baseLeftY  = anchorY + py * tailHalfW;
-    const baseRightX = anchorX - px * tailHalfW;
-    const baseRightY = anchorY - py * tailHalfW;
-    const tipLeftX  = tipX + px * tailHalfW;
-    const tipLeftY  = tipY + py * tailHalfW;
-    const tipRightX = tipX - px * tailHalfW;
-    const tipRightY = tipY - py * tailHalfW;
+    const baseLeftX  = anchorX + px * baseHalfW;
+    const baseLeftY  = anchorY + py * baseHalfW;
+    const baseRightX = anchorX - px * baseHalfW;
+    const baseRightY = anchorY - py * baseHalfW;
+    const tipLeftX  = tipX + px * tipHalfW;
+    const tipLeftY  = tipY + py * tipHalfW;
+    const tipRightX = tipX - px * tipHalfW;
+    const tipRightY = tipY - py * tipHalfW;
     const tailGfx = this.scene.add.graphics();
     tailGfx.fillStyle(SPEECH_BUBBLE_COLOR, 1);
     tailGfx.fillPoints([
@@ -328,7 +327,7 @@ export class TutorialCatOverlay {
       { x: tipRightX,  y: tipRightY  },
       { x: baseRightX, y: baseRightY },
     ], true);
-    tailGfx.fillCircle(tipX, tipY, tailHalfW);
+    tailGfx.fillCircle(tipX, tipY, tipHalfW);
     this.container.add(tailGfx);
 
     const bubbleGfx = this.scene.add.graphics();
