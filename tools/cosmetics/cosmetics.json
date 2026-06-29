@@ -157,9 +157,9 @@
     "name": "Santa Hat",
     "slot": "head",
     "rarity": "uncommon",
-    "offsetX": 0,
-    "offsetY": 3,
-    "scale": 1
+    "offsetX": -17,
+    "offsetY": 4,
+    "scale": 1.1
   },
   {
     "id": "c19",

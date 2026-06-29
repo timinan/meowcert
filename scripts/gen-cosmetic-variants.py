@@ -180,10 +180,53 @@ def pixel_in_cluster(pixel_hue_deg, cluster_center_deg, radius=45):
     return min(d, 360 - d) <= radius
 
 
-def shift_hue(img, target_h_deg, source_h_deg, mask_cluster_deg=None, mask_radius=45):
+def cluster_avg_lightness(img, cluster_h_deg, radius=45):
+    """Average lightness of pixels belonging to a hue cluster. Used to detect
+    very-dark bases (e.g. black witch hat, black tie) where straight hue
+    rotation produces an indistinguishable nearly-black variant — instead
+    we boost lightness during recolor so the new color is actually visible."""
+    src_px = img.load()
+    w, h = img.size
+    total_l = 0.0
+    n = 0
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = src_px[x, y]
+            if a == 0:
+                continue
+            hh, ll, ss = colorsys.rgb_to_hls(r / 255, g / 255, b / 255)
+            if ss < GRAY_SAT:
+                continue
+            if cluster_h_deg is not None:
+                if not pixel_in_cluster(int(hh * 360), cluster_h_deg, radius):
+                    continue
+            total_l += ll
+            n += 1
+    return total_l / n if n else 0.5
+
+
+# When the cluster's average lightness is below this, we boost output lightness
+# so the recolored result is visible (black hat → real-red hat, not near-black-red)
+DARK_BASE_THRESHOLD = 0.30
+# Target average lightness for recolored dark bases — bright enough to read as
+# a real color while still keeping shadow/highlight contrast
+DARK_BASE_TARGET_L = 0.50
+
+
+def shift_hue(img, target_h_deg, source_h_deg, mask_cluster_deg=None, mask_radius=45,
+              cluster_avg_l=None):
     """Per-pixel hue rotation. If mask_cluster_deg is set, only pixels whose
     current hue falls within mask_radius of that cluster center get rotated;
-    other colored pixels stay put."""
+    other colored pixels stay put.
+
+    Per-pixel dark-pixel rescue: any colored pixel whose lightness is below
+    DARK_BASE_THRESHOLD gets lifted to ~DARK_BASE_TARGET_L AND its saturation
+    floored to 0.75+. This makes black/near-black bases produce VISIBLE
+    colored variants instead of nearly-black ones. Bright pixels in the same
+    image are untouched, so a mixed dark/bright cosmetic (witch hat: black
+    body + red band) gets vivid recolor on the body while the band keeps
+    its original tone. cluster_avg_l param kept for backward compat but no
+    longer drives the boost decision."""
     rotation = (target_h_deg - source_h_deg) / 360.0
     out = Image.new('RGBA', img.size, (0, 0, 0, 0))
     src_px = img.load()
@@ -204,7 +247,16 @@ def shift_hue(img, target_h_deg, source_h_deg, mask_cluster_deg=None, mask_radiu
                     dst_px[x, y] = (r, g, b, a)
                     continue
             new_h = (hh + rotation) % 1.0
-            nr, ng, nb = colorsys.hls_to_rgb(new_h, ll, ss)
+            new_l = ll
+            new_s = ss
+            if ll < DARK_BASE_THRESHOLD:
+                # Lift this dark pixel toward visible-color territory while
+                # preserving its position relative to other dark pixels
+                # (so a darker shadow STAYS darker than its neighbors after
+                # the lift)
+                new_l = min(1.0, ll + (DARK_BASE_TARGET_L - ll) * 0.8)
+                new_s = max(ss, 0.75)
+            nr, ng, nb = colorsys.hls_to_rgb(new_h, new_l, new_s)
             dst_px[x, y] = (int(nr * 255), int(ng * 255), int(nb * 255), a)
     return out
 
@@ -263,18 +315,24 @@ for c in bases:
         variants.append({'id': 'lighter', 'label': 'lighter', 'file': l_path.name, 'kind': 'lightness'})
 
     else:
-        # 1. Standard whole-image hue rotation (all clusters move together)
+        # 1. Standard whole-image hue rotation (all clusters move together).
+        # Use ALL colored pixels' avg-L for the boost decision so even an
+        # item whose primary cluster is dark gets a sensible global lift.
         primary_hue = clusters[0][0]
+        global_avg_l = cluster_avg_lightness(img, cluster_h_deg=None)
         for hname, hdeg in HUE_TARGETS:
-            v_img = shift_hue(img, hdeg, primary_hue)
+            v_img = shift_hue(img, hdeg, primary_hue, cluster_avg_l=global_avg_l)
             v_path = IMG_DIR / f'{cid}__all_{hname}.png'
             v_img.save(v_path)
             variants.append({'id': f'all_{hname}', 'label': hname, 'file': v_path.name, 'kind': 'all'})
 
-        # 2. Per-cluster recolors (only if 2+ clusters with enough weight)
+        # 2. Per-cluster recolors (only if 2+ clusters with enough weight).
+        # Per-cluster avg-L so a dark main cluster gets boosted to visible
+        # color while a bright accent cluster keeps its original lightness.
         if len(clusters) >= 2 and all(w >= CLUSTER_MIN_WEIGHT for _, w in clusters[:2]):
             for ci, (cluster_deg, cluster_w) in enumerate(clusters[:2]):
                 cluster_role = 'main' if ci == 0 else 'accent'
+                cluster_l = cluster_avg_lightness(img, cluster_h_deg=cluster_deg)
                 for hname, hdeg in HUE_TARGETS:
                     v_img = shift_hue(
                         img,
@@ -282,6 +340,7 @@ for c in bases:
                         source_h_deg=cluster_deg,
                         mask_cluster_deg=cluster_deg,
                         mask_radius=45,
+                        cluster_avg_l=cluster_l,
                     )
                     label = f'{cluster_role}→{hname}'
                     v_id = f'cluster{ci}_{hname}'

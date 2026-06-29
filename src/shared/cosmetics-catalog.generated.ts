@@ -163,9 +163,9 @@ export const GENERATED_COSMETIC_CATALOG: readonly CosmeticEntry[] = [
     name: "Santa Hat",
     rarity: "uncommon",
     slot: "head",
-    offsetX: 0,
-    offsetY: 3,
-    scale: 1,
+    offsetX: -17,
+    offsetY: 4,
+    scale: 1.1,
   },
   {
     id: "c19",

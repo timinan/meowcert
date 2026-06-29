@@ -157,8 +157,8 @@
     "name": "Santa Hat",
     "slot": "head",
     "rarity": "uncommon",
-    "offsetX": -15,
-    "offsetY": 3,
+    "offsetX": -17,
+    "offsetY": 2,
     "scale": 1
   },
   {
@@ -220,7 +220,7 @@
     "name": "Tan Beret",
     "slot": "head",
     "rarity": "common",
-    "offsetX": -9,
+    "offsetX": 0,
     "offsetY": 4,
     "scale": 1.2
   },
@@ -283,7 +283,7 @@
     "name": "Tan Beret With String",
     "slot": "head",
     "rarity": "uncommon",
-    "offsetX": -14,
+    "offsetX": 0,
     "offsetY": 11,
     "scale": 1
   },
