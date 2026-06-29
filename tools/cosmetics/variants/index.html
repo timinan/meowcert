@@ -1,0 +1,474 @@
+<!doctype html>
+<html><head><meta charset="utf-8"/>
+<title>meowcert · cosmetic color variants</title>
+<style>
+  :root {
+    --bg: #1a0a2e; --bg2: #261540; --bg3: #341c5a;
+    --text: #fff; --muted: #c0a0e6; --accent: #ffd34d;
+  }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, sans-serif; font-size: 13px; }
+  .hdr { position: sticky; top: 40px; z-index: 50; background: var(--bg);
+    padding: 14px 20px 10px; border-bottom: 1px solid var(--bg3); }
+  .hdr h1 { margin: 0 0 4px; font-size: 18px; color: var(--accent); }
+  .hdr .sub { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+  .palette { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .vh { display: flex; align-items: center; gap: 4px; font-size: 11px;
+    color: var(--muted); padding: 3px 7px; background: var(--bg2); border-radius: 4px; }
+  .vh .sw { width: 12px; height: 12px; border-radius: 3px; border: 1px solid #0006; }
+  .navbtn { display: inline-block; padding: 4px 12px; background: #4a7c3a; color: #fff;
+    border: 1px solid #6ba85a; border-radius: 4px; font-size: 12px;
+    cursor: pointer; font-family: inherit; margin-left: 16px; }
+  .navbtn:hover { background: #5a9c44; }
+  .navbtn:disabled { opacity: 0.55; cursor: progress; }
+  .navbtn.err { background: #8b2c2c; border-color: #c44; }
+  .slot-hdr { margin: 28px 20px 8px; color: var(--accent); font-size: 14px;
+    letter-spacing: 1px; padding-bottom: 4px; border-bottom: 1px solid var(--bg3); }
+  .row { display: flex; gap: 14px; padding: 12px 20px; align-items: flex-start;
+    border-bottom: 1px solid #2a1845; }
+  .row:nth-child(even) { background: #14082599; }
+  .base { flex: 0 0 130px; text-align: center; padding: 10px; background: var(--bg2);
+    border-radius: 8px; border: 2px solid var(--accent); }
+  .base img { display: block; margin: 0 auto 6px; width: 80px; height: auto;
+    image-rendering: pixelated; }
+  .base .bid { color: var(--accent); font-weight: 700; font-size: 13px; }
+  .base .bnm { color: var(--text); font-size: 11px; margin: 2px 0; }
+  .base .bhue { color: var(--muted); font-size: 10px; }
+  .variants { display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px;
+    flex: 1; min-width: 0; }
+  .vcell { background: var(--bg2); border-radius: 6px; padding: 8px 4px;
+    text-align: center; min-width: 0; }
+  .vcell img { display: block; margin: 0 auto 4px; width: 60px; height: auto;
+    image-rendering: pixelated; }
+  .vlbl { color: var(--muted); font-size: 10px; text-transform: uppercase;
+    letter-spacing: 0.5px; }
+  @media (max-width: 1200px) {
+    .variants { grid-template-columns: repeat(5, 1fr); }
+  }
+</style></head>
+<body>
+  <div class="hdr">
+    <h1>cosmetic color variants</h1>
+    <div class="sub">
+      Each base cosmetic shown with 10 hue-rotated variants. HSL-aware rotation
+      preserves shadow/highlight relationships within the new hue — darker shadows
+      stay darker, blacks stay black, whites stay white. Near-gray sources
+      (saturation &lt; 0.08, marked <code>*</code>) won't shift much because they
+      have no real hue to rotate.
+    </div>
+    <div class="palette">
+      <div class="vh"><span class="sw" style="background:#d82626"></span><span>red</span></div><div class="vh"><span class="sw" style="background:#d87f26"></span><span>orange</span></div><div class="vh"><span class="sw" style="background:#d8c926"></span><span>yellow</span></div><div class="vh"><span class="sw" style="background:#7fd826"></span><span>lime</span></div><div class="vh"><span class="sw" style="background:#26d852"></span><span>green</span></div><div class="vh"><span class="sw" style="background:#26d8c9"></span><span>teal</span></div><div class="vh"><span class="sw" style="background:#2661d8"></span><span>blue</span></div><div class="vh"><span class="sw" style="background:#7f26d8"></span><span>purple</span></div><div class="vh"><span class="sw" style="background:#d826c9"></span><span>magenta</span></div><div class="vh"><span class="sw" style="background:#d8267f"></span><span>pink</span></div>
+      <button class="navbtn" id="gen-btn" onclick="regenerate()">🔄 Generate (delete + rerun)</button>
+    </div>
+  </div>
+  <h2 class="slot-hdr">HEAD · 23 cosmetics</h2>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c18_base.png" alt="c18"/>
+            <div class="bid">c18</div>
+            <div class="bnm">Santa Hat</div>
+            <div class="bhue">src hue 355°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c18_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c18_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c18_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c18_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c18_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c18_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c18_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c18_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c18_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c18_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c19_base.png" alt="c19"/>
+            <div class="bid">c19</div>
+            <div class="bnm">Sailor Hat</div>
+            <div class="bhue">src hue 44°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c19_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c19_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c19_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c19_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c19_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c19_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c19_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c19_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c19_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c19_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c20_base.png" alt="c20"/>
+            <div class="bid">c20</div>
+            <div class="bnm">Black Hat</div>
+            <div class="bhue">src hue 226°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c20_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c20_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c20_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c20_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c20_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c20_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c20_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c20_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c20_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c20_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c21_base.png" alt="c21"/>
+            <div class="bid">c21</div>
+            <div class="bnm">Black Tophat</div>
+            <div class="bhue">src hue 226°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c21_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c21_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c21_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c21_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c21_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c21_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c21_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c21_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c21_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c21_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c22_base.png" alt="c22"/>
+            <div class="bid">c22</div>
+            <div class="bnm">Tiny Santa Hat</div>
+            <div class="bhue">src hue 355°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c22_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c22_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c22_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c22_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c22_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c22_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c22_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c22_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c22_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c22_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c23_base.png" alt="c23"/>
+            <div class="bid">c23</div>
+            <div class="bnm">Party Hat</div>
+            <div class="bhue">src hue 298°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c23_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c23_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c23_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c23_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c23_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c23_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c23_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c23_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c23_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c23_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c24_base.png" alt="c24"/>
+            <div class="bid">c24</div>
+            <div class="bnm">Tiny Crown</div>
+            <div class="bhue">src hue 44°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c24_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c24_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c24_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c24_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c24_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c24_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c24_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c24_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c24_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c24_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c25_base.png" alt="c25"/>
+            <div class="bid">c25</div>
+            <div class="bnm">Tan Beret</div>
+            <div class="bhue">src hue 24°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c25_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c25_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c25_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c25_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c25_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c25_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c25_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c25_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c25_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c25_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c27_base.png" alt="c27"/>
+            <div class="bid">c27</div>
+            <div class="bnm">Tan Cowboy Hat</div>
+            <div class="bhue">src hue 24°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c27_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c27_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c27_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c27_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c27_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c27_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c27_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c27_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c27_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c27_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c28_base.png" alt="c28"/>
+            <div class="bid">c28</div>
+            <div class="bnm">Black Witch Hat</div>
+            <div class="bhue">src hue 226°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c28_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c28_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c28_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c28_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c28_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c28_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c28_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c28_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c28_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c28_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c29_base.png" alt="c29"/>
+            <div class="bid">c29</div>
+            <div class="bnm">Red Baseball Cap</div>
+            <div class="bhue">src hue 353°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c29_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c29_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c29_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c29_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c29_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c29_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c29_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c29_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c29_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c29_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c30_base.png" alt="c30"/>
+            <div class="bid">c30</div>
+            <div class="bnm">Brown Beret with Bow</div>
+            <div class="bhue">src hue 18°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c30_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c30_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c30_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c30_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c30_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c30_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c30_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c30_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c30_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c30_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c31_base.png" alt="c31"/>
+            <div class="bid">c31</div>
+            <div class="bnm">Clown Hat</div>
+            <div class="bhue">src hue 12°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c31_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c31_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c31_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c31_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c31_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c31_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c31_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c31_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c31_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c31_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c32_base.png" alt="c32"/>
+            <div class="bid">c32</div>
+            <div class="bnm">Black Pilgrim Hat</div>
+            <div class="bhue">src hue 226°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c32_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c32_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c32_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c32_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c32_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c32_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c32_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c32_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c32_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c32_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c33_base.png" alt="c33"/>
+            <div class="bid">c33</div>
+            <div class="bnm">Tan Beret With String</div>
+            <div class="bhue">src hue 18°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c33_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c33_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c33_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c33_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c33_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c33_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c33_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c33_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c33_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c33_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c35_base.png" alt="c35"/>
+            <div class="bid">c35</div>
+            <div class="bnm">Orange Head</div>
+            <div class="bhue">src hue 27°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c35_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c35_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c35_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c35_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c35_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c35_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c35_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c35_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c35_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c35_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c36_base.png" alt="c36"/>
+            <div class="bid">c36</div>
+            <div class="bnm">Strawberry Head</div>
+            <div class="bhue">src hue 356°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c36_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c36_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c36_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c36_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c36_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c36_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c36_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c36_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c36_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c36_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c37_base.png" alt="c37"/>
+            <div class="bid">c37</div>
+            <div class="bnm">Bread Head</div>
+            <div class="bhue">src hue 32°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c37_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c37_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c37_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c37_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c37_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c37_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c37_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c37_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c37_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c37_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c38_base.png" alt="c38"/>
+            <div class="bid">c38</div>
+            <div class="bnm">Frog Head</div>
+            <div class="bhue">src hue 94°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c38_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c38_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c38_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c38_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c38_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c38_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c38_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c38_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c38_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c38_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c39_base.png" alt="c39"/>
+            <div class="bid">c39</div>
+            <div class="bnm">Chef's Hat</div>
+            <div class="bhue">src hue 218°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c39_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c39_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c39_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c39_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c39_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c39_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c39_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c39_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c39_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c39_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c40_base.png" alt="c40"/>
+            <div class="bid">c40</div>
+            <div class="bnm">White Sunglasses</div>
+            <div class="bhue">src hue 231°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c40_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c40_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c40_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c40_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c40_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c40_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c40_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c40_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c40_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c40_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c41_base.png" alt="c41"/>
+            <div class="bid">c41</div>
+            <div class="bnm">Yellow Tint Sunglasses</div>
+            <div class="bhue">src hue 52°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c41_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c41_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c41_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c41_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c41_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c41_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c41_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c41_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c41_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c41_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c57_base.png" alt="c57"/>
+            <div class="bid">c57</div>
+            <div class="bnm">Fire Emoji Head</div>
+            <div class="bhue">src hue 16°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c57_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c57_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c57_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c57_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c57_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c57_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c57_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c57_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c57_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c57_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div><h2 class="slot-hdr">FACE · 8 cosmetics</h2>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c1_base.png" alt="c1"/>
+            <div class="bid">c1</div>
+            <div class="bnm">Red Sunglasses</div>
+            <div class="bhue">src hue 18°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c1_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c1_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c1_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c1_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c1_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c1_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c1_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c1_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c1_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c1_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c2_base.png" alt="c2"/>
+            <div class="bid">c2</div>
+            <div class="bnm">Grey Glasses</div>
+            <div class="bhue">src hue 231°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c2_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c2_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c2_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c2_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c2_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c2_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c2_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c2_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c2_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c2_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c3_base.png" alt="c3"/>
+            <div class="bid">c3</div>
+            <div class="bnm">Cool Sunglasses</div>
+            <div class="bhue">src hue 231°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c3_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c3_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c3_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c3_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c3_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c3_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c3_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c3_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c3_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c3_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c4_base.png" alt="c4"/>
+            <div class="bid">c4</div>
+            <div class="bnm">Grey Round Glasses</div>
+            <div class="bhue">src hue 231°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c4_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c4_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c4_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c4_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c4_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c4_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c4_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c4_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c4_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c4_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c5_base.png" alt="c5"/>
+            <div class="bid">c5</div>
+            <div class="bnm">White  Round Glasses</div>
+            <div class="bhue">src hue 216°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c5_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c5_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c5_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c5_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c5_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c5_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c5_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c5_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c5_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c5_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c6_base.png" alt="c6"/>
+            <div class="bid">c6</div>
+            <div class="bnm">Monocle </div>
+            <div class="bhue">src hue 216°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c6_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c6_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c6_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c6_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c6_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c6_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c6_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c6_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c6_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c6_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c7_base.png" alt="c7"/>
+            <div class="bid">c7</div>
+            <div class="bnm">Eye Patch</div>
+            <div class="bhue">src hue 231°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c7_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c7_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c7_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c7_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c7_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c7_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c7_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c7_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c7_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c7_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c8_base.png" alt="c8"/>
+            <div class="bid">c8</div>
+            <div class="bnm">Yellow Sunglasses</div>
+            <div class="bhue">src hue 44°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c8_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c8_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c8_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c8_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c8_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c8_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c8_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c8_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c8_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c8_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div><h2 class="slot-hdr">NECK · 12 cosmetics</h2>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c9_base.png" alt="c9"/>
+            <div class="bid">c9</div>
+            <div class="bnm">Red Bowtie</div>
+            <div class="bhue">src hue 352°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c9_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c9_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c9_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c9_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c9_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c9_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c9_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c9_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c9_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c9_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c10_base.png" alt="c10"/>
+            <div class="bid">c10</div>
+            <div class="bnm">Pink Round Bowtie</div>
+            <div class="bhue">src hue 357°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c10_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c10_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c10_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c10_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c10_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c10_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c10_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c10_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c10_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c10_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c11_base.png" alt="c11"/>
+            <div class="bid">c11</div>
+            <div class="bnm">Black Tie</div>
+            <div class="bhue">src hue 231°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c11_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c11_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c11_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c11_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c11_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c11_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c11_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c11_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c11_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c11_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c12_base.png" alt="c12"/>
+            <div class="bid">c12</div>
+            <div class="bnm">Sweater with Red Tie</div>
+            <div class="bhue">src hue 352°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c12_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c12_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c12_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c12_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c12_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c12_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c12_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c12_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c12_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c12_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c13_base.png" alt="c13"/>
+            <div class="bid">c13</div>
+            <div class="bnm">Silver Chain</div>
+            <div class="bhue">src hue 218°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c13_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c13_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c13_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c13_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c13_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c13_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c13_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c13_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c13_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c13_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c14_base.png" alt="c14"/>
+            <div class="bid">c14</div>
+            <div class="bnm">Silver Necklace</div>
+            <div class="bhue">src hue 218°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c14_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c14_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c14_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c14_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c14_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c14_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c14_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c14_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c14_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c14_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c15_base.png" alt="c15"/>
+            <div class="bid">c15</div>
+            <div class="bnm">Silver Crown Necklace</div>
+            <div class="bhue">src hue 218°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c15_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c15_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c15_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c15_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c15_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c15_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c15_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c15_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c15_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c15_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c16_base.png" alt="c16"/>
+            <div class="bid">c16</div>
+            <div class="bnm">Gold Chain</div>
+            <div class="bhue">src hue 44°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c16_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c16_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c16_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c16_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c16_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c16_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c16_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c16_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c16_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c16_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c17_base.png" alt="c17"/>
+            <div class="bid">c17</div>
+            <div class="bnm">Gold Necklace</div>
+            <div class="bhue">src hue 44°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c17_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c17_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c17_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c17_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c17_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c17_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c17_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c17_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c17_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c17_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c34_base.png" alt="c34"/>
+            <div class="bid">c34</div>
+            <div class="bnm">Blue Crystal Necklace</div>
+            <div class="bhue">src hue 183°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c34_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c34_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c34_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c34_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c34_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c34_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c34_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c34_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c34_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c34_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c42_base.png" alt="c42"/>
+            <div class="bid">c42</div>
+            <div class="bnm">Fancy Silver Necklace</div>
+            <div class="bhue">src hue 190°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c42_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c42_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c42_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c42_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c42_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c42_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c42_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c42_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c42_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c42_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+        <div class="row">
+          <div class="base">
+            <img src="imgs/c43_base.png" alt="c43"/>
+            <div class="bid">c43</div>
+            <div class="bnm">Silver Gem Necklace</div>
+            <div class="bhue">src hue 356°</div>
+          </div>
+          <div class="variants"><div class="vcell"><img src="imgs/c43_red.png" alt="red"/><div class="vlbl">red</div></div><div class="vcell"><img src="imgs/c43_orange.png" alt="orange"/><div class="vlbl">orange</div></div><div class="vcell"><img src="imgs/c43_yellow.png" alt="yellow"/><div class="vlbl">yellow</div></div><div class="vcell"><img src="imgs/c43_lime.png" alt="lime"/><div class="vlbl">lime</div></div><div class="vcell"><img src="imgs/c43_green.png" alt="green"/><div class="vlbl">green</div></div><div class="vcell"><img src="imgs/c43_teal.png" alt="teal"/><div class="vlbl">teal</div></div><div class="vcell"><img src="imgs/c43_blue.png" alt="blue"/><div class="vlbl">blue</div></div><div class="vcell"><img src="imgs/c43_purple.png" alt="purple"/><div class="vlbl">purple</div></div><div class="vcell"><img src="imgs/c43_magenta.png" alt="magenta"/><div class="vlbl">magenta</div></div><div class="vcell"><img src="imgs/c43_pink.png" alt="pink"/><div class="vlbl">pink</div></div></div>
+        </div>
+  <script src="/tools-nav.js"></script>
+  <script>
+    async function regenerate() {
+      const btn = document.getElementById('gen-btn');
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '⏳ Generating…';
+      btn.classList.remove('err');
+      try {
+        const res = await fetch('/run-cosmetic-variants', { method: 'POST' });
+        const body = await res.json().catch(() => ({ ok: false, error: 'bad json' }));
+        if (!res.ok || !body.ok) throw new Error(body.error || `HTTP ${res.status}`);
+        btn.textContent = '✅ Reloading…';
+        location.reload();
+      } catch (e) {
+        btn.classList.add('err');
+        btn.textContent = '❌ ' + (e.message || 'failed');
+        btn.disabled = false;
+        setTimeout(() => { btn.textContent = original; btn.classList.remove('err'); }, 5000);
+      }
+    }
+  </script>
+</body></html>

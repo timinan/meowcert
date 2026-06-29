@@ -113,6 +113,16 @@ const TOOLS = {
     savePath: path.join(TOOL_DIR, 'cats', 'smoke-anim-lick.html'),
     description: 'Every (cat × cosmetic) combo rendered with live CSS animation across idle/hiss/lick/meow. Catches alignment regressions when offsets or cosmetic art change. Run `npm run smoke-test` to (re)generate.',
   },
+  'cosmetic-variants': {
+    label: 'Cosmetic Color Variants',
+    href: '/tools/cosmetics/variants/index.html',
+    // Generated artifact — base cosmetic + 10 hue-rotated variants per item.
+    // HSL-aware rotation preserves shadow/highlight relationships within
+    // the new hue. Replaces the old flat-tint variants in the catalog.
+    // Use the Generate button on the page or `npm run cosmetic-variants`.
+    savePath: path.join(TOOL_DIR, 'cosmetics', 'variants', 'index.html'),
+    description: 'Per-base 10-hue color exploration. Use to pick which hue-rotated variants to ship as catalog cosmetics; the page shows the same HSL rotation the runtime would apply if we move to per-pixel recoloring.',
+  },
 };
 
 const MAX_BACKUPS = 5;
@@ -913,6 +923,30 @@ async function handleRunSmokeTest(res) {
   }
 }
 
+/**
+ * POST /run-cosmetic-variants — wipe + regen the color-variants explorer.
+ * Mirrors handleRunSmokeTest: the script itself clears stale imgs and
+ * rewrites index.html, so all this handler needs is to spawn it and
+ * surface success/failure to the page so the Generate button can react.
+ */
+async function handleRunCosmeticVariants(res) {
+  try {
+    const { stdout } = await runScript('npm', ['run', 'cosmetic-variants']);
+    const summary = stdout
+      .split('\n')
+      .filter((l) => l.startsWith('Wrote') || l.startsWith('Generating'))
+      .slice(-2)
+      .join(' | ');
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, summary }));
+    console.log(`[run-cosmetic-variants] regenerated — ${summary}`);
+  } catch (e) {
+    console.warn(`[run-cosmetic-variants] failed: ${e.message}`);
+    res.writeHead(500, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ ok: false, error: e.message }));
+  }
+}
+
 async function handleBgUpload(req, res, slug) {
   if (!/^[a-z][a-z0-9_-]{0,30}$/.test(slug)) {
     res.writeHead(400, { 'content-type': 'application/json' });
@@ -1211,6 +1245,16 @@ const server = http.createServer(async (req, res) => {
     // without rebuilding game state.
     if (req.method === 'POST' && req.url === '/run-smoke-test') {
       await handleRunSmokeTest(res);
+      return;
+    }
+
+    // --- POST /run-cosmetic-variants ---------------------------------
+    // Regenerates the 10-hue color-variants explorer for every base
+    // cosmetic. The page's own Generate button hits this; the script
+    // wipes tools/cosmetics/variants/imgs/* first so deleted cosmetics
+    // don't leave orphans.
+    if (req.method === 'POST' && req.url === '/run-cosmetic-variants') {
+      await handleRunCosmeticVariants(res);
       return;
     }
 
