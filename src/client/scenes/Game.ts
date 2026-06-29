@@ -17,6 +17,11 @@ import { resolveLaneTintsFromSeatedCats } from '@/constants/cat-colors';
 import type { PlayerState, LaneId, Chart, SeatId } from '@/../shared/state';
 import type { CatModel } from '@/types/game';
 import { generateChart, type GenDifficulty } from '@/../shared/chart-generator';
+import {
+  TUTORIAL_INTRO_PHASE_CONFIG,
+  TUTORIAL_PHASE_CONFIGS,
+  type TutorialPhaseConfig,
+} from '@/../shared/tutorial-chart';
 import { GenerateModal } from '@/ui/generate-modal';
 import { SongPickerModal, type SongPickerResult } from '@/ui/song-picker-modal';
 import { DifficultyPickerModal } from '@/ui/difficulty-picker-modal';
@@ -148,6 +153,17 @@ export class Game extends Scene {
    *  sets this to its current page so the author lands on the section
    *  they were authoring. Plain Rehearse always uses 0. */
   private initialStartStep = 0;
+  /** Tutorial mode — set by TutorialOrchestrator when handing off Phase 8
+   *  beats. -1 = play-tutorial-intro chart; 0-7 = play-tutorial sub-phase
+   *  (per TUTORIAL_PHASE_CONFIGS). null = real gameplay (default). When
+   *  set, Game loads a tutorial chart, slows noteFallMs, and suppresses
+   *  leaderboard / score-saving / summary / pass-fail / social-loop. */
+  private tutorialPhase: number | null = null;
+  /** Per-round noteFallMs — defaults to Balance.noteFallMs. Tutorial
+   *  mode passes a slower override via init.noteFallMs so players have
+   *  more time to learn each gesture. Replaces every direct
+   *  Balance.noteFallMs read inside this scene. */
+  private noteFallMsActual = Balance.noteFallMs;
   private songPicker: SongPickerModal | null = null;
   private difficultyPicker: DifficultyPickerModal | null = null;
   /** Carries the song picked in step 1 through to step 2 so the
@@ -263,6 +279,16 @@ export class Game extends Scene {
      *  auto-plays it (because your playerState.chart IS the post's chart)
      *  and the user can't pick a new song. */
     forcePicker?: boolean;
+    /** Tutorial-mode handoff from TutorialOrchestrator. -1 = play-
+     *  tutorial-intro; 0-7 = play-tutorial sub-phase index. When set,
+     *  Game loads the corresponding mini-chart, suppresses leaderboard/
+     *  social/summary, and returns to TutorialOrchestrator after the
+     *  phase's exit condition (3 hits, or 5s timer for insane). */
+    tutorialPhase?: number | null;
+    /** Per-round noteFallMs override. Tutorial mode passes a slower
+     *  value (~3600ms vs Balance.noteFallMs=2400) so the player has
+     *  time to learn each gesture. Defaults to Balance.noteFallMs. */
+    noteFallMs?: number;
   }): void {
     this.playerState = data?.playerState ?? null;
     this.testMode = data?.testMode === true;
@@ -272,6 +298,10 @@ export class Game extends Scene {
     this.visitPostBg = data?.visitPostBg ?? '';
     this.visitPostStage = data?.visitPostStage ?? null;
     this.forcePicker = data?.forcePicker === true;
+    this.tutorialPhase = (typeof data?.tutorialPhase === 'number') ? data.tutorialPhase : null;
+    this.noteFallMsActual = (typeof data?.noteFallMs === 'number' && data.noteFallMs > 0)
+      ? data.noteFallMs
+      : Balance.noteFallMs;
     // Clear the visitor-mode hand-off registry entries on any non-visitor
     // entry. VisitPost stamps `hostChart` + `hostUsername` on the registry
     // for the visitor PLAY flow; without this clear, drawer REHEARSE
@@ -2407,7 +2437,7 @@ export class Game extends Scene {
   private currentPlayPage(): number {
     if (!this.playChart || this.playMsPerStep <= 0) return 0;
     const elapsedMs = this.time.now - this.startTimeMs;
-    const playStepFloat = Math.max(0, (elapsedMs - Balance.noteFallMs) / this.playMsPerStep);
+    const playStepFloat = Math.max(0, (elapsedMs - this.noteFallMsActual) / this.playMsPerStep);
     const playStep = Math.floor(playStepFloat);
     const playPage = Math.floor(playStep / CHART_PAGE_SIZE);
     const totalPages = Math.max(1, Math.ceil(this.playChart.stepCount / CHART_PAGE_SIZE));
@@ -2639,7 +2669,29 @@ export class Game extends Scene {
    * Priority: registry.hostChart → playerState.chart → loadChart(host) →
    * fetchState → empty stub.
    */
+  /** Lookup the tutorial config for the current phase. -1 = intro;
+   *  0-7 = play-tutorial sub-phase per TUTORIAL_PHASE_CONFIGS. Returns
+   *  null when tutorial mode is off OR the phase has no Game-mode
+   *  config (phases 1 + 7 are orchestrator-only). */
+  private getTutorialPhaseConfig(): TutorialPhaseConfig | null {
+    if (this.tutorialPhase === null) return null;
+    if (this.tutorialPhase === -1) return TUTORIAL_INTRO_PHASE_CONFIG;
+    return TUTORIAL_PHASE_CONFIGS[this.tutorialPhase] ?? null;
+  }
+
   private async initChartPlayer(): Promise<void> {
+    // Tutorial mode: load the hand-crafted mini-chart for the current
+    // phase and skip the registry / playerState fallback chain — the
+    // tutorial doesn't read or write any of the normal chart sources.
+    if (this.tutorialPhase !== null) {
+      const cfg = this.getTutorialPhaseConfig();
+      if (cfg) {
+        this.attachChartAndMusic(cfg.chart);
+        return;
+      }
+      console.warn('[Game] tutorial mode with no chart config for phase', this.tutorialPhase);
+    }
+
     let chart: Chart | undefined = this.registry.get('hostChart');
 
     if (!chart) {
@@ -2711,13 +2763,13 @@ export class Game extends Scene {
     }
     const spawnCutoffMs = Math.max(
       msPerStep, // at least one step so very short rounds still emit something
-      Balance.maxRoundMs - Balance.noteFallMs - maxHoldMs - Balance.roundWindDownMs,
+      Balance.maxRoundMs - this.noteFallMsActual - maxHoldMs - Balance.roundWindDownMs,
     );
     const loopCount = Math.max(1, Math.ceil(Balance.maxRoundMs / onePassMs) + 1);
 
     this.player = new ChartPlayer(playChart, {
       loopCount,
-      noteFallMs: Balance.noteFallMs,
+      noteFallMs: this.noteFallMsActual,
       maxTotalMs: spawnCutoffMs,
       // Editor rehearse passes initialStartStep so the chart begins
       // at the page the author was working on. Plain Rehearse leaves
@@ -2845,7 +2897,7 @@ export class Game extends Scene {
     const scaleY = height / L.DESIGN_H;
     const laneTopY = L.LANE_TOP_Y * scaleY;
     const hitLineY = L.HIT_LINE_Y * scaleY;
-    const fallMs = Balance.noteFallMs;
+    const fallMs = this.noteFallMsActual;
 
     const cx = width / 2;
     // Depth above notes (depth 40) so the boundary line + label read over
@@ -2973,7 +3025,7 @@ export class Game extends Scene {
     // the ball exits the target still lands. Tween speed is calibrated
     // to keep hit timing locked to Balance.noteFallMs at the target.
     const endY = this.scale.height + 80;
-    const totalFallMs = ((endY - startY) / (hitY - startY)) * Balance.noteFallMs;
+    const totalFallMs = ((endY - startY) / (hitY - startY)) * this.noteFallMsActual;
     note.configure(laneId, x, startY, endY, totalFallMs, hitAtMs, this.laneTints[laneId]);
   }
 
@@ -2989,7 +3041,7 @@ export class Game extends Scene {
     const hitY = L.HIT_LINE_Y * scaleY;
     // fallSpeed (px/ms) is constant — derived from noteFallMs so the
     // head always crosses (startY → hitY) in exactly Balance.noteFallMs.
-    const fallSpeedPxPerMs = (hitY - startY) / Balance.noteFallMs;
+    const fallSpeedPxPerMs = (hitY - startY) / this.noteFallMsActual;
     const tailHeightPx = Math.max(0, (releaseAtMs - hitAtMs) * fallSpeedPxPerMs);
     // Container needs to keep falling past the trailing-edge crossing —
     // otherwise the tween ends, the container freezes, and any tail
@@ -3022,7 +3074,7 @@ export class Game extends Scene {
     const startY = L.LANE_TOP_Y * scaleY;
     const hitY = L.HIT_LINE_Y * scaleY;
     const endY = this.scale.height + 80;
-    const totalFallMs = ((endY - startY) / (hitY - startY)) * Balance.noteFallMs;
+    const totalFallMs = ((endY - startY) / (hitY - startY)) * this.noteFallMsActual;
     note.configure(
       sourceLane, sourceX, startY, endY, totalFallMs, hitAtMs,
       this.laneTints[sourceLane],
@@ -3050,7 +3102,7 @@ export class Game extends Scene {
     const startY = L.LANE_TOP_Y * scaleY;
     const hitY = L.HIT_LINE_Y * scaleY;
     const endY = this.scale.height + 80;
-    const totalFallMs = ((endY - startY) / (hitY - startY)) * Balance.noteFallMs;
+    const totalFallMs = ((endY - startY) / (hitY - startY)) * this.noteFallMsActual;
     note.configure(
       sourceLane, sourceX, startY, endY, totalFallMs, hitAtMs,
       this.laneTints[sourceLane],
