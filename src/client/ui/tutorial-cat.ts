@@ -272,8 +272,12 @@ export class TutorialCatOverlay {
         .setOrigin(0.5);
       this.container.add([btnBg, btnText]);
       btnBg.on('pointerdown', () => {
-        // Quick scale pulse for tap feedback before firing the
-        // callback — same pattern as Welcome.ts had.
+        // Disable the button on first tap so rapid-fire taps during
+        // the 160ms feedback tween can't queue up multiple onContinue
+        // calls — without this, hammering Continue on a box-open beat
+        // fires openBox() three or four times before busy flips,
+        // opening more boxes than the script allows.
+        btnBg.disableInteractive();
         this.scene.tweens.add({
           targets: [btnBg, btnText],
           scale: 0.96,
