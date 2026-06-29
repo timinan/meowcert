@@ -112,6 +112,13 @@ async function genCosmetics(): Promise<number> {
         name: e.name,
         rarity: e.rarity,
         slot: e.slot,
+        // Calibrator positioning. Runtime reads these every frame in
+        // cat.ts syncOneCosmetic — without them in the generated catalog
+        // the runtime saw `undefined` and fell back to (0, 0, 1), so
+        // Tim's calibrator drags never reached the game.
+        offsetX: e.offsetX,
+        offsetY: e.offsetY,
+        scale: e.scale,
         sourceFrame: e.sourceFrame,
         tint: e.tint,
         tintMode: e.tintMode,

@@ -73,6 +73,14 @@ export interface CosmeticEntry {
   rarity: Rarity;
   /** Where the cosmetic sits on the cat (head, face, neck, body, held). */
   slot?: string;
+  /** Calibrator placement — the cosmetic's art CENTER lands at canvas
+   *  pixel `(CANVAS_HORIZONTAL_CENTER + offsetX, CAT_HEAD_TOP_REF + offsetY)`
+   *  in the 91×64 cat-sprite source space. Optional; absent = (0, 0) which
+   *  the runtime treats as "render at the natural trim-center position". */
+  offsetX?: number;
+  offsetY?: number;
+  /** Multiplier on top of the cat's render scale. 1 = same as cat. */
+  scale?: number;
   /** For generated/tinted cosmetics: the parent's atlas frame name to render. */
   sourceFrame?: string;
   /** Hex tint applied at render time. */

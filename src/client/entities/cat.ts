@@ -638,32 +638,35 @@ export class Cat {
       if (resolved) this.lastCosmeticOffset[slot] = resolved;
     }
 
-    // The math:
-    //   target = where the catalog says the cosmetic art CENTER should
-    //            land (in source pixels, relative to the cat sprite's
-    //            top-left corner before scaling).
-    //   anchor = where the cosmetic's idle_00 art CENTER actually sits
-    //            in its 91×64 canvas (cached at setCosmetic time).
-    //   shift  = target − anchor, scaled to screen pixels.
-    //
-    //   Apply shift to the sprite's bottom-center anchor (origin 0.5, 1)
-    //   so the art moves from `anchor` to `target` in screen space.
-    //   For migrated catalogs (where offsetX/Y were computed FROM the
-    //   anchor), shift = 0 and the cosmetic renders exactly where the
-    //   art landed pre-migration. As the artist drags the cosmetic in
-    //   the calibrator, offsetX/Y change → shift becomes non-zero →
-    //   sprite moves to match.
+    // The math (sprite origin is 0.5, 1 — bottom-center of the 91×64 source canvas):
+    //   The cat displays canvas pixel (cx, cy) at screen
+    //     ( catX + (cx - 45.5) * catScale,
+    //       catY + (cy - 64)   * catScale ).
+    //   We want the cosmetic's art-center anchor to land at the screen
+    //   position the cat WOULD render canvas pixel (targetX, targetY).
+    //   Solving for cosmetic sprite position (its own origin 0.5, 1)
+    //   when rendered at cosScale = catalogScale * catScale:
+    //     cosX = catX + (target+frame - 45.5)*catScale − (anchor - 45.5)*cosScale
+    //     cosY = catY + (target+frame - 64)*catScale   − (anchor - 64)*cosScale
+    //   When catalogScale = 1 (cosScale = catScale) this collapses to
+    //   `catPos + (target + frame - anchor) * catScale`, matching the
+    //   pre-2429720 natural-position rendering whenever the catalog's
+    //   offsetX/Y were left at the migrated trim-center defaults.
+    //   When catalogScale ≠ 1 the two scale terms separate correctly so
+    //   the cosmetic doesn't drift relative to the calibrator preview.
     const anchor = this.cosmeticAnchors[slot] ?? { artCenterX: 45, artCenterY: 32 };
     const targetX = Cat.CANVAS_HORIZONTAL_CENTER + catalogOffsetX;
     const targetY = Cat.CAT_HEAD_TOP_REF + catalogOffsetY;
-    const shiftX = (targetX - anchor.artCenterX) + frameDx;
-    const shiftY = (targetY - anchor.artCenterY) + frameDy;
-
-    const renderScale = catalogScale * this.sprite.scaleX;
-    sprite.setScale(renderScale);
+    const catScale = this.sprite.scaleX;
+    const cosScale = catalogScale * catScale;
+    sprite.setScale(cosScale);
     sprite.setPosition(
-      this.sprite.x + shiftX * this.sprite.scaleX,
-      this.sprite.y + shiftY * this.sprite.scaleX,
+      this.sprite.x
+        + (targetX + frameDx - Cat.SOURCE_CANVAS_HALF_W) * catScale
+        - (anchor.artCenterX - Cat.SOURCE_CANVAS_HALF_W) * cosScale,
+      this.sprite.y
+        + (targetY + frameDy - Cat.SOURCE_CANVAS_H) * catScale
+        - (anchor.artCenterY - Cat.SOURCE_CANVAS_H) * cosScale,
     );
   }
 
@@ -676,6 +679,14 @@ export class Cat {
   /** Canvas horizontal centerline for the 91-wide cosmetic/cat sprite.
    *  Match migration script's CANVAS_HORIZONTAL_CENTER. */
   private static readonly CANVAS_HORIZONTAL_CENTER = 45;
+  /** Half-width of the 91×64 source canvas — used by syncOneCosmetic to
+   *  resolve sprite positions relative to the bottom-center anchor that
+   *  origin (0.5, 1) sets. 45.5 (not 45) is the actual midpoint of a
+   *  91-wide canvas; CANVAS_HORIZONTAL_CENTER above is the integer
+   *  catalog reference and stays 45 to keep migration values stable. */
+  private static readonly SOURCE_CANVAS_HALF_W = 45.5;
+  /** Source canvas height; cosmetic + cat sprites both use 91×64. */
+  private static readonly SOURCE_CANVAS_H = 64;
 
   /** Get the cosmetic id equipped in the given slot, accounting for the
    *  equippedCosmetics map's slot keying. Returns null if nothing is
