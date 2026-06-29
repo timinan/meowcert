@@ -239,6 +239,7 @@ html_out = f"""<!doctype html>
     </div>
   </div>
   <table>{hdr_row}{''.join(rows)}</table>
+  <script src="/tools-nav.js"></script>
   <script>
     // Generate button — wipes all smoke-anim artifacts server-side and
     // reruns `npm run smoke-test`, then reloads the current page so the
