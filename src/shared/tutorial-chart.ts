@@ -106,46 +106,44 @@ export const TUTORIAL_CHART_HOLDS: Chart = {
   slides: [], slideReturns: [],
 };
 
-/** play-tutorial phase 2 — adjacent 1-lane slides (0→1 and 2→1). Per
- *  Tim image 5: original 2-step spacing was overwhelming — 4 slides
- *  arriving back-to-back. Now 3 slides at 8-step gaps. matches
- *  slideCompletionsToAdvance:3. */
+/** play-tutorial phase 2 — adjacent 1-lane slides. Per Tim's script
+ *  edit: previous 8-step gaps felt like the slides were coming down too
+ *  slow. Tightened to 5-step gaps (3 slides at 0/5/10 in a 16-step
+ *  chart). */
 export const TUTORIAL_CHART_SLIDES_1: Chart = {
-  ...base('Tutorial — 1-Lane Slides', 24),
-  steps: Array.from({ length: 24 }, emptyStep),
+  ...base('Tutorial — 1-Lane Slides', 16),
+  steps: Array.from({ length: 16 }, emptyStep),
   holds: [],
   slides: [
     { startStep: 0,  sourceLane: 0, targetLane: 1 },
-    { startStep: 8,  sourceLane: 2, targetLane: 1 },
-    { startStep: 16, sourceLane: 0, targetLane: 1 },
+    { startStep: 5,  sourceLane: 2, targetLane: 1 },
+    { startStep: 10, sourceLane: 0, targetLane: 1 },
   ],
   slideReturns: [],
 };
 
-/** play-tutorial phase 3 — cross 2-lane slides (0→2 and 2→0). 3 slides
- *  at 8-step gaps (was 4 slides at 2-step gaps). */
+/** play-tutorial phase 3 — cross 2-lane slides. 5-step gaps (was 8). */
 export const TUTORIAL_CHART_SLIDES_2: Chart = {
-  ...base('Tutorial — 2-Lane Slides', 24),
-  steps: Array.from({ length: 24 }, emptyStep),
+  ...base('Tutorial — 2-Lane Slides', 16),
+  steps: Array.from({ length: 16 }, emptyStep),
   holds: [],
   slides: [
     { startStep: 0,  sourceLane: 0, targetLane: 2 },
-    { startStep: 8,  sourceLane: 2, targetLane: 0 },
-    { startStep: 16, sourceLane: 0, targetLane: 2 },
+    { startStep: 5,  sourceLane: 2, targetLane: 0 },
+    { startStep: 10, sourceLane: 0, targetLane: 2 },
   ],
   slideReturns: [],
 };
 
-/** play-tutorial phase 4 — slide-returns (adjacent ◀▶). 3 slide-returns
- *  at 8-step gaps (was 4 at 2-step gaps). */
+/** play-tutorial phase 4 — slide-returns (adjacent ◀▶). 5-step gaps. */
 export const TUTORIAL_CHART_DOUBLES: Chart = {
-  ...base('Tutorial — Double Slides', 24),
-  steps: Array.from({ length: 24 }, emptyStep),
+  ...base('Tutorial — Double Slides', 16),
+  steps: Array.from({ length: 16 }, emptyStep),
   holds: [], slides: [],
   slideReturns: [
     { startStep: 0,  sourceLane: 0, targetLane: 1 },
-    { startStep: 8,  sourceLane: 2, targetLane: 1 },
-    { startStep: 16, sourceLane: 0, targetLane: 1 },
+    { startStep: 5,  sourceLane: 2, targetLane: 1 },
+    { startStep: 10, sourceLane: 0, targetLane: 1 },
   ],
 };
 
