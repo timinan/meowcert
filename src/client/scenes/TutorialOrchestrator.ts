@@ -1016,11 +1016,16 @@ export class TutorialOrchestrator extends Scene {
     this.seatedCat?.destroy();
     const { width } = this.scale;
     const x = width / 2;
-    const y = 325; // bottom-anchored — sprite fills ~218–325 at scale 1.7
+    // Per Tim image 14: 'make him the size of butters but move him up
+    // more towards the center'. Scale drops 1.7 → 1.4 to match the
+    // narrator Butters' visual weight; y lifts 325 → 250 so the cat
+    // sits in the lower-center of the canvas instead of glued to the
+    // bottom edge.
+    const y = 250;
     this.seatedCat = this.add
       .sprite(x, y, AssetKeys.Atlas.Cats, `${breed}_idle_00`)
       .setOrigin(0.5, 1)
-      .setScale(1.7)
+      .setScale(1.4)
       .setDepth(-100);
     this.seatedCat.play(`${breed}_idle`, true);
     this.renderSeatedCatNameLabel();
