@@ -143,6 +143,10 @@ export class TutorialOrchestrator extends Scene {
   /** Latches once the rehearsal stage has been built so the tween +
    *  rig set-up only happens once even if a step re-renders. */
   private stageRigBuilt = false;
+  /** Timer that auto-advances the rehearsal-intro beat after 5s so the
+   *  player can read the line without having to tap Continue. Cleared
+   *  on step change or on early Continue tap. */
+  private autoAdvanceTimer: Phaser.Time.TimerEvent | undefined;
   /** BUTTERS nametag below the small stage Butters — same scaled style
    *  as the player cat's nametag. Added per Tim Image 31. */
   private stageButtersNameLabel: Phaser.GameObjects.Text | undefined;
@@ -198,6 +202,8 @@ export class TutorialOrchestrator extends Scene {
   private renderStep(): void {
     // Tear down ONLY step-specific UI. The live preview (stage bg +
     // seated cat + cosmetics) persists across steps.
+    this.autoAdvanceTimer?.destroy();
+    this.autoAdvanceTimer = undefined;
     this.stepUI?.destroy(true);
     this.stepUI = this.add.container(0, 0);
     for (const obj of this.hamburgerObjects) obj.destroy();
@@ -335,15 +341,21 @@ export class TutorialOrchestrator extends Scene {
       // Stage rig is already built at stage-set-confirm — no need to
       // re-tween here. Latched guard inside the stage-set-confirm branch
       // covers the re-entry case.
+      const proceed = () => {
+        if (this.busy) return;
+        void this.advance();
+      };
       this.renderHamburgerMock('REHEARSE');
       this.overlay = new TutorialCatOverlay(this);
       this.overlay.show(line, {
         continueLabel: 'Continue →',
-        onContinue: () => {
-          if (this.busy) return;
-          void this.advance();
-        },
+        onContinue: proceed,
       });
+      // Per Tim image 4 + voice note: the line is long and self-paced —
+      // tap Continue OR just wait 5s and the beat advances on its own.
+      // renderStep() clears the timer on step change so this only fires
+      // if the player lingers here.
+      this.autoAdvanceTimer = this.time.delayedCall(5000, proceed);
       this.renderSkipLinkIfUnlocked();
       return;
     }
