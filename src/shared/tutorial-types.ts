@@ -75,9 +75,9 @@ export function nextTutorialStep(current: TutorialStepId): TutorialStepId | 'com
  *  bgs/cats are not "lost" — they're earned later via Background Box
  *  or future cat-hire flows. */
 export const STARTER_STAGES: BackgroundId[] = [
+  'stage',
   'cozy-meowcert-stage',
-  'cyberpunkalley',
-  'candybakery',
+  'c4a2f861-9ba9-4733-8e6d-a1c9b17',
 ];
 export const STARTER_CATS: CatBreed[] = [
   'cat1',
