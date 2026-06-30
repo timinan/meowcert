@@ -2804,6 +2804,41 @@ export class Game extends Scene {
     bubbleGfx.fillStyle(0xfff8e7, 1);
     bubbleGfx.fillRoundedRect(bubbleX, bubbleY, bubbleW, bubbleH, 16);
     this.tutorialDialogueGfx.push(bubbleGfx, text);
+
+    // Tapered teardrop tail pointing from the bubble's top-left up to
+    // Butters' head (lane 0 seated position). Matches TutorialCatOverlay
+    // tail pattern (tutorial-cat.ts:339) — wide 16px base, narrow 6px
+    // tip, rounded cap so it reads as a comma/teardrop, not a phallus.
+    const buttersCx = L.laneCenterX(0, width);
+    const buttersCatY = (L.TOP_HUD_H + L.CAT_STAGE_H * 0.78) * scaleY;
+    const buttersHeadY = buttersCatY - 90;
+    const tailAnchorX = bubbleX + 36;
+    const tailAnchorY = bubbleY;
+    const dxT = buttersCx - tailAnchorX;
+    const dyT = buttersHeadY - tailAnchorY;
+    const distT = Math.hypot(dxT, dyT);
+    if (distT > 8) {
+      const stopShort = 18;
+      const tipDist = Math.max(20, distT - stopShort);
+      const r = tipDist / distT;
+      const tipX = tailAnchorX + dxT * r;
+      const tipY = tailAnchorY + dyT * r;
+      const baseHalfW = 8;
+      const tipHalfW = 3;
+      const ux = dxT / distT;
+      const uy = dyT / distT;
+      const px = -uy;
+      const py = ux;
+      const bL = { x: tailAnchorX + px * baseHalfW, y: tailAnchorY + py * baseHalfW };
+      const bR = { x: tailAnchorX - px * baseHalfW, y: tailAnchorY - py * baseHalfW };
+      const tL = { x: tipX + px * tipHalfW, y: tipY + py * tipHalfW };
+      const tR = { x: tipX - px * tipHalfW, y: tipY - py * tipHalfW };
+      const tailGfx = this.add.graphics().setDepth(1499);
+      tailGfx.fillStyle(0xfff8e7, 1);
+      tailGfx.fillPoints([bL, tL, tR, bR], true);
+      tailGfx.fillCircle(tipX, tipY, tipHalfW);
+      this.tutorialDialogueGfx.push(tailGfx);
+    }
   }
 
   /** Tear down the tutorial dialogue overlay (bubble + Yes button if
