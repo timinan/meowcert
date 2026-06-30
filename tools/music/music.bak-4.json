@@ -1020,7 +1020,7 @@
     "vibe": "illegal",
     "bpm": 130,
     "loopDurationMs": 65000,
-    "clipStartS": 542,
+    "clipStartS": 0,
     "addedAt": 1782856477394,
     "genre": "lo-fi",
     "mood": "chill"
@@ -1044,7 +1044,7 @@
     "vibe": "illegal",
     "bpm": 130,
     "loopDurationMs": 65000,
-    "clipStartS": 633,
+    "clipStartS": 0,
     "addedAt": 1782856481643,
     "genre": "lo-fi",
     "mood": "chill"
@@ -1068,7 +1068,7 @@
     "vibe": "illegal",
     "bpm": 130,
     "loopDurationMs": 65000,
-    "clipStartS": 544,
+    "clipStartS": 0,
     "addedAt": 1782856486430,
     "genre": "house",
     "mood": "chill"
