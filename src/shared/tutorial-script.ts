@@ -22,21 +22,21 @@ import type { TutorialStepId } from './tutorial-types';
 
 export const TUTORIAL_DIALOGUE: Record<TutorialStepId, string | string[]> = {
   'intro':
-    "hey, I'm Butters. I noticed you're new here, so let me show you the ropes before we put on a Meowcert.",
+    "Hey there, I'm Butters. I noticed you're new here, so let me show you the ropes before we put on a Meowcert!",
   'pick-stage':
-    "first, let's pick a venue for your show. don't worry — there will be cooler venues for you to perform at later, but for now pick one of the 3 available.",
+    "First, let's pick a venue for your show. Don't worry — there will be cooler venues for you to perform at later, but for now pick one of the 3 available.",
   'pick-cat':
-    "next, pick your first bandmember. you'll be able to hire more bandmembers as you earn rewards from hosting and attending shows.",
+    "Next, pick your first bandmember. You'll be able to hire more bandmembers as you earn rewards from hosting and attending shows.",
   'merch-intro':
-    "welcome to the band, <catname>! let's check the merch table to spice up your new bandmember.",
+    "Welcome to the band, <catname>! Let's check the merch table to spice up your new bandmember.",
   'box-cosmetic':
-    "first up, let's open a cosmetic box. here's where you'll get hats, bows, and other accessories for your cats.",
+    "First up, let's open a cosmetic box. here's where you'll get hats, bows, and other accessories for your cats.",
   'box-effect':
-    "effect boxes are where you'll find sparkles, flames, and particle flair that make your cats stand out.",
+    "Next we have effect boxes where you'll find sparkles, flames, and particle flair that make your cats stand out.",
   'stage-set-confirm':
-    "your stage is set! for each show or practice you attend, we'll be pspspsing the performers — they prefer being cheered on that way over loud claps.",
+    "Your stage is set! Now let's get to practicing.",
   'rehearsal-intro':
-    "now let's get to practicing. you'll find REHEARSE in here whenever you want to head to the stage for some practice.",
+    "You can come REHEARSE anytime with your band by coming to this tab.",
   'play-tutorial-intro':
     "ready? you'll start seeing some fuzzy balls fall down — that's the optimal time for a lil ps for the kitties. tap them as they get inside the circle.",
   'play-tutorial': [
