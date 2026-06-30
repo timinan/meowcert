@@ -59,9 +59,17 @@ export const TUTORIAL_DIALOGUE: Record<TutorialStepId, string | string[]> = {
     "just kidding — you've got a long way to go before that. now let's hit the put on a show tab and i'll guide you through it!",
   ],
   'editor-tour-intro':
-    "now let's check out the editor — that's where you'll create your own shows.",
-  'editor-tour':
-    "tap a cell to place a note. drag down in one lane for a hold. drag across lanes for a slide. drag out and back for the ◀▶ one. you can come back to the editor any time to keep tweaking — and when you're happy, you have to REHEARSE and PASS the chart before you can post it for others to play.",
+    "tap a cell to place a note.",
+  'editor-tour': [
+    // 0 — hold note demo
+    "tap and drag up or down for a hold note.",
+    // 1 — slide note demo
+    "tap and drag left or right for a slide note (double notes too).",
+    // 2 — ready-to-rehearse pointer
+    "when you're ready, press rehearse to practice your chart. you can come back here anytime to keep tweaking.",
+    // 3 — required-to-rehearse-pass gate
+    "before you can put on a show, you must rehearse your chart from the top and pass it.",
+  ],
   'visit-pointer':
     "when you want to catch other people's shows, head here.",
   'route-a-outro':

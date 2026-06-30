@@ -150,6 +150,11 @@ export class TutorialOrchestrator extends Scene {
   /** BUTTERS nametag below the small stage Butters — same scaled style
    *  as the player cat's nametag. Added per Tim Image 31. */
   private stageButtersNameLabel: Phaser.GameObjects.Text | undefined;
+  /** Editor-tour mock objects — the 3-column grid drawn behind Butters
+   *  during the editor-tour beats so the dialogue's references to taps,
+   *  holds, and slides actually have something to point at. Torn down
+   *  on step change. */
+  private editorMockObjects: Phaser.GameObjects.GameObject[] = [];
 
   constructor() {
     super(SceneKeys.TutorialOrchestrator);
@@ -204,6 +209,7 @@ export class TutorialOrchestrator extends Scene {
     // seated cat + cosmetics) persists across steps.
     this.autoAdvanceTimer?.destroy();
     this.autoAdvanceTimer = undefined;
+    this.tearDownEditorMock();
     this.stepUI?.destroy(true);
     this.stepUI = this.add.container(0, 0);
     for (const obj of this.hamburgerObjects) obj.destroy();
@@ -402,6 +408,39 @@ export class TutorialOrchestrator extends Scene {
         onContinue: () => {
           if (this.busy) return;
           void this.advance();
+        },
+      });
+      this.renderSkipLinkIfUnlocked();
+      return;
+    }
+
+    // Editor-tour beats: render a chart-editor mock behind Butters, pin
+    // the bubble at the top, and progressively reveal demo notes as the
+    // dialogue cycles through tap → hold → slide. Per Tim image 4 the
+    // narrator stays on screen during this stretch (he disappeared in
+    // round 2). Stage rig stays in tree but the mock covers it.
+    if (this.currentStep === 'editor-tour-intro' || this.currentStep === 'editor-tour') {
+      const continueLabelE = hasMoreDialogue ? 'Next →' : 'Continue →';
+      let demoCount: number;
+      if (this.currentStep === 'editor-tour-intro') {
+        demoCount = 1; // tap demo only
+      } else {
+        // editor-tour[0] holds (2 total), [1] slides (3 total), [2-3] stay at 3
+        demoCount = Math.min(3, 2 + this.dialogueIndex);
+      }
+      this.renderEditorMock(demoCount);
+      this.overlay = new TutorialCatOverlay(this);
+      this.overlay.show(line, {
+        continueLabel: continueLabelE,
+        bubbleY: 28,
+        onContinue: () => {
+          if (this.busy) return;
+          if (hasMoreDialogue) {
+            this.dialogueIndex += 1;
+            this.renderStep();
+          } else {
+            void this.advance();
+          }
         },
       });
       this.renderSkipLinkIfUnlocked();
@@ -1274,6 +1313,119 @@ export class TutorialOrchestrator extends Scene {
   private tearDownStageLanes(): void {
     for (const gfx of this.stageLaneGfx) gfx.destroy();
     this.stageLaneGfx = [];
+  }
+
+  /** Tear down the editor-tour mock. Safe to call when nothing is rendered. */
+  private tearDownEditorMock(): void {
+    for (const obj of this.editorMockObjects) obj.destroy();
+    this.editorMockObjects = [];
+  }
+
+  /** Render a simplified chart-editor mock behind Butters during the
+   *  editor-tour beats — 3-column × 6-row grid in the lower band of the
+   *  canvas. `demoCount` controls cumulative visible demo notes:
+   *  1=tap, 2=tap+hold, 3=tap+hold+slide. Matches the dialogue cadence
+   *  per Tim image 4: each instruction adds the matching demo. */
+  private renderEditorMock(demoCount: number): void {
+    this.tearDownEditorMock();
+    const { width, height } = this.scale;
+    const margin = 16;
+    const startY = 200;
+    const endY = height - margin;
+    const editorH = endY - startY;
+    const cols = 3;
+    const rows = 6;
+    const gridX0 = margin;
+    const gridX1 = width - margin;
+    const cellW = (gridX1 - gridX0) / cols;
+    const cellH = editorH / rows;
+
+    // Panel background
+    const panel = this.add
+      .rectangle((gridX0 + gridX1) / 2, (startY + endY) / 2, gridX1 - gridX0, editorH, 0x1a0a2e, 0.95)
+      .setStrokeStyle(2, 0xc678ff, 0.7)
+      .setDepth(50);
+    this.editorMockObjects.push(panel);
+
+    // Header label so the player reads this as the editor
+    const header = this.add
+      .text(width / 2, startY + 12, 'CHART EDITOR', {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontStyle: 'bold',
+        fontSize: '10px',
+        color: '#ffd34d',
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(51);
+    this.editorMockObjects.push(header);
+
+    // Grid lines — start below the header so the column dividers don't
+    // crash through "CHART EDITOR".
+    const gridTopY = startY + 30;
+    const gridUsableH = endY - gridTopY;
+    const gridCellH = gridUsableH / rows;
+    for (let c = 1; c < cols; c++) {
+      const x = gridX0 + c * cellW;
+      const line = this.add
+        .line(0, 0, x, gridTopY, x, endY, 0xc678ff, 0.3)
+        .setOrigin(0, 0)
+        .setDepth(51);
+      this.editorMockObjects.push(line);
+    }
+    for (let r = 1; r < rows; r++) {
+      const y = gridTopY + r * gridCellH;
+      const line = this.add
+        .line(0, 0, gridX0, y, gridX1, y, 0xc678ff, 0.3)
+        .setOrigin(0, 0)
+        .setDepth(51);
+      this.editorMockObjects.push(line);
+    }
+
+    const colCenterX = (col: number) => gridX0 + col * cellW + cellW / 2;
+    const rowCenterY = (row: number) => gridTopY + row * gridCellH + gridCellH / 2;
+
+    // Demo: tap (always when demoCount >= 1)
+    if (demoCount >= 1) {
+      const tap = this.add
+        .circle(colCenterX(1), rowCenterY(1), 10, 0xffd34d, 1)
+        .setStrokeStyle(2, 0x0b041a, 1)
+        .setDepth(52);
+      this.editorMockObjects.push(tap);
+    }
+
+    // Demo: hold (rectangle spanning two cells on lane 1)
+    if (demoCount >= 2) {
+      const holdTop = rowCenterY(2);
+      const holdBottom = rowCenterY(3);
+      const holdMid = (holdTop + holdBottom) / 2;
+      const holdH = holdBottom - holdTop + 14;
+      const hold = this.add
+        .rectangle(colCenterX(1), holdMid, 14, holdH, 0xffd34d, 0.9)
+        .setStrokeStyle(2, 0x0b041a, 1)
+        .setDepth(52);
+      this.editorMockObjects.push(hold);
+    }
+
+    // Demo: slide (lane 0 → lane 2 on row 4)
+    if (demoCount >= 3) {
+      const yMid = rowCenterY(4);
+      const xStart = colCenterX(0);
+      const xEnd = colCenterX(2);
+      const slideLine = this.add
+        .line(0, 0, xStart, yMid, xEnd, yMid, 0xffd34d, 0.9)
+        .setOrigin(0, 0)
+        .setLineWidth(3)
+        .setDepth(52);
+      const startDot = this.add
+        .circle(xStart, yMid, 8, 0xffd34d, 1)
+        .setStrokeStyle(2, 0x0b041a, 1)
+        .setDepth(53);
+      const arrow = this.add
+        .text(xEnd, yMid, '▶', { fontFamily: 'Pixeloid Sans, sans-serif', fontStyle: 'bold', fontSize: '14px', color: '#ffd34d' })
+        .setOrigin(0.5)
+        .setDepth(53);
+      this.editorMockObjects.push(slideLine, startDot, arrow);
+    }
   }
 
   /** Register a cosmetic's idle anim lazily — the Cat entity does this
