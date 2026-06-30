@@ -431,8 +431,22 @@ export class Game extends Scene {
       // round.
       this.seatTutorialButters();
       this.setupTutorialOverlay();
-      await this.initChartPlayer();
-      void this.beginRound();
+      const phaseCfg = this.getTutorialPhaseConfig();
+      if (phaseCfg?.preRollGate) {
+        // Pre-roll gate (insane phase): the lane view + bubble are up,
+        // chart is loaded into memory but doesn't START until the player
+        // taps Yes. Per Tim image-6 feedback: 'get ready for a real
+        // chart shouldnt make everything dissapear and only show the
+        // stage it needs to be in the same chart screen.'
+        await this.initChartPlayer();
+        this.showTutorialPreRollGate(() => {
+          this.clearTutorialDialogue();
+          void this.beginRound();
+        });
+      } else {
+        await this.initChartPlayer();
+        void this.beginRound();
+      }
     } else if (this.testMode) {
       // Editor → REHEARSE path: chart is already authored. Tim's rule:
       // hitting REHEARSE in the editor starts the round immediately —
@@ -2758,6 +2772,44 @@ export class Game extends Scene {
     bubbleGfx.fillStyle(0xfff8e7, 1);
     bubbleGfx.fillRoundedRect(bubbleX, bubbleY, bubbleW, bubbleH, 16);
     this.tutorialDialogueGfx.push(bubbleGfx, text);
+  }
+
+  /** Tear down the tutorial dialogue overlay (bubble + Yes button if
+   *  active). Used when the pre-roll gate fires to clear the screen so
+   *  the chart starts on a clean lane view. */
+  private clearTutorialDialogue(): void {
+    for (const o of this.tutorialDialogueGfx) o.destroy();
+    this.tutorialDialogueGfx = [];
+  }
+
+  /** Render a Yes button at the bottom of the lane view during the
+   *  pre-roll gate. The lane view + dialogue bubble are already up;
+   *  this just adds the gate. On tap the bubble clears, the round
+   *  begins, the gate self-destroys. */
+  private showTutorialPreRollGate(onYes: () => void): void {
+    const { width, height } = this.scale;
+    const btnW = 180;
+    const btnH = 40;
+    const btnX = width / 2;
+    const btnY = height - 50;
+    const bg = this.add
+      .rectangle(btnX, btnY, btnW, btnH, 0xffd34d, 1)
+      .setStrokeStyle(2, 0x0b041a, 1)
+      .setDepth(1600)
+      .setInteractive({ useHandCursor: true });
+    const txt = this.add
+      .text(btnX, btnY, 'Yes →', {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontStyle: 'bold',
+        fontSize: '15px',
+        color: '#1a0a2e',
+      })
+      .setOrigin(0.5)
+      .setDepth(1601);
+    this.tutorialDialogueGfx.push(bg, txt);
+    bg.on('pointerdown', () => {
+      onYes();
+    });
   }
 
   /** Return to TutorialOrchestrator after a tutorial-mode round.

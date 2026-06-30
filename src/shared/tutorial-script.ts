@@ -50,12 +50,10 @@ export const TUTORIAL_DIALOGUE: Record<TutorialStepId, string | string[]> = {
     "you can slide across 2 lanes too — same gesture, longer drag.",
     // 4 — double slide
     "and the double slide ◀▶ — drag out, then drag back. takes practice.",
-    // 5 — "ready for a real chart?" pre-roll. Yes-only beat handled by
-    //   orchestrator; on Yes the insane chart runs.
+    // 5 — insane chart, gated by a Yes pre-roll in Game scene. The
+    //   bubble line sits on top of the lane view; chart starts on Yes.
     "wow, it looks like you've got the hang of it. ready for a real chart?",
-    // 6 — insane chart (5s timer). No bubble copy — let the chaos speak.
-    "",
-    // 7 — outro + menu mock w/ PUT ON A SHOW highlighted
+    // 6 — outro + menu mock w/ PUT ON A SHOW highlighted
     "just kidding — you've got a long way to go before that. now let's hit the put on a show tab and i'll guide you through it!",
   ],
   'editor-tour-intro':
