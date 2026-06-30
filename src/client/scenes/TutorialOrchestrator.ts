@@ -448,7 +448,11 @@ export class TutorialOrchestrator extends Scene {
         // editor-tour[0] holds (2 total), [1] slides (3 total), [2-3] stay at 3
         demoCount = Math.min(3, 2 + this.dialogueIndex);
       }
-      this.renderEditorMock(demoCount);
+      // Highlight REHEARSE on editor-tour[2] ("when you're ready, press
+      // rehearse...") so the player's eye lands on the button as Butters
+      // names it.
+      const highlightRehearse = this.currentStep === 'editor-tour' && this.dialogueIndex === 2;
+      this.renderEditorMock(demoCount, highlightRehearse);
       this.overlay = new TutorialCatOverlay(this);
       this.overlay.show(line, {
         continueLabel: continueLabelE,
@@ -1279,110 +1283,212 @@ export class TutorialOrchestrator extends Scene {
     this.editorMockObjects = [];
   }
 
-  /** Render a simplified chart-editor mock behind Butters during the
-   *  editor-tour beats — 3-column × 6-row grid in the lower band of the
-   *  canvas. `demoCount` controls cumulative visible demo notes:
-   *  1=tap, 2=tap+hold, 3=tap+hold+slide. Matches the dialogue cadence
-   *  per Tim image 4: each instruction adds the matching demo. */
-  private renderEditorMock(demoCount: number): void {
+  /** Render a chart-editor mock behind Butters during the editor-tour
+   *  beats. Mirrors the actual ChartEditor visuals — yellow PUT ON A
+   *  SHOW title strip up top, 3 pastel-colored lanes with grid lines,
+   *  bottom controls strip with CLEAR / BACK TO TOP / PAGES / REHEARSE
+   *  buttons. `demoCount` controls cumulative visible demo notes
+   *  (1=tap, 2=+hold, 3=+slide) and `highlightRehearse` puts a yellow
+   *  pulse glow on the REHEARSE button for the "when you're ready"
+   *  beat. */
+  private renderEditorMock(demoCount: number, highlightRehearse = false): void {
     this.tearDownEditorMock();
     const { width, height } = this.scale;
-    const margin = 16;
-    const startY = 200;
-    const endY = height - margin;
-    const editorH = endY - startY;
-    const cols = 3;
-    const rows = 6;
-    const gridX0 = margin;
-    const gridX1 = width - margin;
-    const cellW = (gridX1 - gridX0) / cols;
-    const cellH = editorH / rows;
+    // Title strip at the top — matches TopHud's "PUT ON A SHOW" label.
+    const startY = 196;
+    // Bottom controls strip occupies the last 56px.
+    const bottomStripH = 56;
+    const gridBottom = height - bottomStripH;
+    const titleBandH = 26;
 
-    // Panel background
+    // Editor panel backdrop
     const panel = this.add
-      .rectangle((gridX0 + gridX1) / 2, (startY + endY) / 2, gridX1 - gridX0, editorH, 0x1a0a2e, 0.95)
-      .setStrokeStyle(2, 0xc678ff, 0.7)
+      .rectangle(width / 2, (startY + height) / 2, width, height - startY, 0x0b041a, 0.96)
+      .setStrokeStyle(2, 0xc678ff, 0.6)
       .setDepth(50);
     this.editorMockObjects.push(panel);
 
-    // Header label so the player reads this as the editor
-    const header = this.add
-      .text(width / 2, startY + 12, 'CHART EDITOR', {
+    // PUT ON A SHOW title — yellow on dark strip, matches ChartEditor.
+    const titleBand = this.add
+      .rectangle(width / 2, startY + titleBandH / 2, width - 4, titleBandH, 0x1a0a2e, 0.95)
+      .setStrokeStyle(1, 0xc678ff, 0.4)
+      .setDepth(51);
+    const title = this.add
+      .text(width / 2, startY + titleBandH / 2, 'PUT ON A SHOW', {
+        fontFamily: '"Courier New", monospace',
+        fontStyle: 'bold',
+        fontSize: '11px',
+        color: '#ffd34d',
+        stroke: '#0b041a',
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5)
+      .setDepth(52);
+    this.editorMockObjects.push(titleBand, title);
+
+    // Pastel lane washes — neutral palette so Butters' lane doesn't tint.
+    const gridTop = startY + titleBandH + 4;
+    const gridH = gridBottom - gridTop;
+    const cols = 3;
+    const cellW = width / cols;
+    const laneTints = [0xfbd6a4, 0xf6c3d0, 0xc8e6c9] as const; // warm / pink / mint
+    for (let c = 0; c < cols; c++) {
+      const wash = this.add
+        .rectangle((c + 0.5) * cellW, gridTop + gridH / 2, cellW - 2, gridH, laneTints[c]!, 0.55)
+        .setDepth(51);
+      this.editorMockObjects.push(wash);
+    }
+
+    // Horizontal row lines — 8 visible rows so the grid reads as a real
+    // chart page. Vertical column separators sit on the lane edges.
+    const rows = 8;
+    const rowH = gridH / rows;
+    for (let r = 1; r < rows; r++) {
+      const y = gridTop + r * rowH;
+      const line = this.add
+        .line(0, 0, 0, y, width, y, 0x0b041a, 0.35)
+        .setOrigin(0, 0)
+        .setDepth(52);
+      this.editorMockObjects.push(line);
+    }
+    for (let c = 1; c < cols; c++) {
+      const x = c * cellW;
+      const line = this.add
+        .line(0, 0, x, gridTop, x, gridBottom, 0x0b041a, 0.35)
+        .setOrigin(0, 0)
+        .setDepth(52);
+      this.editorMockObjects.push(line);
+    }
+
+    const colCenterX = (col: number) => (col + 0.5) * cellW;
+    const rowCenterY = (row: number) => gridTop + (row + 0.5) * rowH;
+
+    // Demo: tap (always when demoCount >= 1) — fuzz-ball style with PS letters.
+    if (demoCount >= 1) {
+      const cx = colCenterX(1);
+      const cy = rowCenterY(1);
+      const tap = this.add
+        .circle(cx, cy, 14, 0xffe89a, 1)
+        .setStrokeStyle(2, 0x6b3b07, 1)
+        .setDepth(53);
+      const tapLabel = this.add
+        .text(cx, cy, 'ps', { fontFamily: 'Pixeloid Sans, sans-serif', fontStyle: 'bold', fontSize: '10px', color: '#6b3b07' })
+        .setOrigin(0.5)
+        .setDepth(54);
+      this.editorMockObjects.push(tap, tapLabel);
+    }
+
+    // Demo: hold (vertical capsule spanning rows 3 → 4 on lane 1).
+    if (demoCount >= 2) {
+      const xLane = colCenterX(1);
+      const yTop = rowCenterY(3);
+      const yBot = rowCenterY(4);
+      const yMid = (yTop + yBot) / 2;
+      const holdH = yBot - yTop + 18;
+      const hold = this.add
+        .rectangle(xLane, yMid, 14, holdH, 0xffe89a, 0.95)
+        .setStrokeStyle(2, 0x6b3b07, 1)
+        .setDepth(53);
+      const cap = this.add
+        .circle(xLane, yTop - 1, 9, 0xffe89a, 1)
+        .setStrokeStyle(2, 0x6b3b07, 1)
+        .setDepth(54);
+      this.editorMockObjects.push(hold, cap);
+    }
+
+    // Demo: slide — circle on lane 0 row 6, arrow pointing to lane 2.
+    if (demoCount >= 3) {
+      const yMid = rowCenterY(6);
+      const xStart = colCenterX(0);
+      const xEnd = colCenterX(2);
+      const tube = this.add
+        .rectangle((xStart + xEnd) / 2, yMid, xEnd - xStart, 10, 0xffe89a, 0.85)
+        .setStrokeStyle(2, 0x6b3b07, 1)
+        .setDepth(53);
+      const startDot = this.add
+        .circle(xStart, yMid, 10, 0xffe89a, 1)
+        .setStrokeStyle(2, 0x6b3b07, 1)
+        .setDepth(54);
+      const arrow = this.add
+        .text(xEnd, yMid, '▶', {
+          fontFamily: 'Pixeloid Sans, sans-serif',
+          fontStyle: 'bold',
+          fontSize: '15px',
+          color: '#6b3b07',
+        })
+        .setOrigin(0.5)
+        .setDepth(54);
+      this.editorMockObjects.push(tube, startDot, arrow);
+    }
+
+    // Bottom controls strip — 2×2 button grid matching ChartEditor.
+    const stripY = gridBottom + 4;
+    const strip = this.add
+      .rectangle(0, stripY, width, bottomStripH - 4, 0x0b041a, 0.92)
+      .setOrigin(0, 0)
+      .setDepth(53);
+    this.editorMockObjects.push(strip);
+
+    const sideMargin = 8;
+    const colGap = 6;
+    const rowGap = 4;
+    const btnH = 22;
+    const btnW = (width - sideMargin * 2 - colGap) / 2;
+    const leftX = sideMargin + btnW / 2;
+    const rightX = sideMargin + btnW + colGap + btnW / 2;
+    const topRowY = stripY + 6 + btnH / 2;
+    const botRowY = topRowY + btnH + rowGap;
+
+    const drawSecondary = (x: number, y: number, label: string) => {
+      const bg = this.add
+        .rectangle(x, y, btnW, btnH, 0x2c1856, 1)
+        .setStrokeStyle(1, 0xc678ff, 0.7)
+        .setDepth(54);
+      const txt = this.add
+        .text(x, y, label, {
+          fontFamily: 'Pixeloid Sans, sans-serif',
+          fontStyle: 'bold',
+          fontSize: '9px',
+          color: '#c0a0e6',
+        })
+        .setOrigin(0.5)
+        .setDepth(55);
+      this.editorMockObjects.push(bg, txt);
+    };
+
+    drawSecondary(leftX, topRowY, 'CLEAR');
+    drawSecondary(rightX, topRowY, 'BACK TO TOP');
+    drawSecondary(leftX, botRowY, 'PAGES');
+
+    // REHEARSE — yellow primary. Highlight glow when the beat asks for it.
+    const rehearseStroke = highlightRehearse ? 0xff5050 : 0x0b041a;
+    const rehearseStrokeW = highlightRehearse ? 3 : 1;
+    const rehearseBg = this.add
+      .rectangle(rightX, botRowY, btnW, btnH, 0xffd34d, 1)
+      .setStrokeStyle(rehearseStrokeW, rehearseStroke, 1)
+      .setDepth(54);
+    const rehearseTxt = this.add
+      .text(rightX, botRowY, 'REHEARSE', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
         fontSize: '10px',
-        color: '#ffd34d',
+        color: '#1a0a2e',
       })
-      .setOrigin(0.5, 0)
-      .setDepth(51);
-    this.editorMockObjects.push(header);
+      .setOrigin(0.5)
+      .setDepth(55);
+    this.editorMockObjects.push(rehearseBg, rehearseTxt);
 
-    // Grid lines — start below the header so the column dividers don't
-    // crash through "CHART EDITOR".
-    const gridTopY = startY + 30;
-    const gridUsableH = endY - gridTopY;
-    const gridCellH = gridUsableH / rows;
-    for (let c = 1; c < cols; c++) {
-      const x = gridX0 + c * cellW;
-      const line = this.add
-        .line(0, 0, x, gridTopY, x, endY, 0xc678ff, 0.3)
-        .setOrigin(0, 0)
-        .setDepth(51);
-      this.editorMockObjects.push(line);
-    }
-    for (let r = 1; r < rows; r++) {
-      const y = gridTopY + r * gridCellH;
-      const line = this.add
-        .line(0, 0, gridX0, y, gridX1, y, 0xc678ff, 0.3)
-        .setOrigin(0, 0)
-        .setDepth(51);
-      this.editorMockObjects.push(line);
-    }
-
-    const colCenterX = (col: number) => gridX0 + col * cellW + cellW / 2;
-    const rowCenterY = (row: number) => gridTopY + row * gridCellH + gridCellH / 2;
-
-    // Demo: tap (always when demoCount >= 1)
-    if (demoCount >= 1) {
-      const tap = this.add
-        .circle(colCenterX(1), rowCenterY(1), 10, 0xffd34d, 1)
-        .setStrokeStyle(2, 0x0b041a, 1)
-        .setDepth(52);
-      this.editorMockObjects.push(tap);
-    }
-
-    // Demo: hold (rectangle spanning two cells on lane 1)
-    if (demoCount >= 2) {
-      const holdTop = rowCenterY(2);
-      const holdBottom = rowCenterY(3);
-      const holdMid = (holdTop + holdBottom) / 2;
-      const holdH = holdBottom - holdTop + 14;
-      const hold = this.add
-        .rectangle(colCenterX(1), holdMid, 14, holdH, 0xffd34d, 0.9)
-        .setStrokeStyle(2, 0x0b041a, 1)
-        .setDepth(52);
-      this.editorMockObjects.push(hold);
-    }
-
-    // Demo: slide (lane 0 → lane 2 on row 4)
-    if (demoCount >= 3) {
-      const yMid = rowCenterY(4);
-      const xStart = colCenterX(0);
-      const xEnd = colCenterX(2);
-      const slideLine = this.add
-        .line(0, 0, xStart, yMid, xEnd, yMid, 0xffd34d, 0.9)
-        .setOrigin(0, 0)
-        .setLineWidth(3)
-        .setDepth(52);
-      const startDot = this.add
-        .circle(xStart, yMid, 8, 0xffd34d, 1)
-        .setStrokeStyle(2, 0x0b041a, 1)
-        .setDepth(53);
-      const arrow = this.add
-        .text(xEnd, yMid, '▶', { fontFamily: 'Pixeloid Sans, sans-serif', fontStyle: 'bold', fontSize: '14px', color: '#ffd34d' })
-        .setOrigin(0.5)
-        .setDepth(53);
-      this.editorMockObjects.push(slideLine, startDot, arrow);
+    if (highlightRehearse) {
+      // Subtle pulse on the rehearse button to draw the eye.
+      this.tweens.add({
+        targets: rehearseBg,
+        scaleX: 1.06,
+        scaleY: 1.06,
+        duration: 540,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.InOut',
+      });
     }
   }
 
