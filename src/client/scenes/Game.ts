@@ -3219,6 +3219,14 @@ export class Game extends Scene {
    *  lands chart + music in sync at the author's current page. */
   private async beginRound(): Promise<void> {
     if (!this.scene.isActive()) return;
+    // Non-tutorial play: the chart's own backing takes over here. Stop
+    // whatever home/menu music was looping (Lantern Tutorial from the
+    // SongPicker stretch, Cozy from the editor, etc.). Tutorial phases
+    // keep their home track — beginRound is a no-op for music there
+    // (this.music is null since the tutorial uses no MusicSystem).
+    if (this.tutorialPhase === null) {
+      stopHomeMusic(this);
+    }
     const startOffsetMs = this.player?.startOffsetMs ?? 0;
     await this.music?.start(startOffsetMs);
     if (!this.scene.isActive()) return;
