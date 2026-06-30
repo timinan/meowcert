@@ -29,6 +29,35 @@ export const CAT_COLOR_BY_BREED: Record<string, number> = {
   cat11:    0xb968ff,  // Purps — punchy purple
   cat12:    0xffc4de,  // Sakura — bright blossom pink
   cat13:    0x6c7785,  // Butters — darker British Shorthair grey, lifted brighter than realism per the rule
+  // ===== AUTO-EXTRACTED dominant fur color for cat14+ (scripts/extract-cat-fur-colors.py one-off) =====
+  // Algorithm: most-common opaque non-outline non-white non-ear-pink pixel from idle_00, lifted in HSL
+  // by +0.10 lightness / +0.15 saturation per the cat-colors rule.
+  cat14:    0x6e5252,  cat15:    0xffa470,  cat16:    0xe69d74,  cat17:    0xe9c785,
+  cat18:    0xdac995,  cat19:    0xff9a70,  cat20:    0xf0b37e,  cat21:    0x8da4b8,
+  cat22:    0xa9b2c5,  cat23:    0xf4cb7a,  cat24:    0xfff270,  cat25:    0x9fff70,
+  cat26:    0x77f8f8,  cat27:    0x89e6b7,  cat28:    0xbe90de,  cat29:    0xf88277,
+  cat30:    0xff70ce,  cat31:    0x70abff,  cat32:    0xa442fa,  cat33:    0xfe579d,
+  cat34:    0x6e5252,  cat35:    0xe69d74,  cat36:    0x70abff,  cat37:    0xf88277,
+  cat38:    0x70abff,  cat39:    0x6e5252,  cat40:    0x9fff70,  cat41:    0x89e6b7,
+  cat42:    0xbe90de,  cat43:    0xff7070,  cat44:    0x77f8f8,  cat45:    0xaf6be0,
+  cat46:    0x77f777,  cat47:    0xf0b37e,  cat48:    0xfff370,  cat49:    0xff70ce,
+  cat50:    0x7bb7f3,  cat51:    0x6e5252,  cat52:    0xff7070,  cat53:    0xfff370,
+  cat54:    0xff70a7,  cat55:    0x70eeff,  cat56:    0xc770ff,  cat57:    0xd6ff70,
+  cat58:    0xff70e2,  cat59:    0xfff770,  cat61:    0x70fff7,  cat62:    0xc6b8a8,
+  cat63:    0xc2acac,  cat64:    0x5c4444,  cat65:    0xc2acac,  cat66:    0xf9cb75,
+  cat67:    0xecc182,  cat68:    0xefcf7f,  cat69:    0xf1cb7d,  cat70:    0x9bbad3,
+  cat71:    0xf5c579,  cat72:    0x616187,  cat73:    0xe7ba87,  cat74:    0xe6c589,
+  cat75:    0xcf9fab,  cat76:    0xf4b87a,  cat77:    0xfbc874,  cat78:    0xa9a9c5,
+  // Bright neon single-tones (cat79-90)
+  cat79:    0xffd046,  cat80:    0xfe4747,  cat81:    0xfa764b,  cat82:    0xffa346,
+  cat83:    0xfff046,  cat84:    0xa3ff46,  cat85:    0x5de8ba,  cat86:    0x47fefe,
+  cat87:    0x4784fe,  cat88:    0xa24ff6,  cat89:    0xfe47c1,  cat90:    0xf15496,
+  // L/R splits — dominant picks one side (typically head color); fine for lane identity.
+  cat91:    0xe38262,  cat92:    0xd96c9a,  cat93:    0x6cd9c8,  cat94:    0xb36fd5,
+  cat96:    0xde6799,  cat99:    0x62e3d8,  cat103:   0x2f397b,  cat104:   0xc2acac,
+  cat105:   0xe39862,  cat106:   0xe39862,  cat107:   0xe39862,  cat108:   0xe39862,
+  cat109:   0x805e5e,  cat110:   0x805e5e,  cat113:   0x725454,  cat114:   0x8ca9b9,
+  cat115:   0xd99a6c,  cat116:   0xd4b69a,
 };
 
 const SEAT_ORDER: SeatId[] = ['seat-left', 'seat-center', 'seat-right'];

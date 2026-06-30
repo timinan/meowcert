@@ -18,6 +18,7 @@ node tools/server.mjs
 | --- | --- | --- | --- |
 | [`cosmetics/`](cosmetics/) | Calibrate name / slot / X-Y offset / scale per cosmetic, generate tinted variants. | `/tools/cosmetics/calibrator.html` | `tools/cosmetics/cosmetics.json` |
 | [`cats/`](cats/) | Calibrate name / rarity / scale per cat, preview animations frame-by-frame, generate tinted variants. | `/tools/cats/calibrator.html` | `tools/cats/cats.json` |
+| [`marketing/`](marketing/) | Final marketing assets — V21 logo, Reddit banner, dev.to cover. SVG + PNG downloads. | `/tools/marketing/index.html` | n/a (source generators in PM-OS) |
 
 ## Adding a new tool
 

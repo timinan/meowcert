@@ -39,7 +39,7 @@ export const BACKGROUND_CATALOG = {
   "meowstage": { id: "meowstage", displayName: "Meow Stage", backdropKey: "theme-meowstage-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: -27, bgScale: 1.4 },
   "countryfarm": { id: "countryfarm", displayName: "Country Farm", backdropKey: "theme-countryfarm-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: -47, bgScale: 1.33 },
   "desertpalace": { id: "desertpalace", displayName: "Desert Palace", backdropKey: "theme-desertpalace-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 10, bgScale: 1.27 },
-  "hidden-oasis-cave": { id: "hidden-oasis-cave", displayName: "Hidden Oasis Cave", backdropKey: "theme-hidden-oasis-cave-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 47, bgScale: 1.07 },
+  "hidden-oasis-cave": { id: "hidden-oasis-cave", displayName: "Hidden Oasis Cave", backdropKey: "theme-hidden-oasis-cave-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 44, bgScale: 1.16 },
   "moonlit-bamboo-grove": { id: "moonlit-bamboo-grove", displayName: "Moonlit Bamboo Grove", backdropKey: "theme-moonlit-bamboo-grove-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 21, bgScale: 1.09 },
   "frozen-waterfall-cave": { id: "frozen-waterfall-cave", displayName: "Frozen Waterfall Cave", backdropKey: "theme-frozen-waterfall-cave-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 26, bgScale: 1.09 },
   "enchanted-lily-pond": { id: "enchanted-lily-pond", displayName: "Enchanted Lily Pond", backdropKey: "theme-enchanted-lily-pond-bg", musicKey: "theme-default-music", rarity: "rare" as const, bgShiftUp: 31, bgScale: 1.13 },

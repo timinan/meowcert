@@ -103,15 +103,16 @@ const TOOLS = {
     savePath: path.join(TOOL_DIR, 'cosmetics', 'cosmetics.json'),
     description: 'Upload one PNG → fully integrated cosmetic (static + rides cat motion).',
   },
-  'smoke-test': {
-    label: 'Cosmetic Smoke Test',
-    href: '/tools/cats/smoke-anim-lick.html',
-    // Generated artifact — gitignored. Run `npm run smoke-test` after
-    // any extract/offset/cosmetic-art change to regenerate the 4 pages
-    // (idle/hiss/lick/meow). Defaults to lick since that's the heaviest
-    // deformation case; nav buttons in the page switch animations.
-    savePath: path.join(TOOL_DIR, 'cats', 'smoke-anim-lick.html'),
-    description: 'Every (cat × cosmetic) combo rendered with live CSS animation across idle/hiss/lick/meow. Catches alignment regressions when offsets or cosmetic art change. Run `npm run smoke-test` to (re)generate.',
+  'smoke-test-small': {
+    label: 'Cosmetic Smoke (small)',
+    href: '/tools/cats/smoke-small-lick.html',
+    // Generated artifact — gitignored. 14 representative cats × 43 base
+    // cosmetics × 4 anims (idle/hiss/lick/meow), animated live in the
+    // browser. Replaces the full 116×498 sweep which melted Tim's
+    // laptop. Regenerate via the Generate button on the page or
+    // `npm run smoke-test:small`.
+    savePath: path.join(TOOL_DIR, 'cats', 'smoke-small-lick.html'),
+    description: '14 cats × 43 base cosmetics × 4 anims, live CSS playback. 2 cats per visible variety (hand-drawn / legendary / neon / pastel split / themed split / common two-tone / solid). Run `npm run smoke-test:small` to regenerate.',
   },
   'cosmetic-variants': {
     label: 'Cosmetic Color Variants',
@@ -130,6 +131,15 @@ const TOOLS = {
     // atlas live so they always reflect current catalog state.
     savePath: path.join(TOOL_DIR, 'catalog', 'index.html'),
     description: 'Reference catalog images — every cosmetic in one grid, every cat in another. Live from the atlas, regenerable from the page.',
+  },
+  'marketing': {
+    label: 'Marketing',
+    href: '/tools/marketing/index.html',
+    // Final marketing assets (logo + Reddit banner + dev.to banner) with
+    // SVG and PNG download links. Source generators live in PM-OS, copies
+    // here so the assets are accessible from the tools nav.
+    savePath: path.join(TOOL_DIR, 'marketing', 'index.html'),
+    description: 'V21 logo + Reddit subreddit banner + dev.to article cover. SVG + PNG downloads for each.',
   },
 };
 
@@ -902,20 +912,23 @@ async function handleSaveThumb(res, slug) {
  * runs) so the output is exactly the current package.json `smoke-test`
  * matrix and nothing else.
  */
-async function handleRunSmokeTest(res) {
+async function handleRunSmokeTest(res, { small = false } = {}) {
+  const prefix = small ? 'smoke-small-' : 'smoke-anim-';
+  const npmScript = small ? 'smoke-test:small' : 'smoke-test';
+  const tag = small ? 'run-smoke-test-small' : 'run-smoke-test';
   try {
     const catsDir = path.join(TOOL_DIR, 'cats');
     const entries = await fs.readdir(catsDir).catch(() => []);
     let deleted = 0;
     for (const name of entries) {
-      if (name.startsWith('smoke-anim-')) {
+      if (name.startsWith(prefix)) {
         const target = path.join(catsDir, name);
         await fs.rm(target, { recursive: true, force: true });
         deleted++;
       }
     }
-    console.log(`[run-smoke-test] cleared ${deleted} stale artifact(s) from ${path.relative(PROJECT_ROOT, catsDir)}`);
-    const { stdout } = await runScript('npm', ['run', 'smoke-test']);
+    console.log(`[${tag}] cleared ${deleted} stale artifact(s) from ${path.relative(PROJECT_ROOT, catsDir)}`);
+    const { stdout } = await runScript('npm', ['run', npmScript]);
     const summary = stdout
       .split('\n')
       .filter((l) => l.startsWith('✓') || l.startsWith('  ...'))
@@ -923,9 +936,9 @@ async function handleRunSmokeTest(res) {
       .join(' | ');
     res.writeHead(200, { 'content-type': 'application/json' });
     res.end(JSON.stringify({ ok: true, deleted, summary }));
-    console.log(`[run-smoke-test] regenerated — ${summary}`);
+    console.log(`[${tag}] regenerated — ${summary}`);
   } catch (e) {
-    console.warn(`[run-smoke-test] failed: ${e.message}`);
+    console.warn(`[${tag}] failed: ${e.message}`);
     res.writeHead(500, { 'content-type': 'application/json' });
     res.end(JSON.stringify({ ok: false, error: e.message }));
   }
@@ -1303,6 +1316,10 @@ const server = http.createServer(async (req, res) => {
     // without rebuilding game state.
     if (req.method === 'POST' && req.url === '/run-smoke-test') {
       await handleRunSmokeTest(res);
+      return;
+    }
+    if (req.method === 'POST' && req.url === '/run-smoke-test-small') {
+      await handleRunSmokeTest(res, { small: true });
       return;
     }
 

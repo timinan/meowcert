@@ -1,0 +1,202 @@
+<!doctype html>
+<html><head><meta charset="utf-8"/>
+<title>meowcert · marketing assets</title>
+<style>
+  body { margin: 0; background: #1a0a2e; color: #fff;
+    font-family: system-ui, -apple-system, sans-serif; padding-top: 50px; }
+  .hdr { padding: 14px 20px 10px; border-bottom: 1px solid #341c5a;
+    position: sticky; top: 40px; background: #1a0a2e; z-index: 50; }
+  .hdr h1 { margin: 0 0 4px; font-size: 18px; color: #ffd34d; }
+  .hdr .sub { color: #c0a0e6; font-size: 12px; }
+  section { padding: 20px; border-bottom: 1px solid #341c5a; }
+  section h2 { margin: 0 0 6px; font-size: 16px; color: #ffd34d; }
+  section .desc { color: #c0a0e6; font-size: 12px; margin-bottom: 14px; max-width: 900px; }
+  .row { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; }
+  .row.wide { grid-template-columns: 1fr; }
+  @media (max-width: 720px) { .row { grid-template-columns: 1fr; } }
+  .card { background: #261540; border: 1px solid #4a2e7a; border-radius: 8px; overflow: hidden; }
+  .card-head { padding: 10px 14px; background: #341c5a; display: flex; justify-content: space-between;
+    align-items: center; font-size: 12px; color: #c0a0e6; }
+  .card-head .label { color: #ffd34d; font-weight: 700; }
+  .card-head .links a { color: #ffd34d; text-decoration: none; margin-left: 8px; }
+  .card-head .links a:hover { text-decoration: underline; }
+  .card-body { padding: 18px; display: flex; justify-content: center; align-items: center;
+    background: #2b1a4d; min-height: 200px; }
+  .card-body img { display: block; max-width: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
+  .card-body.logo img { max-width: 320px; }
+  .card-body.banner img { max-width: 100%; }
+  .copy-block { background: #261540; border: 1px solid #4a2e7a; border-radius: 8px; padding: 18px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px; line-height: 1.5;
+    color: #fff; white-space: pre-wrap; word-break: break-word; cursor: text; }
+  .copy-btn { display: inline-block; padding: 4px 10px; background: #4a2e7a; color: #ffd34d;
+    border: 1px solid #6b4dab; border-radius: 4px; font-size: 11px; cursor: pointer;
+    font-family: inherit; }
+  .copy-btn:hover { background: #6b4dab; color: #fff; }
+  .copy-btn.ok { background: #2e6b3a; color: #fff; border-color: #4a9c5a; }
+  .rule { background: #261540; border-left: 3px solid #ffd34d; padding: 10px 14px; margin-bottom: 8px;
+    border-radius: 0 6px 6px 0; }
+  .rule .rule-title { color: #ffd34d; font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+  .rule .rule-body { color: #e0d0f5; font-size: 13px; line-height: 1.5; }
+</style></head>
+<body>
+  <div class="hdr">
+    <h1>marketing assets</h1>
+    <div class="sub">
+      Final marketing assets + copy for Meowcert — logo, banners, subreddit description, subreddit rules.
+      SVG renders crisp at any size (use for web/code); PNG is raster (use for Reddit/Discord/dev.to upload fields).
+      Source generators live in <code>~/Documents/GitHub/PM-OS/outputs/portfolio/meowcert/</code>.
+    </div>
+  </div>
+
+  <section>
+    <h2>Subreddit Description</h2>
+    <div class="desc">
+      The locked one-line community description. Goes in subreddit settings → about → community description.
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+      <button class="copy-btn" id="copy-desc" onclick="copyText('desc-text', this)">copy to clipboard</button>
+    </div>
+    <div class="copy-block" id="desc-text" onclick="selectAll(this)">A rhythm-tap game with cats. Your post is your show. Visitors play, both sides earn rewards. Cozy on easy, brutal on hard.</div>
+    <div style="margin-top:8px;font-size:11px;">
+      <a href="/tools/marketing/subreddit-description.txt" download style="color:#ffd34d;">download .txt</a>
+    </div>
+  </section>
+
+  <section>
+    <h2>Subreddit Rules</h2>
+    <div class="desc">
+      8 rules, drop-in for Reddit mod tools → community settings → rules. Lowercase titles match the brand voice (casual, real).
+      Music-copyright rule is non-negotiable since Meowcert lets users upload tracks.
+      <a href="/tools/marketing/subreddit-rules.md" download style="color:#ffd34d;margin-left:8px;">download .md</a>
+    </div>
+    <div class="rule"><div class="rule-title">1. be kind — zero tolerance</div><div class="rule-body">No harassment, hate speech, personal attacks, threats, or doxxing. Disagree all you want about charts and song picks — keep it about the music, not the person.</div></div>
+    <div class="rule"><div class="rule-title">2. no copyrighted music</div><div class="rule-body">Only upload songs you own or have rights to — originals, royalty-free, or licensed. We honor DMCA takedowns. Copyrighted uploads get removed and may get the uploader banned.</div></div>
+    <div class="rule"><div class="rule-title">3. keep it cozy — no NSFW or shock content</div><div class="rule-body">No sexual content, gore, slurs, or shock imagery in posts, comments, custom cosmetics, or song titles. If you wouldn't show it at an arcade with kids around, don't post it.</div></div>
+    <div class="rule"><div class="rule-title">4. stay on topic</div><div class="rule-body">Meowcert, rhythm games, cats + cosmetics, charts, scores, bug reports, feature ideas. Off-topic memes, unrelated discord drops, and random promo posts get removed.</div></div>
+    <div class="rule"><div class="rule-title">5. no spam or off-platform self-promo</div><div class="rule-body">Sharing your own scores, charts, and clips: encouraged. "Subscribe to my channel" with no context: removed. Links are fine if the post stands on its own.</div></div>
+    <div class="rule"><div class="rule-title">6. constructive feedback only</div><div class="rule-body">Bug reports and feature ideas welcome — say what you tried, what you expected, what happened. Clips help. "this sucks" with no detail isn't useful and will be removed.</div></div>
+    <div class="rule"><div class="rule-title">7. no cheating, exploits, or modded clients</div><div class="rule-body">No autoplay bots, score injection, or modified game clients. Found a real exploit? DM the mods — we'll fix it and credit you.</div></div>
+    <div class="rule"><div class="rule-title">8. follow Reddit's content policy</div><div class="rule-body">These local rules sit on top of reddit.com/help/contentpolicy. Anything that breaks site-wide rules is removed regardless of what these say.</div></div>
+  </section>
+
+  <section>
+    <h2>V21 Logo</h2>
+    <div class="desc">
+      Circular badge with Butters + cat collage + MEOWCERT triple-border wordmark. Use for the subreddit icon,
+      app icon, favicon, Devpost submission thumbnail, anywhere a square/circular brand mark is needed.
+    </div>
+    <div class="row">
+      <div class="card">
+        <div class="card-head">
+          <span class="label">SVG · scalable</span>
+          <span class="links"><a href="/tools/marketing/logos/21_v14_triple_a.svg" download>download</a></span>
+        </div>
+        <div class="card-body logo">
+          <img src="/tools/marketing/logos/21_v14_triple_a.svg" alt="V21 SVG"/>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <span class="label">PNG · raster</span>
+          <span class="links">
+            <a href="/tools/marketing/logos/21_v14_triple_a_512.png" download>512</a>
+            <a href="/tools/marketing/logos/21_v14_triple_a.png" download>1024</a>
+            <a href="/tools/marketing/logos/21_v14_triple_a_2048.png" download>2048</a>
+          </span>
+        </div>
+        <div class="card-body logo">
+          <img src="/tools/marketing/logos/21_v14_triple_a.png" alt="V21 PNG"/>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Reddit Subreddit Banner — 1920×384</h2>
+    <div class="desc">
+      Reddit subreddit banner. Upload via mod tools → community appearance → banner image. Fully packed cat collage,
+      no Butters, MEOWCERT wordmark centered, cats popping out from edges and around the text.
+    </div>
+    <div class="row wide">
+      <div class="card">
+        <div class="card-head">
+          <span class="label">SVG · scalable</span>
+          <span class="links"><a href="/tools/marketing/banners/banner_v2_04.svg" download>download</a></span>
+        </div>
+        <div class="card-body banner">
+          <img src="/tools/marketing/banners/banner_v2_04.svg" alt="Reddit banner SVG"/>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <span class="label">PNG · raster</span>
+          <span class="links">
+            <a href="/tools/marketing/banners/banner_v2_04.png" download>1920×384</a>
+            <a href="/tools/marketing/banners/banner_v2_04_3840.png" download>3840×768 (2× retina)</a>
+          </span>
+        </div>
+        <div class="card-body banner">
+          <img src="/tools/marketing/banners/banner_v2_04.png" alt="Reddit banner PNG"/>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>dev.to Article Cover — 1000×420</h2>
+    <div class="desc">
+      dev.to article cover image (2.38:1, boxier than Reddit's 5:1). Use as the cover image when publishing
+      Meowcert articles on dev.to. Same triple-border wordmark + dense cat collage, scaled to dev.to's
+      recommended cover dimensions.
+    </div>
+    <div class="row wide">
+      <div class="card">
+        <div class="card-head">
+          <span class="label">SVG · scalable</span>
+          <span class="links"><a href="/tools/marketing/banners-devto/banner_devto_04.svg" download>download</a></span>
+        </div>
+        <div class="card-body banner">
+          <img src="/tools/marketing/banners-devto/banner_devto_04.svg" alt="dev.to banner SVG"/>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <span class="label">PNG · raster</span>
+          <span class="links">
+            <a href="/tools/marketing/banners-devto/banner_devto_04.png" download>1000×420</a>
+            <a href="/tools/marketing/banners-devto/banner_devto_04_2x.png" download>2000×840 (2× retina)</a>
+          </span>
+        </div>
+        <div class="card-body banner">
+          <img src="/tools/marketing/banners-devto/banner_devto_04.png" alt="dev.to banner PNG"/>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    function selectAll(el) {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    async function copyText(elId, btn) {
+      const el = document.getElementById(elId);
+      try {
+        await navigator.clipboard.writeText(el.textContent.trim());
+        const orig = btn.textContent;
+        btn.textContent = 'copied ✓';
+        btn.classList.add('ok');
+        setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 1500);
+      } catch (err) {
+        selectAll(el);
+        btn.textContent = 'select + ⌘C';
+        setTimeout(() => { btn.textContent = 'copy to clipboard'; }, 2000);
+      }
+    }
+  </script>
+  <script src="/tools-nav.js"></script>
+</body>
+</html>

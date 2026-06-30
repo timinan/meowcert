@@ -284,7 +284,7 @@
     "backdropKey": "theme-hidden-oasis-cave-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 47,
+    "bgShiftUp": 27,
     "bgScale": 1.07
   },
   "moonlit-bamboo-grove": {
@@ -516,8 +516,8 @@
     "backdropKey": "theme-c4a2f861-9ba9-4733-8e6d-a1c9b17-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": -37,
-    "bgScale": 1.34
+    "bgShiftUp": -43,
+    "bgScale": 1.33
   },
   "petstore": {
     "displayName": "Petstore",

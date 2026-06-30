@@ -57,8 +57,8 @@ HUE_TARGETS = [
 # Universal "force" recolors that apply to every cosmetic regardless of
 # cluster shape — the (hue, sat, lightness_mid) target for each
 FORCE_TARGETS = [
-    ('black',  0,   0.0,  0.15),  # near-black with a hint of original shadow contrast
-    ('white',  0,   0.0,  0.92),  # soft white
+    ('black',  0,   0.0,  0.05),  # crisp black — was 0.15 → rgb(38,38,38) light grey artifact
+    ('white',  0,   0.0,  0.98),  # crisp white — was 0.92 → rgb(234,234,234) light grey artifact
     ('gold',   45,  0.85, 0.55),  # warm metallic gold
     ('silver', 0,   0.0,  0.75),  # light grey silver
 ]

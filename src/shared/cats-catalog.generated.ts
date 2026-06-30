@@ -489,43 +489,13 @@ export const GENERATED_CAT_CATALOG: readonly CatEntry[] = [
     rarity: "common",
   },
   {
-    id: "cat95",
-    name: "Sunbeam",
-    rarity: "common",
-  },
-  {
     id: "cat96",
     name: "Cottoncandy",
     rarity: "common",
   },
   {
-    id: "cat97",
-    name: "Mintchip",
-    rarity: "common",
-  },
-  {
-    id: "cat98",
-    name: "Petal",
-    rarity: "common",
-  },
-  {
     id: "cat99",
     name: "Lagoon",
-    rarity: "common",
-  },
-  {
-    id: "cat100",
-    name: "Daydream",
-    rarity: "common",
-  },
-  {
-    id: "cat101",
-    name: "Custard",
-    rarity: "common",
-  },
-  {
-    id: "cat102",
-    name: "Sky",
     rarity: "common",
   },
   {
@@ -566,16 +536,6 @@ export const GENERATED_CAT_CATALOG: readonly CatEntry[] = [
   {
     id: "cat110",
     name: "Mittens",
-    rarity: "common",
-  },
-  {
-    id: "cat111",
-    name: "Mocha",
-    rarity: "common",
-  },
-  {
-    id: "cat112",
-    name: "Cocoa",
     rarity: "common",
   },
   {

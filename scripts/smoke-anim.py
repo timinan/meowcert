@@ -17,12 +17,35 @@ from pathlib import Path
 import html
 
 ANIM = 'lick'
+SMALL = False
 for arg in sys.argv[1:]:
     if arg.startswith('--anim='):
         ANIM = arg.split('=', 1)[1]
+    elif arg == '--small':
+        SMALL = True
+
+# Small-mode picks: 2 representative cats per visible variety + 43 base
+# cosmetics only (skip the ~457 color variants from shipped.json). Designed
+# to be a fast, scannable smoke test that doesn't melt the laptop.
+SMALL_CATS = [
+    'cat1', 'cat3',       # hand-drawn classic
+    'cat10', 'cat11',     # legendary
+    'cat84', 'cat89',     # bright neon single-tone
+    'cat91', 'cat93',     # pastel L/R split
+    'cat96', 'cat99',     # pastel L/R split (replaces the deleted themed-split row)
+    'cat103', 'cat105',   # common cat L/R split
+    'cat113', 'cat114',   # solid extremes (Coal, Snowdrop)
+]
+SMALL_COSMETICS = {
+    'c1','c2','c3','c4','c5','c6','c7','c8','c9','c10','c11','c12','c13',
+    'c14','c15','c16','c17','c18','c19','c20','c21','c22','c23','c24','c25',
+    'c27','c28','c29','c30','c31','c32','c33','c34','c35','c36','c37','c38',
+    'c39','c40','c41','c42','c43','c57',
+}
 
 ROOT = Path('.')
-OUT_DIR = Path(f'tools/cats/smoke-anim-{ANIM}')
+TAG = 'small' if SMALL else 'anim'
+OUT_DIR = Path(f'tools/cats/smoke-{TAG}-{ANIM}')
 OUT_DIR.mkdir(exist_ok=True)
 for f in OUT_DIR.glob('*.png'): f.unlink()
 
@@ -53,8 +76,12 @@ def extract_canvas(atlas, fd):
 
 cat_ids = sorted([c['id'] for c in CAT_CATALOG],
                  key=lambda s: int(s[3:]) if s[3:].isdigit() else 9999)
+if SMALL:
+    cat_ids = [c for c in SMALL_CATS if c in cat_ids]
 cos_grouped = {'face': [], 'head': [], 'neck': []}
 for c in COS_CATALOG:
+    if SMALL and c['id'] not in SMALL_COSMETICS:
+        continue
     cos_grouped.setdefault(c['slot'], []).append(c)
 cosmetic_order = cos_grouped.get('face', []) + cos_grouped.get('head', []) + cos_grouped.get('neck', [])
 
@@ -183,7 +210,7 @@ for cat_id in cat_ids:
         else:
             cells.append(
                 f'<td><div class="cell anim-{N}" '
-                f'style="background-image:url(smoke-anim-{ANIM}/{cat_id}_{cos["id"]}.png)"></div></td>')
+                f'style="background-image:url(smoke-{TAG}-{ANIM}/{cat_id}_{cos["id"]}.png)"></div></td>')
     rows.append('<tr>' + ''.join(cells) + '</tr>')
 
 keyframes = []
@@ -234,7 +261,7 @@ html_out = f"""<!doctype html>
     <div class="sub">
       Runtime-accurate composite: cosmetic anim plays in sync with cat, no offset math.
       Switch animation:
-      {' '.join(f'<a class="navbtn{(" cur" if a == ANIM else "")}" href="smoke-anim-{a}.html">{a}</a>' for a in ['idle','hiss','lick','meow'])}
+      {' '.join(f'<a class="navbtn{(" cur" if a == ANIM else "")}" href="smoke-{TAG}-{a}.html">{a}</a>' for a in ['idle','hiss','lick','meow'])}
       <button class="navbtn gen" id="gen-btn" onclick="regenerate()">🔄 Generate (delete + rerun)</button>
     </div>
   </div>
@@ -252,7 +279,7 @@ html_out = f"""<!doctype html>
       btn.textContent = '⏳ Generating…';
       btn.classList.remove('err');
       try {{
-        const res = await fetch('/run-smoke-test', {{ method: 'POST' }});
+        const res = await fetch('{('/run-smoke-test-small' if SMALL else '/run-smoke-test')}', {{ method: 'POST' }});
         const body = await res.json().catch(() => ({{ ok: false, error: 'bad json' }}));
         if (!res.ok || !body.ok) throw new Error(body.error || `HTTP ${{res.status}}`);
         btn.textContent = '✅ Reloading…';
@@ -267,6 +294,6 @@ html_out = f"""<!doctype html>
   </script>
 </body></html>
 """
-out = ROOT / f'tools/cats/smoke-anim-{ANIM}.html'
+out = ROOT / f'tools/cats/smoke-{TAG}-{ANIM}.html'
 out.write_text(html_out)
 print(f'✓ HTML: {out}')

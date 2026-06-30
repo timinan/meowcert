@@ -20,16 +20,62 @@ export class Preloader extends Scene {
   init() {
     const { width, height } = this.scale;
     const cx = width / 2;
-    const cy = height / 2;
 
-    // Loading bar outline
-    this.add.rectangle(cx, cy, 468, 32).setStrokeStyle(1, 0xffffff);
+    // Brand dark purple bg — overrides the game's default near-black
+    // (#0b041a from game.ts) so the loading screen matches the stage
+    // backdrop and feels like part of the game, not a chrome step
+    // before it. Drawn as a full-canvas rect rather than swapping the
+    // global config so MainMenu / Welcome / etc. still get the global
+    // default when they don't draw their own bg.
+    this.add.rectangle(0, 0, width, height, 0x1a0a2e).setOrigin(0, 0);
 
-    // Loading bar fill — anchored left, grows right based on load progress
-    const fill = this.add.rectangle(cx - 230, cy, 4, 28, 0xffffff).setOrigin(0, 0.5);
+    // V21 logo centered in the top half — preloaded in Boot so it's
+    // ready before this scene runs. Source PNG is 256px; we display at
+    // 200px on a 320-wide design canvas (~62% width) which leaves
+    // breathing room on the sides. `pixelated` rendering preserves the
+    // pixel-art letter cells + cat sprites without smoothing them into
+    // mush at this downscale.
+    const logo = this.add
+      .image(cx, height * 0.36, AssetKeys.Image.Logo)
+      .setDisplaySize(200, 200);
+    (logo.texture.source[0] as { scaleMode: number }).scaleMode = 0; // NEAREST
+
+    // Loading bar: brand yellow fill, cream outline. Sits in the lower
+    // third so the logo gets visual priority. Sized to 240×16 (vs the
+    // old 468×32) since the design canvas is 320 wide — the old bar
+    // was sized for a wider scene and looked oversized on the portrait
+    // viewport.
+    const barW = 240;
+    const barH = 16;
+    const barY = height * 0.62;
+
+    this.add
+      .rectangle(cx, barY, barW, barH)
+      .setStrokeStyle(2, 0xfff8e7); // cream outline
+
+    // Bar fill — anchored left at the inner edge of the outline so it
+    // grows rightward without crossing the stroke. 2px inset on each
+    // side leaves a 1px gap between fill and stroke.
+    const inner = barW - 4;
+    const fill = this.add
+      .rectangle(cx - inner / 2, barY, 2, barH - 4, 0xffd34d)
+      .setOrigin(0, 0.5);
+
+    // "LOADING..." caption under the bar, using the brand font the
+    // rest of the game uses (Pixeloid Sans, loaded via index.html's
+    // CSS @font-face). Falls back to monospace if the webfont hasn't
+    // resolved yet — the loading screen is short-lived so the fallback
+    // is an acceptable first frame.
+    this.add
+      .text(cx, barY + 24, 'LOADING...', {
+        fontFamily: 'Pixeloid Sans, monospace',
+        fontSize: '10px',
+        color: '#fff8e7',
+      })
+      .setOrigin(0.5);
 
     this.load.on('progress', (progress: number) => {
-      fill.width = 4 + 460 * progress;
+      fill.width = 2 + inner * progress;
     });
   }
 

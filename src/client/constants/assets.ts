@@ -4,6 +4,10 @@ export const AssetKeys = {
     Cosmetics: 'cosmetics-atlas',
   },
   Image: {
+    /** V21 brand logo — preloaded in Boot so the Preloader's loading
+     *  screen can display it while everything else loads. 256px PNG,
+     *  ~72KB, scaled down with pixelated rendering in Preloader.init. */
+    Logo: 'logo',
     GameBackground: 'game-background',
     MeowBarFill: 'meow-bar-fill',
     MeowBarOutline: 'meow-bar-outline',

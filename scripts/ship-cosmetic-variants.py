@@ -49,8 +49,8 @@ HUE_TARGETS_DICT = {
 }
 # Must match gen-cosmetic-variants.py FORCE_TARGETS
 FORCE_TARGETS = {
-    'black':  (0,   0.0,  0.15),
-    'white':  (0,   0.0,  0.92),
+    'black':  (0,   0.0,  0.05),  # crisp black — was 0.15 (light grey artifact)
+    'white':  (0,   0.0,  0.98),  # crisp white — was 0.92 (light grey artifact)
     'gold':   (45,  0.85, 0.55),
     'silver': (0,   0.0,  0.75),
 }

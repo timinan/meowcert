@@ -79,36 +79,43 @@ def shift_palette_naturalistic(palette, target_h_deg, target_s_base):
 # Note: cat79..cat90 are already shipped (Bright single-tone) — keep them.
 # This list is regenerated from cat91 onward.
 VARIANTS = [
-    # ---- Pastel two-tone splits (soft + harmonious, no clashing combos) ----
-    ('Sherbet',    'split',   (15, 0.55, 0.0, 335, 0.45, 0.0)),   # peach head, soft pink body
-    ('Macaron',    'split',   (335, 0.45, 0.0, 200, 0.35, 0.0)),  # pink head, sky-blue body
-    ('Seaglass',   'split',   (170, 0.45, 0.0, 280, 0.40, 0.0)),  # mint head, lavender body
-    ('Lullaby',    'split',   (280, 0.40, 0.0, 200, 0.35, 0.0)),  # lavender head, sky body
-    ('Sunbeam',    'split',   (55, 0.55, 0.0, 30, 0.55, 0.0)),    # lemon head, soft orange body
-    ('Cottoncandy','split',   (335, 0.50, 0.0, 200, 0.45, 0.0)),  # pink head, baby blue body
-    ('Mintchip',   'split',   (160, 0.45, 0.0, 30, 0.35, 0.0)),   # mint head, cream body
-    ('Petal',      'split',   (335, 0.45, 0.0, 15, 0.40, 0.0)),   # pink head, peach body
-    ('Lagoon',     'split',   (175, 0.55, 0.0, 220, 0.55, 0.0)),  # aqua head, soft blue body
-    ('Daydream',   'split',   (45, 0.50, 0.0, 280, 0.40, 0.0)),   # gold head, lavender body
-    ('Custard',    'split',   (45, 0.55, 0.0, 30, 0.40, 0.0)),    # gold head, cream body
-    ('Sky',        'split',   (200, 0.50, 0.0, 30, 0.35, 0.0)),   # blue head, cream body
+    # Pastel L/R splits (cat91-94, 96, 99) — kept from prior round
+    ('Sherbet',    'split',   (15, 0.55, 0.0, 335, 0.45, 0.0)),   # cat91 peach + pink
+    ('Macaron',    'split',   (335, 0.45, 0.0, 200, 0.35, 0.0)),  # cat92 pink + sky blue
+    ('Seaglass',   'split',   (170, 0.45, 0.0, 280, 0.40, 0.0)),  # cat93 mint + lavender
+    ('Lullaby',    'split',   (280, 0.40, 0.0, 200, 0.35, 0.0)),  # cat94 lavender + sky
+    # NEW (cat95) — head/body, black head + white body
+    ('Bishop',     'hbsplit', (0, 0.0, -0.65, 0, 0.0, 0.55)),     # cat95 H:black B:white
+    ('Cottoncandy','split',   (335, 0.50, 0.0, 200, 0.45, 0.0)),  # cat96 pink + baby blue
+    # NEW (cat97) — black head + grey body
+    ('Knight',     'hbsplit', (0, 0.0, -0.60, 0, 0.0, -0.20)),    # cat97 H:black B:grey
+    # NEW (cat98) — blue head + white body (like image cat38)
+    ('Sailor',     'hbsplit', (200, 0.50, 0.0, 0, 0.0, 0.55)),    # cat98 H:blue B:white
+    ('Lagoon',     'split',   (175, 0.55, 0.0, 220, 0.55, 0.0)),  # cat99 aqua + soft blue
+    # NEW (cat100) — green head + brown body (like image cat41)
+    ('Ranger',     'hbsplit', (110, 0.40, 0.0, 25, 0.40, -0.10)), # cat100 H:green B:brown
+    # NEW (cat101) — lavender head + blue body (like image cat42)
+    ('Wizard',     'hbsplit', (280, 0.40, 0.0, 220, 0.50, 0.0)),  # cat101 H:lavender B:blue
+    # NEW (cat102) — red head + white body (like image cat43)
+    ('Strawberry', 'hbsplit', (0, 0.65, -0.05, 0, 0.0, 0.55)),    # cat102 H:red B:white
 
-    # ---- Common-cat-color two-tones (real cat colors, like image 16) ----
-    # Use light_bias to push toward true black (-) or true white (+).
-    ('Tuxedo',     'split',   (0, 0.0, -0.65, 0, 0.0, 0.55)),     # black head, white body
-    ('Bandit',     'split',   (0, 0.0, 0.55, 0, 0.0, -0.65)),     # white head, black body
-    ('Cinnamon',   'split',   (25, 0.55, 0.0, 0, 0.0, 0.50)),     # orange head, white body
-    ('Pumpkin',    'split',   (0, 0.0, 0.50, 25, 0.55, 0.0)),     # white head, orange body
-    ('Domino',     'split',   (0, 0.0, -0.55, 25, 0.55, 0.0)),    # black head, orange body
-    ('Spice',      'split',   (25, 0.55, 0.0, 0, 0.0, -0.55)),    # orange head, black body
-    ('Storm',      'split',   (0, 0.0, -0.20, 0, 0.0, 0.50)),     # grey head, white body
-    ('Mittens',    'split',   (0, 0.0, 0.50, 0, 0.0, -0.20)),     # white head, grey body
-    ('Mocha',      'split',   (20, 0.4, -0.10, 30, 0.30, 0.20)),  # brown head, cream body
-    ('Cocoa',      'split',   (30, 0.30, 0.20, 20, 0.4, -0.10)),  # cream head, brown body
-    ('Coal',       'split',   (0, 0.0, -0.60, 0, 0.0, -0.25)),    # full black + dark grey accent
-    ('Snowdrop',   'split',   (0, 0.0, 0.55, 200, 0.10, 0.0)),    # white head, pale grey body
-    ('Caramel',    'split',   (25, 0.45, 0.0, 30, 0.25, 0.25)),   # caramel head, light cream body
-    ('Toffee',     'split',   (30, 0.25, 0.25, 25, 0.45, 0.0)),   # cream head, caramel body
+    # Common-cat L/R splits (cat103-110) — kept
+    ('Tuxedo',     'split',   (0, 0.0, -0.65, 0, 0.0, 0.55)),     # cat103 black + white L/R
+    ('Bandit',     'split',   (0, 0.0, 0.55, 0, 0.0, -0.65)),     # cat104 white + black L/R
+    ('Cinnamon',   'split',   (25, 0.55, 0.0, 0, 0.0, 0.50)),     # cat105 orange + white L/R
+    ('Pumpkin',    'split',   (0, 0.0, 0.50, 25, 0.55, 0.0)),     # cat106 white + orange L/R
+    ('Domino',     'split',   (0, 0.0, -0.55, 25, 0.55, 0.0)),    # cat107 black + orange L/R
+    ('Spice',      'split',   (25, 0.55, 0.0, 0, 0.0, -0.55)),    # cat108 orange + black L/R
+    ('Storm',      'split',   (0, 0.0, -0.20, 0, 0.0, 0.50)),     # cat109 grey + white L/R
+    ('Mittens',    'split',   (0, 0.0, 0.50, 0, 0.0, -0.20)),     # cat110 white + grey L/R
+    # NEW (cat111) — orange head + cream body
+    ('Apricot',    'hbsplit', (25, 0.55, 0.0, 30, 0.30, 0.20)),   # cat111 H:orange B:cream
+    # NEW (cat112) — black head + orange body (like image cat39)
+    ('Lava',       'hbsplit', (0, 0.0, -0.60, 25, 0.55, 0.0)),    # cat112 H:black B:orange
+    ('Coal',       'split',   (0, 0.0, -0.60, 0, 0.0, -0.25)),    # cat113 full black + grey
+    ('Snowdrop',   'split',   (0, 0.0, 0.55, 200, 0.10, 0.0)),    # cat114 white + pale grey
+    ('Caramel',    'split',   (25, 0.45, 0.0, 30, 0.25, 0.25)),   # cat115 caramel + cream
+    ('Toffee',     'split',   (30, 0.25, 0.25, 25, 0.45, 0.0)),   # cat116 cream + caramel
 ]
 
 
@@ -132,16 +139,89 @@ def recolor_frame_solid(a: np.ndarray, pmap: dict) -> np.ndarray:
     return out
 
 
-def recolor_frame_split(a: np.ndarray, head_map: dict, body_map: dict, split_y: int) -> np.ndarray:
-    """Apply head_map to rows 0..split_y-1, body_map to rows split_y..end."""
+SPLIT_X = 50  # fixed canvas column for vertical L/R split. Matches
+# cat13_idle_00 silhouette midpoint AND cat.ts CANVAS_HORIZONTAL_CENTER.
+# Using a fixed value (not per-frame midpoint) keeps the split line locked
+# to the cat's body center across all animation frames — otherwise the
+# boundary "walks" as the tail extends or the head bobs (Tim's bug).
+
+
+def recolor_frame_split(a: np.ndarray, left_map: dict, right_map: dict) -> np.ndarray:
+    """Vertical L/R split — apply left_map to the cat's left half, right_map
+    to the right half. Split line is FIXED at canvas x=SPLIT_X (50) across
+    every frame so the boundary doesn't jitter as the cat animates.
+    """
     out = a.copy()
     r = a[..., 0]
     g = a[..., 1]
     b = a[..., 2]
     alpha = a[..., 3]
+
+    xs = np.arange(a.shape[1])[None, :]
+    left_mask = xs < SPLIT_X
+    right_mask = ~left_mask
+
+    for src, tgt in left_map.items():
+        m = (r == src[0]) & (g == src[1]) & (b == src[2]) & (alpha > 0) & left_mask
+        out[m, 0] = tgt[0]
+        out[m, 1] = tgt[1]
+        out[m, 2] = tgt[2]
+    for src, tgt in right_map.items():
+        m = (r == src[0]) & (g == src[1]) & (b == src[2]) & (alpha > 0) & right_mask
+        out[m, 0] = tgt[0]
+        out[m, 1] = tgt[1]
+        out[m, 2] = tgt[2]
+    return out
+
+
+def find_chin_safe_split_y(a: np.ndarray, default: int = 44) -> int:
+    """Find the row just below the chin where the body starts widening.
+
+    Scans the head/neck transition zone (y=36..50) for the narrowest row
+    (the chin/neck waist), then returns one row below it. The waist is
+    where the silhouette is at its thinnest between the head bubble and
+    the body bubble. Splitting just below keeps the full chin in the
+    head color. Falls back to `default` (=44) when no clear waist is
+    found — e.g. sleep/stretch frames where the cat doesn't have the
+    standard head-on-top pose.
+    """
+    alpha = a[..., 3]
+    best_y = None
+    best_w = 10 ** 9
+    for y in range(36, 50):
+        opaque = np.where(alpha[y] > 100)[0]
+        if len(opaque) < 4:
+            continue
+        # Use the OUTLINE-to-outline width (max - min), which corresponds
+        # to the silhouette's bounding box at this row.
+        w = int(opaque.max() - opaque.min() + 1)
+        if w < best_w:
+            best_w = w
+            best_y = y
+    if best_y is None:
+        return default
+    return best_y + 1
+
+
+def recolor_frame_hbsplit(a: np.ndarray, head_map: dict, body_map: dict) -> np.ndarray:
+    """Horizontal HEAD/BODY split — full head (ears, face, CHIN) gets
+    head_map, chest/belly/legs/tail gets body_map.
+
+    Split line is computed per-frame via silhouette waist detection so the
+    chin always stays head-color (the old fixed split_y=42 sliced through
+    the chin underside — that's the explicit bug Tim flagged).
+    """
+    out = a.copy()
+    r = a[..., 0]
+    g = a[..., 1]
+    b = a[..., 2]
+    alpha = a[..., 3]
+
+    split_y = find_chin_safe_split_y(a)
     ys = np.arange(a.shape[0])[:, None]
     head_mask = ys < split_y
     body_mask = ~head_mask
+
     for src, tgt in head_map.items():
         m = (r == src[0]) & (g == src[1]) & (b == src[2]) & (alpha > 0) & head_mask
         out[m, 0] = tgt[0]
@@ -190,13 +270,30 @@ def make_one_variant(name: str, kind: str, params, new_id: int, dry: bool = Fals
         h_hue, h_sat, h_bias, b_hue, b_sat, b_bias = params
         h_tgt = shift_palette(BASE_FUR_PALETTE, h_hue, h_sat, h_bias)
         b_tgt = shift_palette(BASE_FUR_PALETTE, b_hue, b_sat, b_bias)
-        h_map = build_pixel_map(BASE_FUR_PALETTE, h_tgt)
-        b_map = build_pixel_map(BASE_FUR_PALETTE, b_tgt)
-        # Split at y=42 — cat neck/shoulder transition. Whole head (ears,
-        # face, chin) gets head color; chest, belly, legs, tail get body.
+        l_map = build_pixel_map(BASE_FUR_PALETTE, h_tgt)
+        r_map = build_pixel_map(BASE_FUR_PALETTE, b_tgt)
+        # Vertical L/R split — left half of cat = h_* color, right half = b_*
+        # color. Params keep their head/body names for backwards-compat with
+        # the VARIANTS table, but spatially the split runs down the cat's
+        # midline (per-frame).
         for fp in sorted(src_dir.glob(f'{BASE_CAT}_*.png')):
             a = np.array(Image.open(fp).convert('RGBA'))
-            out = recolor_frame_split(a, h_map, b_map, split_y=42)
+            out = recolor_frame_split(a, l_map, r_map)
+            out_name = fp.name.replace(BASE_CAT, new_cat)
+            Image.fromarray(out, 'RGBA').save(dst_dir / out_name)
+
+    elif kind == 'hbsplit':
+        h_hue, h_sat, h_bias, b_hue, b_sat, b_bias = params
+        h_tgt = shift_palette(BASE_FUR_PALETTE, h_hue, h_sat, h_bias)
+        b_tgt = shift_palette(BASE_FUR_PALETTE, b_hue, b_sat, b_bias)
+        h_map = build_pixel_map(BASE_FUR_PALETTE, h_tgt)
+        b_map = build_pixel_map(BASE_FUR_PALETTE, b_tgt)
+        # Horizontal HEAD/BODY split: whole head incl chin = h_* color,
+        # chest/belly/legs/tail = b_* color. Split y picked per-frame from
+        # silhouette waist (chin-safe).
+        for fp in sorted(src_dir.glob(f'{BASE_CAT}_*.png')):
+            a = np.array(Image.open(fp).convert('RGBA'))
+            out = recolor_frame_hbsplit(a, h_map, b_map)
             out_name = fp.name.replace(BASE_CAT, new_cat)
             Image.fromarray(out, 'RGBA').save(dst_dir / out_name)
 

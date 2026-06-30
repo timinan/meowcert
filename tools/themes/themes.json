@@ -284,8 +284,8 @@
     "backdropKey": "theme-hidden-oasis-cave-bg",
     "musicKey": "theme-default-music",
     "rarity": "rare",
-    "bgShiftUp": 47,
-    "bgScale": 1.07
+    "bgShiftUp": 44,
+    "bgScale": 1.16
   },
   "moonlit-bamboo-grove": {
     "displayName": "Moonlit Bamboo Grove",
