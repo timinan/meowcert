@@ -2731,12 +2731,18 @@ export class Game extends Scene {
       ? (getTutorialDialogue('play-tutorial-intro')[0] ?? '')
       : (getTutorialDialogue('play-tutorial')[this.tutorialPhase] ?? '');
     if (!dialogue) return;
-    const { width } = this.scale;
+    const { width, height } = this.scale;
     const margin = 16;
     const padding = 14;
     const bubbleW = width - margin * 2;
     const bubbleX = margin;
-    const bubbleY = 20;
+    // Per Tim image 5 (red rectangle at the top of the lane area): the
+    // play-tutorial bubble pins INSIDE the lane band, just below the
+    // cats, instead of covering the cats + nametags up top. Cats stay
+    // visible above; the first ~30% of each note's fall sits behind the
+    // bubble so the player has time to read before the note clears it.
+    const scaleY = height / L.DESIGN_H;
+    const bubbleY = L.LANE_TOP_Y * scaleY + 4;
     const text = this.add
       .text(bubbleX + padding, bubbleY + padding, dialogue, {
         fontFamily: 'Pixeloid Sans, sans-serif',

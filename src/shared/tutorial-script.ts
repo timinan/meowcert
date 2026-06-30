@@ -38,7 +38,7 @@ export const TUTORIAL_DIALOGUE: Record<TutorialStepId, string | string[]> = {
   'rehearsal-intro':
     "next, you can practice before the big show by coming to the rehearse tab. for each show or practice you attend, we'll be pspspsing the performers — they prefer being cheered on that way over loud claps.",
   'play-tutorial-intro':
-    "for each show you attend or when you're practicing with your band, we'll be pspspsing the performers — they prefer being cheered on that way over loud claps. you'll see fuzzy balls fall down — that's the optimal time for a lil ps for the kitties. tap them as they get inside the circle.",
+    "ready? you'll start seeing some fuzzy balls fall down — that's the optimal time for a lil ps for the kitties. tap them as they get inside the circle.",
   'play-tutorial': [
     // 0 — taps + chord intro (drops chord notes after first tap-only round)
     "nice! those are taps — the basic note. two or three lanes at once? both work, it's just a chord.",
