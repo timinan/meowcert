@@ -78,21 +78,30 @@ export const TUTORIAL_CHART_CHORDS: Chart = {
 };
 
 /** play-tutorial phase 1 — 2 single-lane holds + 2 double-lane holds.
+ *  Per Tim image 5: holds are now 4 steps long (was 2) and consecutive
+ *  events don't stack on the same lane. Singles alternate lane 0 → lane
+ *  2; doubles are lanes 0+1 then lanes 1+2 so the same lane never
+ *  appears in adjacent SINGLE events. Lane 1 still spans both doubles
+ *  (unavoidable with 3 lanes + 2 distinct double-hold pairings), but a
+ *  4-step gap between hold-ends gives the finger time to reposition.
+ *
  *  hitsToAdvance:6 = 1+1+2+2 (each lane scores at hold-end). The 6th
  *  hit only lands when the player completes the final double, so the
  *  advance gate naturally requires a clean double-hold. */
 export const TUTORIAL_CHART_HOLDS: Chart = {
-  ...base('Tutorial — Holds', 16),
-  steps: Array.from({ length: 16 }, emptyStep),
+  ...base('Tutorial — Holds', 32),
+  steps: Array.from({ length: 32 }, emptyStep),
   holds: [
-    // 2 single-lane holds on the center lane
-    { lane: 1, startStep: 0, endStep: 2 },
-    { lane: 1, startStep: 4, endStep: 6 },
-    // 2 double-lane holds (outer lanes simultaneously)
-    { lane: 0, startStep: 8, endStep: 10 },
-    { lane: 2, startStep: 8, endStep: 10 },
-    { lane: 0, startStep: 12, endStep: 14 },
-    { lane: 2, startStep: 12, endStep: 14 },
+    // single-lane hold on lane 0
+    { lane: 0, startStep: 0, endStep: 4 },
+    // single-lane hold on lane 2 (different lane from prior single)
+    { lane: 2, startStep: 8, endStep: 12 },
+    // double-lane hold: lanes 0 + 1
+    { lane: 0, startStep: 16, endStep: 20 },
+    { lane: 1, startStep: 16, endStep: 20 },
+    // double-lane hold: lanes 1 + 2 (different pairing from prior)
+    { lane: 1, startStep: 24, endStep: 28 },
+    { lane: 2, startStep: 24, endStep: 28 },
   ],
   slides: [], slideReturns: [],
 };
