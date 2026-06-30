@@ -414,6 +414,32 @@ export class TutorialOrchestrator extends Scene {
       return;
     }
 
+    // Visit-pointer: 4-beat menu walkthrough per Tim image-4 spec — one
+    // beat per menu tab (CATCH A SHOW → MERCH → REWARDS → SETTINGS) with
+    // the matching row highlighted in the hamburger mock so the player
+    // sees where each feature lives.
+    if (this.currentStep === 'visit-pointer') {
+      const highlights = ['CATCH A SHOW', 'MERCH', 'REWARDS', 'SETTINGS'] as const;
+      const highlight = highlights[Math.min(this.dialogueIndex, highlights.length - 1)]!;
+      this.renderHamburgerMock(highlight);
+      const continueLabelV = hasMoreDialogue ? 'Next →' : 'Continue →';
+      this.overlay = new TutorialCatOverlay(this);
+      this.overlay.show(line, {
+        continueLabel: continueLabelV,
+        onContinue: () => {
+          if (this.busy) return;
+          if (hasMoreDialogue) {
+            this.dialogueIndex += 1;
+            this.renderStep();
+          } else {
+            void this.advance();
+          }
+        },
+      });
+      this.renderSkipLinkIfUnlocked();
+      return;
+    }
+
     // Editor-tour beats: render a chart-editor mock behind Butters, pin
     // the bubble at the top, and progressively reveal demo notes as the
     // dialogue cycles through tap → hold → slide. Per Tim image 4 the
@@ -1075,7 +1101,7 @@ export class TutorialOrchestrator extends Scene {
     this.renderSkipLinkIfUnlocked();
   }
 
-  private renderHamburgerMock(highlight: 'SET STAGE' | 'REHEARSE' | 'PUT ON A SHOW'): void {
+  private renderHamburgerMock(highlight: 'SET STAGE' | 'REHEARSE' | 'PUT ON A SHOW' | 'MERCH' | 'CATCH A SHOW' | 'REWARDS' | 'SETTINGS'): void {
     const { width, height } = this.scale;
 
     // Drawer dimensions sized to fit the canvas with margin — Tim:

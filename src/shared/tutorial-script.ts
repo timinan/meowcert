@@ -70,8 +70,16 @@ export const TUTORIAL_DIALOGUE: Record<TutorialStepId, string | string[]> = {
     // 3 — required-to-rehearse-pass gate
     "before you can put on a show, you must rehearse your chart from the top and pass it.",
   ],
-  'visit-pointer':
-    "when you want to catch other people's shows, head here.",
+  'visit-pointer': [
+    // 0 — CATCH A SHOW highlighted
+    "here's where you can go find other people's shows to attend.",
+    // 1 — MERCH highlighted
+    "the merch table is where you can find more cosmetics — like the ones you just got.",
+    // 2 — REWARDS highlighted (stub for now; real feature coming)
+    "the rewards tab — be sure to check it often for new goodies.",
+    // 3 — SETTINGS highlighted
+    "and the settings tab lets you adjust things to match your gameplay style.",
+  ],
   'route-a-outro':
     "you're all set! go run wild — your show, your rules.",
   'route-b-outro':
