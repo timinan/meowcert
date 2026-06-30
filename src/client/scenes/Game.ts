@@ -12,7 +12,7 @@ import { buildMenuItems } from '@/ui/menu-items';
 import * as L from '@/constants/scene-layout';
 import { AssetKeys } from '@/constants/assets';
 import { Balance } from '@/constants/balance';
-import { fetchState, loadChart } from '@/services/state-client';
+import { fetchState, loadChart, completeOnboarding } from '@/services/state-client';
 import { CAT_CATALOG, emptyChart, CHART_PAGE_SIZE } from '@/../shared/state';
 import { resolveLaneTintsFromSeatedCats } from '@/constants/cat-colors';
 import type { PlayerState, LaneId, Chart, SeatId } from '@/../shared/state';
@@ -1403,7 +1403,10 @@ export class Game extends Scene {
    *  shouldnt be a back button when you are loading someone's chart
    *  (even for own rehersals just restart)".
    *
-   *  Hidden in testMode (the BACK TO EDITOR chip covers that flow). */
+   *  Hidden in testMode (the BACK TO EDITOR chip covers that flow).
+   *  In tutorial mode (tutorialPhase !== null): a single SKIP TUTORIAL
+   *  chip replaces BACK + RESTART so the player has one clean exit
+   *  instead of two buttons that don't fit the guided flow. */
   private buildRehearsalControls(): void {
     const { width } = this.scale;
     const padX = 10;
@@ -1412,6 +1415,40 @@ export class Game extends Scene {
     const chipH = 32;
     const gap = 6;
     const chipCx = width - padX - chipW / 2;
+
+    if (this.tutorialPhase !== null) {
+      const skipCy = padY + chipH / 2;
+      const skipBg = this.add
+        .rectangle(chipCx, skipCy, chipW, chipH, 0x1a0a2e, 0.95)
+        .setStrokeStyle(2, 0xc678ff, 0.9)
+        .setDepth(60)
+        .setInteractive({ useHandCursor: true });
+      const skipTxt = this.add
+        .text(chipCx, skipCy, 'SKIP TUTORIAL', {
+          fontFamily: 'Pixeloid Sans, sans-serif',
+          fontStyle: 'bold',
+          fontSize: '11px',
+          color: '#c0a0e6',
+        })
+        .setOrigin(0.5)
+        .setDepth(61);
+      skipBg.on('pointerover', () => skipBg.setFillStyle(0x2c1856, 0.95));
+      skipBg.on('pointerout', () => skipBg.setFillStyle(0x1a0a2e, 0.95));
+      skipBg.on('pointerup', () => {
+        skipBg.disableInteractive();
+        void (async () => {
+          try {
+            const updated = await completeOnboarding();
+            this.playerState = updated;
+          } catch (e) {
+            console.warn('[tutorial] skip → completeOnboarding failed', e);
+          }
+          this.scene.start(SceneKeys.Decorate, { playerState: this.playerState });
+        })();
+      });
+      this.backToChartChip = [skipBg, skipTxt];
+      return;
+    }
 
     const chips: Phaser.GameObjects.GameObject[] = [];
 
