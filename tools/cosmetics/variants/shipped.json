@@ -1,0 +1,875 @@
+{
+  "c18": {
+    "lighter": {
+      "new_id": "c60",
+      "frames": 85,
+      "name": "Light Santa Hat"
+    },
+    "darker": {
+      "new_id": "c61",
+      "frames": 85,
+      "name": "Dark Santa Hat"
+    },
+    "all_magenta": {
+      "new_id": "c62",
+      "frames": 85,
+      "name": "Magenta Santa Hat"
+    },
+    "all_blue": {
+      "new_id": "c63",
+      "frames": 85,
+      "name": "Blue Santa Hat"
+    },
+    "all_teal": {
+      "new_id": "c64",
+      "frames": 85,
+      "name": "Teal Santa Hat"
+    },
+    "all_purple": {
+      "new_id": "c65",
+      "frames": 85,
+      "name": "Purple Santa Hat"
+    },
+    "all_yellow": {
+      "new_id": "c66",
+      "frames": 85,
+      "name": "Yellow Santa Hat"
+    },
+    "all_red": {
+      "new_id": "c67",
+      "frames": 85,
+      "name": "Red Santa Hat"
+    },
+    "all_green": {
+      "new_id": "c68",
+      "frames": 85,
+      "name": "Green Santa Hat"
+    }
+  },
+  "c19": {
+    "cluster0_red": {
+      "new_id": "c69",
+      "frames": 85,
+      "name": "Red Sailor Hat"
+    },
+    "all_orange": {
+      "new_id": "c70",
+      "frames": 85,
+      "name": "Orange Sailor Hat"
+    },
+    "all_red": {
+      "new_id": "c71",
+      "frames": 85,
+      "name": "Red Sailor Hat"
+    },
+    "cluster0_teal": {
+      "new_id": "c72",
+      "frames": 85,
+      "name": "Teal Sailor Hat"
+    },
+    "cluster0_pink": {
+      "new_id": "c73",
+      "frames": 85,
+      "name": "Pink Sailor Hat"
+    }
+  },
+  "c22": {
+    "all_red": {
+      "new_id": "c74",
+      "frames": 109,
+      "name": "Red Tiny Santa Hat"
+    },
+    "all_orange": {
+      "new_id": "c75",
+      "frames": 109,
+      "name": "Orange Tiny Santa Hat"
+    },
+    "all_yellow": {
+      "new_id": "c76",
+      "frames": 109,
+      "name": "Yellow Tiny Santa Hat"
+    },
+    "all_lime": {
+      "new_id": "c77",
+      "frames": 109,
+      "name": "Lime Tiny Santa Hat"
+    },
+    "all_green": {
+      "new_id": "c78",
+      "frames": 109,
+      "name": "Green Tiny Santa Hat"
+    },
+    "all_teal": {
+      "new_id": "c79",
+      "frames": 109,
+      "name": "Teal Tiny Santa Hat"
+    },
+    "all_blue": {
+      "new_id": "c80",
+      "frames": 109,
+      "name": "Blue Tiny Santa Hat"
+    },
+    "all_purple": {
+      "new_id": "c81",
+      "frames": 109,
+      "name": "Purple Tiny Santa Hat"
+    },
+    "all_magenta": {
+      "new_id": "c82",
+      "frames": 109,
+      "name": "Magenta Tiny Santa Hat"
+    },
+    "all_pink": {
+      "new_id": "c83",
+      "frames": 109,
+      "name": "Pink Tiny Santa Hat"
+    },
+    "lighter": {
+      "new_id": "c84",
+      "frames": 109,
+      "name": "Light Tiny Santa Hat"
+    }
+  },
+  "c23": {
+    "all_red": {
+      "new_id": "c85",
+      "frames": 109,
+      "name": "Red Party Hat"
+    },
+    "all_orange": {
+      "new_id": "c86",
+      "frames": 109,
+      "name": "Orange Party Hat"
+    },
+    "all_yellow": {
+      "new_id": "c87",
+      "frames": 109,
+      "name": "Yellow Party Hat"
+    },
+    "all_green": {
+      "new_id": "c88",
+      "frames": 109,
+      "name": "Green Party Hat"
+    },
+    "all_lime": {
+      "new_id": "c89",
+      "frames": 109,
+      "name": "Lime Party Hat"
+    },
+    "all_teal": {
+      "new_id": "c90",
+      "frames": 109,
+      "name": "Teal Party Hat"
+    },
+    "all_blue": {
+      "new_id": "c91",
+      "frames": 109,
+      "name": "Blue Party Hat"
+    },
+    "all_purple": {
+      "new_id": "c92",
+      "frames": 109,
+      "name": "Purple Party Hat"
+    },
+    "darker": {
+      "new_id": "c93",
+      "frames": 109,
+      "name": "Dark Party Hat"
+    },
+    "cluster0_teal": {
+      "new_id": "c94",
+      "frames": 109,
+      "name": "Teal Party Hat"
+    },
+    "cluster0_blue": {
+      "new_id": "c95",
+      "frames": 109,
+      "name": "Blue Party Hat"
+    },
+    "cluster0_purple": {
+      "new_id": "c96",
+      "frames": 109,
+      "name": "Purple Party Hat"
+    },
+    "cluster0_green": {
+      "new_id": "c97",
+      "frames": 109,
+      "name": "Green Party Hat"
+    },
+    "lighter": {
+      "new_id": "c98",
+      "frames": 109,
+      "name": "Light Party Hat"
+    },
+    "cluster0_yellow": {
+      "new_id": "c99",
+      "frames": 109,
+      "name": "Yellow Party Hat"
+    },
+    "cluster0_lime": {
+      "new_id": "c100",
+      "frames": 109,
+      "name": "Lime Party Hat"
+    }
+  },
+  "c24": {
+    "all_red": {
+      "new_id": "c101",
+      "frames": 109,
+      "name": "Red Tiny Crown"
+    },
+    "all_blue": {
+      "new_id": "c102",
+      "frames": 109,
+      "name": "Blue Tiny Crown"
+    },
+    "all_pink": {
+      "new_id": "c103",
+      "frames": 109,
+      "name": "Pink Tiny Crown"
+    }
+  },
+  "c25": {
+    "all_red": {
+      "new_id": "c104",
+      "frames": 109,
+      "name": "Red Tan Beret"
+    },
+    "all_yellow": {
+      "new_id": "c105",
+      "frames": 109,
+      "name": "Yellow Tan Beret"
+    },
+    "all_teal": {
+      "new_id": "c106",
+      "frames": 109,
+      "name": "Teal Tan Beret"
+    },
+    "all_blue": {
+      "new_id": "c107",
+      "frames": 109,
+      "name": "Blue Tan Beret"
+    },
+    "all_purple": {
+      "new_id": "c108",
+      "frames": 109,
+      "name": "Purple Tan Beret"
+    },
+    "all_pink": {
+      "new_id": "c109",
+      "frames": 109,
+      "name": "Pink Tan Beret"
+    }
+  },
+  "c27": {
+    "all_red": {
+      "new_id": "c110",
+      "frames": 1,
+      "name": "Red Tan Cowboy Hat"
+    },
+    "all_teal": {
+      "new_id": "c111",
+      "frames": 1,
+      "name": "Teal Tan Cowboy Hat"
+    },
+    "all_blue": {
+      "new_id": "c112",
+      "frames": 1,
+      "name": "Blue Tan Cowboy Hat"
+    },
+    "all_purple": {
+      "new_id": "c113",
+      "frames": 1,
+      "name": "Purple Tan Cowboy Hat"
+    },
+    "darker": {
+      "new_id": "c114",
+      "frames": 1,
+      "name": "Dark Tan Cowboy Hat"
+    },
+    "lighter": {
+      "new_id": "c115",
+      "frames": 1,
+      "name": "Light Tan Cowboy Hat"
+    }
+  },
+  "c29": {
+    "cluster0_teal": {
+      "new_id": "c116",
+      "frames": 109,
+      "name": "Teal Red Baseball Cap"
+    },
+    "cluster0_green": {
+      "new_id": "c117",
+      "frames": 109,
+      "name": "Green Red Baseball Cap"
+    },
+    "lighter": {
+      "new_id": "c118",
+      "frames": 109,
+      "name": "Light Red Baseball Cap"
+    }
+  },
+  "c30": {
+    "all_orange": {
+      "new_id": "c119",
+      "frames": 109,
+      "name": "Orange Brown Beret with Bow"
+    },
+    "all_green": {
+      "new_id": "c120",
+      "frames": 109,
+      "name": "Green Brown Beret with Bow"
+    },
+    "all_teal": {
+      "new_id": "c121",
+      "frames": 109,
+      "name": "Teal Brown Beret with Bow"
+    },
+    "all_pink": {
+      "new_id": "c122",
+      "frames": 109,
+      "name": "Pink Brown Beret with Bow"
+    },
+    "all_blue": {
+      "new_id": "c123",
+      "frames": 109,
+      "name": "Blue Brown Beret with Bow"
+    },
+    "all_purple": {
+      "new_id": "c124",
+      "frames": 109,
+      "name": "Purple Brown Beret with Bow"
+    },
+    "all_magenta": {
+      "new_id": "c125",
+      "frames": 109,
+      "name": "Magenta Brown Beret with Bow"
+    },
+    "lighter": {
+      "new_id": "c126",
+      "frames": 109,
+      "name": "Light Brown Beret with Bow"
+    }
+  },
+  "c31": {
+    "cluster0_teal": {
+      "new_id": "c127",
+      "frames": 109,
+      "name": "Teal Clown Hat"
+    },
+    "cluster0_blue": {
+      "new_id": "c128",
+      "frames": 109,
+      "name": "Blue Clown Hat"
+    },
+    "cluster0_green": {
+      "new_id": "c129",
+      "frames": 109,
+      "name": "Green Clown Hat"
+    },
+    "cluster0_purple": {
+      "new_id": "c130",
+      "frames": 109,
+      "name": "Purple Clown Hat"
+    },
+    "all_teal": {
+      "new_id": "c131",
+      "frames": 109,
+      "name": "Teal Clown Hat"
+    }
+  },
+  "c33": {
+    "all_yellow": {
+      "new_id": "c132",
+      "frames": 109,
+      "name": "Yellow Tan Beret With String"
+    },
+    "all_orange": {
+      "new_id": "c133",
+      "frames": 109,
+      "name": "Orange Tan Beret With String"
+    },
+    "all_teal": {
+      "new_id": "c134",
+      "frames": 109,
+      "name": "Teal Tan Beret With String"
+    },
+    "all_green": {
+      "new_id": "c135",
+      "frames": 109,
+      "name": "Green Tan Beret With String"
+    },
+    "all_magenta": {
+      "new_id": "c136",
+      "frames": 109,
+      "name": "Magenta Tan Beret With String"
+    },
+    "all_purple": {
+      "new_id": "c137",
+      "frames": 109,
+      "name": "Purple Tan Beret With String"
+    },
+    "lighter": {
+      "new_id": "c138",
+      "frames": 109,
+      "name": "Light Tan Beret With String"
+    }
+  },
+  "c35": {
+    "all_red": {
+      "new_id": "c139",
+      "frames": 109,
+      "name": "Red Orange Head"
+    },
+    "all_orange": {
+      "new_id": "c140",
+      "frames": 109,
+      "name": "Orange Orange Head"
+    },
+    "all_teal": {
+      "new_id": "c141",
+      "frames": 109,
+      "name": "Teal Orange Head"
+    },
+    "lighter": {
+      "new_id": "c142",
+      "frames": 109,
+      "name": "Light Orange Head"
+    }
+  },
+  "c36": {
+    "all_purple": {
+      "new_id": "c143",
+      "frames": 109,
+      "name": "Purple Strawberry Head"
+    },
+    "cluster0_orange": {
+      "new_id": "c144",
+      "frames": 109,
+      "name": "Orange Strawberry Head"
+    },
+    "cluster1_purple": {
+      "new_id": "c145",
+      "frames": 109,
+      "name": "Purple-Accent Strawberry Head"
+    },
+    "cluster1_yellow": {
+      "new_id": "c146",
+      "frames": 109,
+      "name": "Yellow-Accent Strawberry Head"
+    }
+  },
+  "c37": {
+    "all_red": {
+      "new_id": "c147",
+      "frames": 109,
+      "name": "Red Bread Head"
+    },
+    "all_green": {
+      "new_id": "c148",
+      "frames": 109,
+      "name": "Green Bread Head"
+    },
+    "all_blue": {
+      "new_id": "c149",
+      "frames": 109,
+      "name": "Blue Bread Head"
+    },
+    "all_purple": {
+      "new_id": "c150",
+      "frames": 109,
+      "name": "Purple Bread Head"
+    },
+    "all_pink": {
+      "new_id": "c151",
+      "frames": 109,
+      "name": "Pink Bread Head"
+    }
+  },
+  "c38": {
+    "all_yellow": {
+      "new_id": "c152",
+      "frames": 109,
+      "name": "Yellow Frog Head"
+    },
+    "all_teal": {
+      "new_id": "c153",
+      "frames": 109,
+      "name": "Teal Frog Head"
+    },
+    "all_purple": {
+      "new_id": "c154",
+      "frames": 109,
+      "name": "Purple Frog Head"
+    },
+    "all_magenta": {
+      "new_id": "c155",
+      "frames": 109,
+      "name": "Magenta Frog Head"
+    },
+    "cluster0_yellow": {
+      "new_id": "c156",
+      "frames": 109,
+      "name": "Yellow Frog Head"
+    },
+    "cluster0_lime": {
+      "new_id": "c157",
+      "frames": 109,
+      "name": "Lime Frog Head"
+    }
+  },
+  "c41": {
+    "all_red": {
+      "new_id": "c158",
+      "frames": 101,
+      "name": "Red Yellow Tint Sunglasses"
+    },
+    "all_lime": {
+      "new_id": "c159",
+      "frames": 101,
+      "name": "Lime Yellow Tint Sunglasses"
+    },
+    "all_teal": {
+      "new_id": "c160",
+      "frames": 101,
+      "name": "Teal Yellow Tint Sunglasses"
+    },
+    "all_blue": {
+      "new_id": "c161",
+      "frames": 101,
+      "name": "Blue Yellow Tint Sunglasses"
+    },
+    "all_purple": {
+      "new_id": "c162",
+      "frames": 101,
+      "name": "Purple Yellow Tint Sunglasses"
+    },
+    "all_magenta": {
+      "new_id": "c163",
+      "frames": 101,
+      "name": "Magenta Yellow Tint Sunglasses"
+    }
+  },
+  "c57": {
+    "all_orange": {
+      "new_id": "c164",
+      "frames": 1,
+      "name": "Orange Fire Emoji Head"
+    },
+    "all_yellow": {
+      "new_id": "c165",
+      "frames": 1,
+      "name": "Yellow Fire Emoji Head"
+    },
+    "all_teal": {
+      "new_id": "c166",
+      "frames": 1,
+      "name": "Teal Fire Emoji Head"
+    },
+    "all_purple": {
+      "new_id": "c167",
+      "frames": 1,
+      "name": "Purple Fire Emoji Head"
+    },
+    "all_green": {
+      "new_id": "c168",
+      "frames": 1,
+      "name": "Green Fire Emoji Head"
+    },
+    "cluster1_red": {
+      "new_id": "c169",
+      "frames": 1,
+      "name": "Red-Accent Fire Emoji Head"
+    }
+  },
+  "c1": {
+    "all_red": {
+      "new_id": "c170",
+      "frames": 98,
+      "name": "Red Red Sunglasses"
+    },
+    "all_orange": {
+      "new_id": "c171",
+      "frames": 98,
+      "name": "Orange Red Sunglasses"
+    },
+    "all_yellow": {
+      "new_id": "c172",
+      "frames": 98,
+      "name": "Yellow Red Sunglasses"
+    },
+    "all_green": {
+      "new_id": "c173",
+      "frames": 98,
+      "name": "Green Red Sunglasses"
+    },
+    "all_teal": {
+      "new_id": "c174",
+      "frames": 98,
+      "name": "Teal Red Sunglasses"
+    }
+  },
+  "c2": {
+    "darker": {
+      "new_id": "c175",
+      "frames": 98,
+      "name": "Dark Grey Glasses"
+    },
+    "lighter": {
+      "new_id": "c176",
+      "frames": 98,
+      "name": "Light Grey Glasses"
+    }
+  },
+  "c3": {
+    "darker": {
+      "new_id": "c177",
+      "frames": 98,
+      "name": "Dark Cool Sunglasses"
+    }
+  },
+  "c4": {
+    "all_teal": {
+      "new_id": "c178",
+      "frames": 98,
+      "name": "Teal Grey Round Glasses"
+    }
+  },
+  "c6": {
+    "all_green": {
+      "new_id": "c179",
+      "frames": 98,
+      "name": "Green Monocle "
+    },
+    "lighter": {
+      "new_id": "c180",
+      "frames": 98,
+      "name": "Light Monocle "
+    }
+  },
+  "c7": {
+    "all_pink": {
+      "new_id": "c181",
+      "frames": 98,
+      "name": "Pink Eye Patch"
+    }
+  },
+  "c10": {
+    "all_yellow": {
+      "new_id": "c182",
+      "frames": 98,
+      "name": "Yellow Pink Round Bowtie"
+    },
+    "all_lime": {
+      "new_id": "c183",
+      "frames": 98,
+      "name": "Lime Pink Round Bowtie"
+    },
+    "all_green": {
+      "new_id": "c184",
+      "frames": 98,
+      "name": "Green Pink Round Bowtie"
+    },
+    "lighter": {
+      "new_id": "c185",
+      "frames": 98,
+      "name": "Light Pink Round Bowtie"
+    },
+    "all_magenta": {
+      "new_id": "c186",
+      "frames": 98,
+      "name": "Magenta Pink Round Bowtie"
+    },
+    "all_purple": {
+      "new_id": "c187",
+      "frames": 98,
+      "name": "Purple Pink Round Bowtie"
+    },
+    "all_blue": {
+      "new_id": "c188",
+      "frames": 98,
+      "name": "Blue Pink Round Bowtie"
+    },
+    "all_teal": {
+      "new_id": "c189",
+      "frames": 98,
+      "name": "Teal Pink Round Bowtie"
+    }
+  },
+  "c9": {
+    "all_teal": {
+      "new_id": "c190",
+      "frames": 90,
+      "name": "Teal Red Bowtie"
+    },
+    "all_green": {
+      "new_id": "c191",
+      "frames": 90,
+      "name": "Green Red Bowtie"
+    },
+    "all_orange": {
+      "new_id": "c192",
+      "frames": 90,
+      "name": "Orange Red Bowtie"
+    },
+    "all_yellow": {
+      "new_id": "c193",
+      "frames": 90,
+      "name": "Yellow Red Bowtie"
+    },
+    "all_lime": {
+      "new_id": "c194",
+      "frames": 90,
+      "name": "Lime Red Bowtie"
+    },
+    "all_blue": {
+      "new_id": "c195",
+      "frames": 90,
+      "name": "Blue Red Bowtie"
+    },
+    "all_magenta": {
+      "new_id": "c196",
+      "frames": 90,
+      "name": "Magenta Red Bowtie"
+    }
+  },
+  "c16": {
+    "all_red": {
+      "new_id": "c197",
+      "frames": 98,
+      "name": "Red Gold Chain"
+    },
+    "all_lime": {
+      "new_id": "c198",
+      "frames": 98,
+      "name": "Lime Gold Chain"
+    },
+    "all_green": {
+      "new_id": "c199",
+      "frames": 98,
+      "name": "Green Gold Chain"
+    },
+    "all_teal": {
+      "new_id": "c200",
+      "frames": 98,
+      "name": "Teal Gold Chain"
+    },
+    "all_blue": {
+      "new_id": "c201",
+      "frames": 98,
+      "name": "Blue Gold Chain"
+    },
+    "all_magenta": {
+      "new_id": "c202",
+      "frames": 98,
+      "name": "Magenta Gold Chain"
+    },
+    "all_pink": {
+      "new_id": "c203",
+      "frames": 98,
+      "name": "Pink Gold Chain"
+    },
+    "lighter": {
+      "new_id": "c204",
+      "frames": 98,
+      "name": "Light Gold Chain"
+    },
+    "darker": {
+      "new_id": "c205",
+      "frames": 98,
+      "name": "Dark Gold Chain"
+    }
+  },
+  "c34": {
+    "all_red": {
+      "new_id": "c206",
+      "frames": 109,
+      "name": "Red Blue Crystal Necklace"
+    },
+    "all_lime": {
+      "new_id": "c207",
+      "frames": 109,
+      "name": "Lime Blue Crystal Necklace"
+    },
+    "all_teal": {
+      "new_id": "c208",
+      "frames": 109,
+      "name": "Teal Blue Crystal Necklace"
+    },
+    "all_blue": {
+      "new_id": "c209",
+      "frames": 109,
+      "name": "Blue Blue Crystal Necklace"
+    },
+    "all_purple": {
+      "new_id": "c210",
+      "frames": 109,
+      "name": "Purple Blue Crystal Necklace"
+    },
+    "all_magenta": {
+      "new_id": "c211",
+      "frames": 109,
+      "name": "Magenta Blue Crystal Necklace"
+    },
+    "lighter": {
+      "new_id": "c212",
+      "frames": 109,
+      "name": "Light Blue Crystal Necklace"
+    },
+    "all_orange": {
+      "new_id": "c213",
+      "frames": 109,
+      "name": "Orange Blue Crystal Necklace"
+    }
+  },
+  "c42": {
+    "all_red": {
+      "new_id": "c214",
+      "frames": 101,
+      "name": "Red Fancy Silver Necklace"
+    },
+    "all_teal": {
+      "new_id": "c215",
+      "frames": 101,
+      "name": "Teal Fancy Silver Necklace"
+    },
+    "all_green": {
+      "new_id": "c216",
+      "frames": 101,
+      "name": "Green Fancy Silver Necklace"
+    },
+    "all_magenta": {
+      "new_id": "c217",
+      "frames": 101,
+      "name": "Magenta Fancy Silver Necklace"
+    },
+    "all_purple": {
+      "new_id": "c218",
+      "frames": 101,
+      "name": "Purple Fancy Silver Necklace"
+    },
+    "all_blue": {
+      "new_id": "c219",
+      "frames": 101,
+      "name": "Blue Fancy Silver Necklace"
+    }
+  },
+  "c43": {
+    "all_blue": {
+      "new_id": "c220",
+      "frames": 90,
+      "name": "Blue Silver Gem Necklace"
+    },
+    "all_teal": {
+      "new_id": "c221",
+      "frames": 90,
+      "name": "Teal Silver Gem Necklace"
+    },
+    "all_green": {
+      "new_id": "c222",
+      "frames": 90,
+      "name": "Green Silver Gem Necklace"
+    }
+  }
+}

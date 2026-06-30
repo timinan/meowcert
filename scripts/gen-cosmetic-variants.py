@@ -228,6 +228,11 @@ def shift_hue(img, target_h_deg, source_h_deg, mask_cluster_deg=None, mask_radiu
     its original tone. cluster_avg_l param kept for backward compat but no
     longer drives the boost decision."""
     rotation = (target_h_deg - source_h_deg) / 360.0
+    # Dark-base boost only applies to pixels that ARE the cluster we're
+    # rotating — otherwise unrelated dark accents (e.g. sunglass frames
+    # that happen to be near-black with a faint blue tint) get
+    # accidentally pumped to bright colors when all_red runs.
+    boost_cluster_deg = mask_cluster_deg if mask_cluster_deg is not None else source_h_deg
     out = Image.new('RGBA', img.size, (0, 0, 0, 0))
     src_px = img.load()
     dst_px = out.load()
@@ -241,19 +246,15 @@ def shift_hue(img, target_h_deg, source_h_deg, mask_cluster_deg=None, mask_radiu
             if ss < GRAY_SAT:
                 dst_px[x, y] = (r, g, b, a)
                 continue
+            pixel_h_deg = int(hh * 360)
             if mask_cluster_deg is not None:
-                pixel_h_deg = int(hh * 360)
                 if not pixel_in_cluster(pixel_h_deg, mask_cluster_deg, mask_radius):
                     dst_px[x, y] = (r, g, b, a)
                     continue
             new_h = (hh + rotation) % 1.0
             new_l = ll
             new_s = ss
-            if ll < DARK_BASE_THRESHOLD:
-                # Lift this dark pixel toward visible-color territory while
-                # preserving its position relative to other dark pixels
-                # (so a darker shadow STAYS darker than its neighbors after
-                # the lift)
+            if ll < DARK_BASE_THRESHOLD and pixel_in_cluster(pixel_h_deg, boost_cluster_deg, mask_radius):
                 new_l = min(1.0, ll + (DARK_BASE_TARGET_L - ll) * 0.8)
                 new_s = max(ss, 0.75)
             nr, ng, nb = colorsys.hls_to_rgb(new_h, new_l, new_s)
@@ -284,8 +285,28 @@ def hue_to_swatch(deg):
     return f'#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}'
 
 
-bases = [c for c in cat if not c.get('sourceFrame') and c.get('id') not in ('c58', 'c59')]
-print(f'Generating variants for {len(bases)} bases')
+# Load the shipped-variants map so we can (a) skip showing already-shipped
+# variant cells on parent rows and (b) avoid treating freshly-shipped child
+# cosmetics as new bases (which would recursively re-offer to recolor them).
+SHIPPED_PATH = OUT_DIR / 'shipped.json'
+shipped_map = {}  # parent_id -> { variant_id: { new_id, ... } }
+shipped_new_ids = set()  # all child IDs we've created from a parent
+if SHIPPED_PATH.exists():
+    try:
+        shipped_map = json.load(open(SHIPPED_PATH))
+        for vmap in shipped_map.values():
+            for v in vmap.values():
+                shipped_new_ids.add(v.get('new_id'))
+    except Exception:
+        shipped_map = {}
+
+bases = [
+    c for c in cat
+    if not c.get('sourceFrame')
+    and c.get('id') not in ('c58', 'c59')
+    and c.get('id') not in shipped_new_ids
+]
+print(f'Generating variants for {len(bases)} bases (excluded {len(shipped_new_ids)} shipped-child IDs)')
 
 manifest = []
 total_variants = 0
@@ -302,17 +323,19 @@ for c in bases:
     img.save(base_path)
     variants = []  # list of {id, label, file, kind}
 
+    already_shipped_gs = shipped_map.get(cid, {})
     if not clusters:
         # Grayscale source — only lightness variants make sense
-        d_img = shift_lightness(img, -0.2)
-        d_path = IMG_DIR / f'{cid}__darker.png'
-        d_img.save(d_path)
-        variants.append({'id': 'darker', 'label': 'darker', 'file': d_path.name, 'kind': 'lightness'})
-
-        l_img = shift_lightness(img, 0.2)
-        l_path = IMG_DIR / f'{cid}__lighter.png'
-        l_img.save(l_path)
-        variants.append({'id': 'lighter', 'label': 'lighter', 'file': l_path.name, 'kind': 'lightness'})
+        if 'darker' not in already_shipped_gs:
+            d_img = shift_lightness(img, -0.2)
+            d_path = IMG_DIR / f'{cid}__darker.png'
+            d_img.save(d_path)
+            variants.append({'id': 'darker', 'label': 'darker', 'file': d_path.name, 'kind': 'lightness'})
+        if 'lighter' not in already_shipped_gs:
+            l_img = shift_lightness(img, 0.2)
+            l_path = IMG_DIR / f'{cid}__lighter.png'
+            l_img.save(l_path)
+            variants.append({'id': 'lighter', 'label': 'lighter', 'file': l_path.name, 'kind': 'lightness'})
 
     else:
         # 1. Standard whole-image hue rotation (all clusters move together).
@@ -320,11 +343,15 @@ for c in bases:
         # item whose primary cluster is dark gets a sensible global lift.
         primary_hue = clusters[0][0]
         global_avg_l = cluster_avg_lightness(img, cluster_h_deg=None)
+        already_shipped = shipped_map.get(cid, {})
         for hname, hdeg in HUE_TARGETS:
+            vid = f'all_{hname}'
+            if vid in already_shipped:
+                continue  # already in the catalog as a real cosmetic
             v_img = shift_hue(img, hdeg, primary_hue, cluster_avg_l=global_avg_l)
-            v_path = IMG_DIR / f'{cid}__all_{hname}.png'
+            v_path = IMG_DIR / f'{cid}__{vid}.png'
             v_img.save(v_path)
-            variants.append({'id': f'all_{hname}', 'label': hname, 'file': v_path.name, 'kind': 'all'})
+            variants.append({'id': vid, 'label': hname, 'file': v_path.name, 'kind': 'all'})
 
         # 2. Per-cluster recolors (only if 2+ clusters with enough weight).
         # Per-cluster avg-L so a dark main cluster gets boosted to visible
@@ -334,6 +361,9 @@ for c in bases:
                 cluster_role = 'main' if ci == 0 else 'accent'
                 cluster_l = cluster_avg_lightness(img, cluster_h_deg=cluster_deg)
                 for hname, hdeg in HUE_TARGETS:
+                    vid = f'cluster{ci}_{hname}'
+                    if vid in already_shipped:
+                        continue
                     v_img = shift_hue(
                         img,
                         target_h_deg=hdeg,
@@ -343,21 +373,22 @@ for c in bases:
                         cluster_avg_l=cluster_l,
                     )
                     label = f'{cluster_role}→{hname}'
-                    v_id = f'cluster{ci}_{hname}'
-                    v_path = IMG_DIR / f'{cid}__{v_id}.png'
+                    v_path = IMG_DIR / f'{cid}__{vid}.png'
                     v_img.save(v_path)
-                    variants.append({'id': v_id, 'label': label, 'file': v_path.name, 'kind': f'cluster{ci}'})
+                    variants.append({'id': vid, 'label': label, 'file': v_path.name, 'kind': f'cluster{ci}'})
 
         # 3. Lightness variants of the base
-        d_img = shift_lightness(img, -0.2)
-        d_path = IMG_DIR / f'{cid}__darker.png'
-        d_img.save(d_path)
-        variants.append({'id': 'darker', 'label': 'darker', 'file': d_path.name, 'kind': 'lightness'})
+        if 'darker' not in already_shipped:
+            d_img = shift_lightness(img, -0.2)
+            d_path = IMG_DIR / f'{cid}__darker.png'
+            d_img.save(d_path)
+            variants.append({'id': 'darker', 'label': 'darker', 'file': d_path.name, 'kind': 'lightness'})
 
-        l_img = shift_lightness(img, 0.2)
-        l_path = IMG_DIR / f'{cid}__lighter.png'
-        l_img.save(l_path)
-        variants.append({'id': 'lighter', 'label': 'lighter', 'file': l_path.name, 'kind': 'lightness'})
+        if 'lighter' not in already_shipped:
+            l_img = shift_lightness(img, 0.2)
+            l_path = IMG_DIR / f'{cid}__lighter.png'
+            l_img.save(l_path)
+            variants.append({'id': 'lighter', 'label': 'lighter', 'file': l_path.name, 'kind': 'lightness'})
 
     cluster_summary = ', '.join(f'{int(d)}°({int(w*100)}%)' for d, w in clusters) if clusters else 'grayscale'
     manifest.append(
