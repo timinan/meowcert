@@ -1278,54 +1278,17 @@ export class TutorialOrchestrator extends Scene {
     this.tearDownStageLanes();
     this.drawStageLanes();
 
-    // Seat a small Butters at the left lane (lane 0) so the player
-    // can see who's narrating. Same scale as the player cat per Tim's
-    // brief ("butters can also shrink down to be the same size next to
-    // the cat sort of where the usual other band member goes").
+    // Per Tim image 6: the orchestrator preview no longer seats a small
+    // stage Butters at lane 0. The narrator/overlay Butters is the only
+    // visible Butters during stage-set-confirm / rehearsal-intro — a
+    // duplicate read as "two Butters". When play-tutorial runs in Game
+    // scene, seatTutorialButters there handles the lane-0 seat.
     this.stageButters?.destroy();
+    this.stageButters = undefined;
     this.stageButtersGlasses?.destroy();
-    const buttersX = L.laneCenterX(0, width);
-    this.stageButters = this.add
-      .sprite(buttersX, stageY, AssetKeys.Atlas.Cats, 'cat13_idle_00')
-      .setOrigin(0.5, 1)
-      .setScale(stageScale)
-      .setDepth(-100)
-      .setAlpha(0);
-    this.stageButters.play('cat13_idle', true);
-    this.stageButtersGlasses = this.add
-      .sprite(buttersX, stageY, AssetKeys.Atlas.Cosmetics, 'cosmetic_c2_idle_00')
-      .setOrigin(0.5, 1)
-      .setScale(stageScale)
-      .setDepth(-90)
-      .setAlpha(0);
-    // Lazy-register the cosmetic idle anim so the glasses bob with
-    // Butters' head instead of holding frame 00 while the cat moves.
-    const glassesAnimKey = this.ensureCosmeticIdleAnim('c2');
-    if (glassesAnimKey) this.stageButtersGlasses.play(glassesAnimKey, true);
-    // BUTTERS nametag below small Butters — same Game.seatCats style
-    // as the player cat's nametag, font scaled by stageScale per Tim
-    // Image 31 ("butters nametag missing"). Faded in with the sprites.
+    this.stageButtersGlasses = undefined;
     this.stageButtersNameLabel?.destroy();
-    const nameFontPx = Math.round(10 * stageScale / 1.4);
-    this.stageButtersNameLabel = this.add
-      .text(buttersX, stageY + 4, 'BUTTERS', {
-        fontFamily: '"Courier New", monospace',
-        fontStyle: 'bold',
-        fontSize: `${nameFontPx}px`,
-        color: '#ffffff',
-        stroke: '#000000',
-        strokeThickness: 3,
-      })
-      .setOrigin(0.5, 0)
-      .setDepth(-89)
-      .setAlpha(0);
-    // Fade Butters + glasses + nametag in alongside the cat tween.
-    this.tweens.add({
-      targets: [this.stageButters, this.stageButtersGlasses, this.stageButtersNameLabel],
-      alpha: 1,
-      duration: 360,
-      ease: 'Sine.Out',
-    });
+    this.stageButtersNameLabel = undefined;
   }
 
   /** Tear down the 3-lane rhythm-bar visuals seeded by drawStageLanes.
