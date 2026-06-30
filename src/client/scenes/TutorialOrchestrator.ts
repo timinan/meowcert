@@ -26,7 +26,7 @@ import {
   openBox,
 } from '@/services/state-client';
 import { TutorialCatOverlay } from '@/ui/tutorial-cat';
-import { playTutorialMusic } from '@/systems/home-music';
+import { playCozyMusic } from '@/systems/home-music';
 import { Picker } from '@/ui/picker';
 import { playBoxOpenAnimation } from '@/ui/box-open-animation';
 import { CatNamingModal } from '@/ui/cat-naming-modal';
@@ -173,9 +173,11 @@ export class TutorialOrchestrator extends Scene {
   }
 
   create(): void {
-    // Lantern Tutorial loops under every tutorial beat (the insane
-    // phase swaps to Steel Phase Loop via Game scene).
-    playTutorialMusic(this);
+    // Cozy plays under every tutorial beat per Tim's spec ("cozy music
+    // plays ALL THE TIME"). The insane phase swaps to Steel Phase Loop
+    // via Game scene, then this scene's create swaps back when the
+    // orchestrator boots for the outro.
+    playCozyMusic(this);
     const { width, height } = this.scale;
 
     // Persistent backdrop — sits below everything and stays for the

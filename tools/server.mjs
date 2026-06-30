@@ -141,6 +141,17 @@ const TOOLS = {
     savePath: path.join(TOOL_DIR, 'marketing', 'index.html'),
     description: 'V21 logo + Reddit subreddit banner + dev.to article cover. SVG + PNG downloads for each.',
   },
+  'effects': {
+    label: 'Effects Smoke',
+    href: '/tools/effects/index.html',
+    // Live preview grid of every candidate cat-effect (stagelights, halos,
+    // beams, pulses, orbiters, tints, floor, weather, decor, misc). Tickbox
+    // per card persists to selections.json so picks survive reloads. After
+    // Tim ticks favorites, ship the chosen ones to src/client/effects/
+    // cat-effects.ts as full TS entries. Vanilla canvas — no Phaser load.
+    savePath: path.join(TOOL_DIR, 'effects', 'selections.json'),
+    description: 'Candidate effects beyond floating-emoji particles. Tick the ones to ship; selections persist to tools/effects/selections.json. Cards lazy-render via IntersectionObserver so the grid scrolls smoothly.',
+  },
 };
 
 const MAX_BACKUPS = 5;
@@ -991,6 +1002,48 @@ async function handleRunCatalogs(res) {
 }
 
 /**
+ * POST /save-effect-selections — persist Tim's ticked effect smoketest picks
+ * AND any per-effect freeform notes typed into the card textareas.
+ * Body: { selected: [effectId, ...], notes?: { effectId: 'text', ... }, timestamp, totalAvailable }.
+ * Writes to tools/effects/selections.json. The effects smoketest page
+ * reads this file back on load so tickboxes + notes survive reloads. A
+ * future ship-effects script can read it to know which candidates Tim
+ * wants promoted to src/client/effects/cat-effects.ts and what to change
+ * about each one.
+ */
+async function handleSaveEffectSelections(req, res) {
+  const chunks = [];
+  req.on('data', (c) => chunks.push(c));
+  req.on('end', async () => {
+    try {
+      const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+      if (typeof body !== 'object' || body === null || !Array.isArray(body.selected)) {
+        throw new Error('expected { selected: [string], ... }');
+      }
+      if (body.notes != null) {
+        if (typeof body.notes !== 'object' || Array.isArray(body.notes)) {
+          throw new Error('notes must be an object keyed by effect id');
+        }
+        for (const [k, v] of Object.entries(body.notes)) {
+          if (typeof v !== 'string') throw new Error(`notes.${k} must be a string`);
+        }
+      }
+      const target = path.join(TOOL_DIR, 'effects', 'selections.json');
+      await fs.mkdir(path.dirname(target), { recursive: true });
+      await fs.writeFile(target, JSON.stringify(body, null, 2));
+      res.writeHead(200, { 'content-type': 'application/json' });
+      const noteCount = body.notes ? Object.keys(body.notes).length : 0;
+      res.end(JSON.stringify({ ok: true, count: body.selected.length, notes: noteCount }));
+      console.log(`[save-effect-selections] wrote ${body.selected.length} picks, ${noteCount} notes`);
+    } catch (e) {
+      console.warn(`[save-effect-selections] ${e.message}`);
+      res.writeHead(400, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: e.message }));
+    }
+  });
+}
+
+/**
  * POST /save-variant-selections — persist Tim's ticked cosmetic variants.
  * Body is the full selections object so this is idempotent (no diffing).
  * Writes to tools/cosmetics/variants/selections.json. A regen of the
@@ -1351,6 +1404,16 @@ const server = http.createServer(async (req, res) => {
     // tinted cosmetics to add to the catalog.
     if (req.method === 'POST' && req.url === '/save-variant-selections') {
       await handleSaveVariantSelections(req, res);
+      return;
+    }
+
+    // --- POST /save-effect-selections --------------------------------
+    // Body: { selected: ['effect-halo-golden', ...], timestamp, totalAvailable }
+    // Persisted to tools/effects/selections.json so tickboxes survive
+    // page reloads. A future ship-effects script reads this file to know
+    // which candidates Tim wants promoted to cat-effects.ts.
+    if (req.method === 'POST' && req.url === '/save-effect-selections') {
+      await handleSaveEffectSelections(req, res);
       return;
     }
 

@@ -58,12 +58,9 @@ export const AssetKeys = {
     ThemeDefaultMusic: 'theme-default-music',
     ThemeCozyMusic: 'theme-cozy-music',
     ThemeSpookyMusic: 'theme-spooky-music',
-    /** Lantern Tutorial — loops under every tutorial beat (except the
-     *  insane chart) AND under the menu scenes when not in someone
-     *  else's post. */
-    TutorialMusic: 'tutorial-music',
     /** Steel Phase Loop — plays during the play-tutorial insane phase
-     *  only, to bait the joke run. */
+     *  only, to bait the joke run. Lantern Tutorial was retired —
+     *  Cozy plays everywhere now per Tim's 2026-06-30 spec. */
     InsaneMusic: 'insane-music',
   },
   Json: {

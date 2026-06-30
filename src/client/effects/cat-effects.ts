@@ -201,6 +201,132 @@ function makeGlow(color: number): CatEffect['apply'] {
 }
 
 /**
+ * Multicolor stagelight — same flame-stack geometry as `makeGlow` but
+ * cycles the fill color through `colors` over `cycleMs`. Two-color combos
+ * cross-fade as a slow color sweep; longer lists rotate around. Drawing
+ * is re-issued on every POST_UPDATE since the color changes per frame.
+ *
+ * Re-uses the same flicker tween + hit/miss pulse semantics as `makeGlow`
+ * so multicolor stagelights feel like the other auras — just chromatic.
+ */
+function makeMultiGlow(
+  colors: number[],
+  cycleMs = 2400,
+): CatEffect['apply'] {
+  return (scene, sprite, scale = 1) => {
+    const baseWidth = 56 * scale;
+    const tipWidth = 10 * scale;
+    const flameHeight = 96 * scale;
+    const slices = 40;
+    const sliceThickness = 10 * scale;
+
+    const graphics = scene.add.graphics();
+    graphics.setDepth(sprite.depth - 1);
+    graphics.alpha = REST_INTENSITY;
+
+    const draw = (color: number): void => {
+      graphics.clear();
+      for (let i = 0; i < slices; i++) {
+        const t = i / (slices - 1);
+        const y = -t * flameHeight;
+        const w = baseWidth + (tipWidth - baseWidth) * t;
+        const alpha = 0.24 * (1 - t * 0.8);
+        graphics.fillStyle(color, alpha);
+        graphics.fillEllipse(0, y, w, sliceThickness);
+      }
+    };
+
+    const sync = (): void => {
+      const foot = footPosition(sprite);
+      graphics.setPosition(foot.x, foot.y);
+    };
+
+    // Color interpolation. phase ∈ [0, 1) advances over cycleMs; segments
+    // divide [0,1) evenly between adjacent color pairs. We lerp R/G/B
+    // independently for each segment.
+    const startedAt = scene.time.now;
+    const seg = 1 / colors.length;
+    let lastColor = -1;
+    const stepColor = (): void => {
+      const elapsed = scene.time.now - startedAt;
+      const phase = (elapsed / cycleMs) % 1;
+      const segIdx = Math.floor(phase / seg);
+      const segPhase = (phase - segIdx * seg) / seg;
+      const c1 = colors[segIdx];
+      const c2 = colors[(segIdx + 1) % colors.length];
+      const r1 = (c1 >> 16) & 0xff;
+      const g1 = (c1 >> 8) & 0xff;
+      const b1 = c1 & 0xff;
+      const r2 = (c2 >> 16) & 0xff;
+      const g2 = (c2 >> 8) & 0xff;
+      const b2 = c2 & 0xff;
+      const r = Math.round(r1 + (r2 - r1) * segPhase);
+      const g = Math.round(g1 + (g2 - g1) * segPhase);
+      const b = Math.round(b1 + (b2 - b1) * segPhase);
+      const color = (r << 16) | (g << 8) | b;
+      if (color !== lastColor) {
+        draw(color);
+        lastColor = color;
+      }
+    };
+
+    const onUpdate = (): void => {
+      sync();
+      stepColor();
+    };
+    scene.events.on(Scenes.Events.POST_UPDATE, onUpdate);
+    sync();
+    stepColor();
+
+    const flicker = scene.tweens.add({
+      targets: graphics,
+      scaleX: 1.08,
+      duration: 380,
+      delay: Math.random() * 380,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+
+    let pulseTween: Tweens.Tween | null = null;
+    let pulseDecay: Tweens.Tween | null = null;
+    const pulseTo = (peak: number): void => {
+      pulseTween?.stop();
+      pulseDecay?.stop();
+      pulseTween = scene.tweens.add({
+        targets: graphics,
+        alpha: peak,
+        duration: 80,
+        ease: 'Quad.easeOut',
+        onComplete: () => {
+          pulseDecay = scene.tweens.add({
+            targets: graphics,
+            alpha: REST_INTENSITY,
+            duration: PULSE_DECAY_MS,
+            ease: 'Sine.easeOut',
+          });
+        },
+      });
+    };
+
+    return {
+      destroy: () => {
+        scene.events.off(Scenes.Events.POST_UPDATE, onUpdate);
+        flicker.stop();
+        flicker.remove();
+        pulseTween?.stop();
+        pulseTween?.remove();
+        pulseDecay?.stop();
+        pulseDecay?.remove();
+        graphics.destroy();
+      },
+      pulseHit: () => pulseTo(HIT_INTENSITY),
+      pulseMiss: () => pulseTo(MISS_INTENSITY),
+    };
+  };
+}
+
+/**
  * Alpha-breathing "ghost" look. Not a position move so it's kept after the
  * movement-effect cull.
  */
@@ -517,14 +643,67 @@ function makeParticleBurst(
 // particle variants alongside the originals.
 // ---------------------------------------------------------------------------
 
+/**
+ * Compact builder used by the 2026-06-30 emoji batch (Tim's list of ~100
+ * emoji effects). Standard cadence: size 14 (or 16 for bigger glyphs),
+ * spawn 240ms, rise 95px, life 1800ms, spread 55. All rarity 'common' so
+ * everything's playable from day one; re-tune individual entries by
+ * replacing the call with a full literal.
+ */
+function emojiEffect(
+  id: string,
+  name: string,
+  emoji: string,
+  size = 14,
+): CatEffect {
+  return {
+    id,
+    name,
+    iconEmoji: emoji,
+    rarity: 'common',
+    apply: makeParticles({
+      emoji,
+      size,
+      spawnIntervalMs: 240,
+      riseDistancePx: 95,
+      lifeMs: 1800,
+      spreadX: 55,
+    }),
+    burst: makeParticleBurst(emoji, size),
+  };
+}
+
 export const CAT_EFFECTS: CatEffect[] = [
-  // Auras — fuzzy ground glow at the feet
-  { id: 'effect-red-glow',    name: 'Red Aura',    iconEmoji: '🔴', rarity: 'common',    apply: makeGlow(0xff3333), burst: makeGlowBurst(0xff3333) },
-  { id: 'effect-blue-glow',   name: 'Blue Aura',   iconEmoji: '🔵', rarity: 'common',    apply: makeGlow(0x3399ff), burst: makeGlowBurst(0x3399ff) },
-  { id: 'effect-gold-glow',   name: 'Gold Aura',   iconEmoji: '🟡', rarity: 'rare',      apply: makeGlow(0xffd34d), burst: makeGlowBurst(0xffd34d) },
-  { id: 'effect-green-glow',  name: 'Green Aura',  iconEmoji: '🟢', rarity: 'uncommon',  apply: makeGlow(0x33ff66), burst: makeGlowBurst(0x33ff66) },
-  { id: 'effect-purple-glow', name: 'Purple Aura', iconEmoji: '🟣', rarity: 'uncommon',  apply: makeGlow(0xa64dff), burst: makeGlowBurst(0xa64dff) },
-  { id: 'effect-pink-glow',   name: 'Pink Aura',   iconEmoji: '🩷', rarity: 'common',    apply: makeGlow(0xff66cc), burst: makeGlowBurst(0xff66cc) },
+  // Stagelights — fuzzy stage-light glow rising from the cat's feet.
+  // (Display rename 2026-06-30, was 'Aura'. IDs stay `effect-X-glow` so
+  // existing player saves don't break their equipped item.)
+  { id: 'effect-red-glow',    name: 'Red Stagelight',    iconEmoji: '🔴', rarity: 'common',    apply: makeGlow(0xff3333), burst: makeGlowBurst(0xff3333) },
+  { id: 'effect-blue-glow',   name: 'Blue Stagelight',   iconEmoji: '🔵', rarity: 'common',    apply: makeGlow(0x3399ff), burst: makeGlowBurst(0x3399ff) },
+  { id: 'effect-gold-glow',   name: 'Gold Stagelight',   iconEmoji: '🟡', rarity: 'rare',      apply: makeGlow(0xffd34d), burst: makeGlowBurst(0xffd34d) },
+  { id: 'effect-green-glow',  name: 'Green Stagelight',  iconEmoji: '🟢', rarity: 'uncommon',  apply: makeGlow(0x33ff66), burst: makeGlowBurst(0x33ff66) },
+  { id: 'effect-purple-glow', name: 'Purple Stagelight', iconEmoji: '🟣', rarity: 'uncommon',  apply: makeGlow(0xa64dff), burst: makeGlowBurst(0xa64dff) },
+  { id: 'effect-pink-glow',   name: 'Pink Stagelight',   iconEmoji: '🩷', rarity: 'common',    apply: makeGlow(0xff66cc), burst: makeGlowBurst(0xff66cc) },
+
+  // Multicolor stagelights — cycle through a palette using makeMultiGlow.
+  // cycleMs is the full rotation duration; longer = slower color sweep.
+  { id: 'effect-rainbow-glow',   name: 'Rainbow Stagelight',  iconEmoji: '🌈', rarity: 'legendary',
+    apply: makeMultiGlow([0xff3333, 0xffa500, 0xffd34d, 0x33ff66, 0x3399ff, 0xa64dff], 4800),
+    burst: makeGlowBurst(0xff66cc) },
+  { id: 'effect-sunset-glow',    name: 'Sunset Stagelight',   iconEmoji: '🌇', rarity: 'rare',
+    apply: makeMultiGlow([0xff5e3a, 0xff9a3c, 0xffd66b, 0xff5e3a], 3600),
+    burst: makeGlowBurst(0xff7a45) },
+  { id: 'effect-aurora-glow',    name: 'Aurora Stagelight',   iconEmoji: '🌌', rarity: 'rare',
+    apply: makeMultiGlow([0x33ff99, 0x33ffe6, 0x6688ff, 0xa64dff, 0x33ff99], 4400),
+    burst: makeGlowBurst(0x33ffd4) },
+  { id: 'effect-police-glow',    name: 'Police Stagelight',   iconEmoji: '🚨', rarity: 'uncommon',
+    apply: makeMultiGlow([0xff2222, 0x2266ff], 600),
+    burst: makeGlowBurst(0xff2222) },
+  { id: 'effect-disco-glow',     name: 'Disco Stagelight',    iconEmoji: '🪩', rarity: 'rare',
+    apply: makeMultiGlow([0xff33aa, 0x33ddff, 0xffe44d, 0x66ff66, 0xff7a3c], 1200),
+    burst: makeGlowBurst(0xff33aa) },
+  { id: 'effect-rgb-glow',       name: 'RGB Stagelight',      iconEmoji: '💡', rarity: 'uncommon',
+    apply: makeMultiGlow([0xff0000, 0x00ff00, 0x0066ff], 2400),
+    burst: makeGlowBurst(0x00ff66) },
 
   // Filter-style — ghost reads as a desaturated white halo on hit
   { id: 'effect-ghost',       name: 'Ghost',       iconEmoji: '👻', rarity: 'rare',      apply: makeGhost(),        burst: makeGlowBurst(0xffffff) },
@@ -706,6 +885,107 @@ export const CAT_EFFECTS: CatEffect[] = [
     apply: makeParticles({ emoji: '👑', size: 16, spawnIntervalMs: 320, riseDistancePx: 100, lifeMs: 2000, spreadX: 55 }),
     burst: makeParticleBurst('👑', 16),
   },
+
+  // ---------------------------------------------------------------------
+  // Tim's 2026-06-30 emoji batch — 94 effects, all `common` rarity,
+  // default cadence via emojiEffect(). Skipped: 🍀 ✨ ⚡️ ❄️ 🎈 🍩 already
+  // in registry above; 🛘 + 🫯 don't render reliably in Reddit's webview.
+  // Re-tune individual entries by swapping to a full literal.
+  // ---------------------------------------------------------------------
+  emojiEffect('effect-poo',              'Poo',                '💩'),
+  emojiEffect('effect-robot',            'Robot',              '🤖'),
+  emojiEffect('effect-clown',            'Clown',              '🤡'),
+  emojiEffect('effect-pumpkin',          'Jack-O-Lantern',     '🎃'),
+  emojiEffect('effect-devil',            'Devil',              '😈'),
+  emojiEffect('effect-ogre',             'Ogre',               '👹'),
+  emojiEffect('effect-cursing',          'Cursing',            '🤬'),
+  emojiEffect('effect-cold',             'Cold Face',          '🥶'),
+  emojiEffect('effect-heart-eyes',       'Heart Eyes',         '😍'),
+  emojiEffect('effect-smile',            'Smile',              '😊'),
+  emojiEffect('effect-cat-face',         'Cat Face',           '🐱'),
+  emojiEffect('effect-dragon',           'Dragon',             '🐉', 16),
+  emojiEffect('effect-daisy',            'Daisy',              '🌼'),
+  emojiEffect('effect-new-moon-face',    'New Moon Face',      '🌚'),
+  emojiEffect('effect-rock',             'Rock',               '🪨'),
+  emojiEffect('effect-lotus',            'Lotus',              '🪷'),
+  emojiEffect('effect-hibiscus',         'Hibiscus',           '🌺'),
+  emojiEffect('effect-boom',             'Boom',               '💥', 16),
+  emojiEffect('effect-sweat',            'Sweat',              '💦'),
+  emojiEffect('effect-droplet',          'Droplet',            '💧'),
+  emojiEffect('effect-peach',            'Peach',              '🍑'),
+  emojiEffect('effect-watermelon',       'Watermelon',         '🍉'),
+  emojiEffect('effect-strawberry',       'Strawberry',         '🍓'),
+  emojiEffect('effect-cheese',           'Cheese',             '🧀'),
+  emojiEffect('effect-egg',              'Egg',                '🥚'),
+  emojiEffect('effect-butter',           'Butter',             '🧈'),
+  emojiEffect('effect-pizza',            'Pizza',              '🍕', 16),
+  emojiEffect('effect-shrimp',           'Shrimp',             '🍤'),
+  emojiEffect('effect-dumpling',         'Dumpling',           '🥟'),
+  emojiEffect('effect-lollipop',         'Lollipop',           '🍭'),
+  emojiEffect('effect-bubble-tea',       'Bubble Tea',         '🧋'),
+  emojiEffect('effect-beer',             'Beer',               '🍻', 16),
+  emojiEffect('effect-cocktail',         'Cocktail',           '🍸'),
+  emojiEffect('effect-popcorn',          'Popcorn',            '🍿'),
+  emojiEffect('effect-ice',              'Ice Cube',           '🧊'),
+  emojiEffect('effect-soccer',           'Soccer',             '⚽️'),
+  emojiEffect('effect-basketball',       'Basketball',         '🏀'),
+  emojiEffect('effect-baseball',         'Baseball',           '⚾️'),
+  emojiEffect('effect-football',         'Football',           '🏈'),
+  emojiEffect('effect-volleyball',       'Volleyball',         '🏐'),
+  emojiEffect('effect-softball',         'Softball',           '🥎'),
+  emojiEffect('effect-tennis',           'Tennis',             '🎾'),
+  emojiEffect('effect-rugby',            'Rugby',              '🏉'),
+  emojiEffect('effect-eightball',        '8 Ball',             '🎱'),
+  emojiEffect('effect-boxing',           'Boxing',             '🥊'),
+  emojiEffect('effect-skateboard',       'Skateboard',         '🛹'),
+  emojiEffect('effect-trophy',           'Trophy',             '🏆', 16),
+  emojiEffect('effect-rosette',          'Rosette',            '🏵️'),
+  emojiEffect('effect-die',              'Die',                '🎲'),
+  emojiEffect('effect-ambulance',        'Ambulance',          '🚑', 16),
+  emojiEffect('effect-car',              'Car',                '🚗', 16),
+  emojiEffect('effect-suv',              'SUV',                '🚙', 16),
+  emojiEffect('effect-airplane',         'Airplane',           '✈️', 16),
+  emojiEffect('effect-helicopter',       'Helicopter',         '🚁', 16),
+  emojiEffect('effect-moai',             'Moai',               '🗿', 16),
+  emojiEffect('effect-cd',               'CD',                 '💿'),
+  emojiEffect('effect-phone',            'Phone',              '📞'),
+  emojiEffect('effect-lightbulb',        'Lightbulb',          '💡'),
+  emojiEffect('effect-cash-wings',       'Flying Cash',        '💸', 16),
+  emojiEffect('effect-dollar-bill',      'Dollar Bill',        '💵', 16),
+  emojiEffect('effect-yen-bill',         'Yen Bill',           '💴', 16),
+  emojiEffect('effect-euro-bill',        'Euro Bill',          '💶', 16),
+  emojiEffect('effect-pound-bill',       'Pound Bill',         '💷', 16),
+  emojiEffect('effect-money-bag',        'Money Bag',          '💰', 16),
+  emojiEffect('effect-coin',             'Coin',               '🪙'),
+  emojiEffect('effect-bomb',             'Bomb',               '💣'),
+  emojiEffect('effect-pill',             'Pill',               '💊'),
+  emojiEffect('effect-blood',            'Blood Drop',         '🩸'),
+  emojiEffect('effect-microbe',          'Microbe',            '🦠'),
+  emojiEffect('effect-gift',             'Gift',               '🎁', 16),
+  emojiEffect('effect-party-popper',     'Party Popper',       '🎉', 16),
+  emojiEffect('effect-disco-ball',       'Disco Ball',         '🪩'),
+  emojiEffect('effect-confetti',         'Confetti',           '🎊'),
+  emojiEffect('effect-pinata',           'Pinata',             '🪅'),
+  emojiEffect('effect-fan',              'Hand Fan',           '🪭'),
+  emojiEffect('effect-carp-streamer',    'Carp Streamer',      '🎏'),
+  emojiEffect('effect-pink-heart',       'Pink Heart',         '🩷'),
+  emojiEffect('effect-burning-heart',    'Burning Heart',      '❤️‍🔥', 16),
+  emojiEffect('effect-black-heart',      'Black Heart',        '🖤'),
+  emojiEffect('effect-beating-heart',    'Beating Heart',      '💓'),
+  emojiEffect('effect-mending-heart',    'Mending Heart',      '❤️‍🩹', 16),
+  emojiEffect('effect-sparkling-heart',  'Sparkling Heart',    '💖'),
+  emojiEffect('effect-heart-arrow',      'Heart Arrow',        '💘'),
+  emojiEffect('effect-cross',            'Cross Mark',         '❌'),
+  emojiEffect('effect-circle',           'Circle Mark',        '⭕️'),
+  emojiEffect('effect-no-smoking',       'No Smoking',         '🚭'),
+  emojiEffect('effect-hundred',          '100',                '💯', 16),
+  emojiEffect('effect-bangbang',         '!?',                 '⁉️'),
+  emojiEffect('effect-check',            'Check',              '✅'),
+  emojiEffect('effect-top',              'Top',                '🔝'),
+  emojiEffect('effect-dollar-sign',      'Dollar Sign',        '💲'),
+  emojiEffect('effect-soon',             'Soon',               '🔜'),
+  emojiEffect('effect-flag-ca',          'Canada Flag',        '🇨🇦', 16),
+  emojiEffect('effect-flag-tw',          'Taiwan Flag',        '🇹🇼', 16),
 ];
 
 /** Fast lookup by id. */

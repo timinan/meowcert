@@ -126,7 +126,11 @@ def group_eyes(blobs: list, frame_w: int):
 
 
 def sample_face_color(a: np.ndarray) -> tuple:
-    """Sample cat body color from cheek/chest row 36-42 (below eyes)."""
+    """Sample cat body color from cheek/chest row 36-42 (below eyes).
+
+    Fallback sampler — used only when the local ring sampler can't find
+    enough fur pixels around the eye (small frames, heavy occlusion).
+    """
     samples = []
     for y in range(36, 44):
         for x in range(20, a.shape[1] - 20):
@@ -144,6 +148,60 @@ def sample_face_color(a: np.ndarray) -> tuple:
             samples.append((r, g, b))
     if not samples:
         return (200, 200, 200, 255)
+    arr = np.array(samples)
+    return (int(np.median(arr[:, 0])), int(np.median(arr[:, 1])),
+            int(np.median(arr[:, 2])), 255)
+
+
+def sample_face_color_local(a: np.ndarray, ey_min: int, ey_max: int,
+                             ex_min: int, ex_max: int,
+                             fallback: tuple) -> tuple:
+    """Sample fur color from a RING immediately around the per-eye erase rect.
+
+    Why local: the global sampler (sample_face_color) reads cheek/chest at
+    y=36..43, which is the cat's MIDLINE color. On cat79-90 lick/meow frames
+    the artist drew darker shading around the eyes. The old code used the
+    midline median as face_color and the distance-threshold in
+    is_eye_region_pixel then flagged the darker shadow as "eye art" and
+    bleached it to the lighter median — leaving a lighter halo around the
+    closed slit that broke the artist's shadow gradient.
+
+    Sampling from the ring around the erase rect picks up exactly the shade
+    the surrounding pixels are using (shadow OR plain fur, whichever is
+    actually around this eye), so the bleach color matches and the seam is
+    invisible.
+    """
+    RING_PAD = 4
+    h, w = a.shape[:2]
+    y0 = max(0, ey_min - RING_PAD)
+    y1 = min(h, ey_max + RING_PAD)
+    x0 = max(0, ex_min - RING_PAD)
+    x1 = min(w, ex_max + RING_PAD)
+    samples = []
+    for y in range(y0, y1):
+        for x in range(x0, x1):
+            # Skip the erase rect interior (those are the eye art we're
+            # about to repaint — we want the OUTSIDE shade).
+            if ey_min <= y < ey_max and ex_min <= x < ex_max:
+                continue
+            r, g, b, al = a[y, x]
+            if al < 200:
+                continue
+            r, g, b = int(r), int(g), int(b)
+            if r < 30 and g < 30 and b < 30:  # outline
+                continue
+            if r > 240 and g > 240 and b > 240:  # white highlight remnant
+                continue
+            # Pink blush — skip
+            if r > 200 and 90 < g < 170 and 90 < b < 170:
+                continue
+            # Saturated orange — likely iris that escaped the rect (e.g. on
+            # frames where the artist drew the iris wider than our pad)
+            if r > 200 and 80 < g < 180 and b < 100 and (r - b) > 100:
+                continue
+            samples.append((r, g, b))
+    if len(samples) < 5:
+        return fallback
     arr = np.array(samples)
     return (int(np.median(arr[:, 0])), int(np.median(arr[:, 1])),
             int(np.median(arr[:, 2])), 255)
@@ -213,7 +271,11 @@ def fix_frame(a: np.ndarray, fallback_eyes: list | None = None) -> tuple[np.ndar
 
     out = a.copy()
     frame_w = a.shape[1]
-    face_color = sample_face_color(a)
+    # Global midline sampler — kept as a fallback only. Per-eye erase uses
+    # sample_face_color_local so the bleach color matches the shade
+    # immediately around each eye (artist's eye-area shadow), not the
+    # cheek/chest median which would leave a lighter halo on shaded frames.
+    global_fallback = sample_face_color(a)
     ERASE_PAD = 2
 
     for cy, cx, _members in eyes:
@@ -247,6 +309,9 @@ def fix_frame(a: np.ndarray, fallback_eyes: list | None = None) -> tuple[np.ndar
         ey_max = ty + th + erase_bot_pad
         ex_min = tx - ERASE_PAD
         ex_max = tx + tw + ERASE_PAD
+        face_color = sample_face_color_local(
+            a, ey_min, ey_max, ex_min, ex_max, global_fallback
+        )
         for y in range(max(0, ey_min), min(a.shape[0], ey_max)):
             for x in range(max(0, ex_min), min(a.shape[1], ex_max)):
                 if is_eye_region_pixel(a[y, x], face_color):

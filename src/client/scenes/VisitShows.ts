@@ -2,7 +2,7 @@ import { Scene, GameObjects } from 'phaser';
 import { SceneKeys } from '@/constants/scenes';
 import { TopHud } from '@/ui/top-hud';
 import { buildMenuItems } from '@/ui/menu-items';
-import { playTutorialMusic } from '@/systems/home-music';
+import { playCozyMusic } from '@/systems/home-music';
 import type { PlayerState } from '@/../shared/state';
 
 /**
@@ -32,7 +32,7 @@ export class VisitShows extends Scene {
   }
 
   create(): void {
-    playTutorialMusic(this);
+    playCozyMusic(this);
     const { width, height } = this.scale;
     this.add.rectangle(0, 0, width, height, 0x0b041a, 1).setOrigin(0, 0);
 

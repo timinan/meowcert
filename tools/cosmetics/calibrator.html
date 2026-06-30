@@ -583,11 +583,13 @@
           slot: 'head',
           rarity: DEFAULT_RARITY[id] || 'common',
           offsetX: 0,
-          // Default Y puts the cosmetic right at the top of the cat —
-          // gives a visible starting point you can drag from. (The legacy
-          // game value was -46 but that pushes it well above the head;
-          // we'll re-tune per-cosmetic anyway.)
-          offsetY: -10,
+          // Start at (0, 0, 1): art-trim center sits ON the cat head-top
+          // reference point — natural neutral baseline. The old default
+          // was offsetY: -10 which inflicted ~1-15px float on every
+          // shipped variant that inherited from a parent that hadn't
+          // been re-calibrated yet (see scripts/resync-variant-offsets.py
+          // for the data fix that cleaned that up).
+          offsetY: 0,
           scale: 1,
         };
       }
