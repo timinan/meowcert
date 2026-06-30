@@ -1,3 +1,4 @@
+import * as Phaser from 'phaser';
 import { Scene, GameObjects } from 'phaser';
 import { AssetKeys } from '@/constants/assets';
 
@@ -165,6 +166,13 @@ export class TutorialCatOverlay {
       // smaller later when hes on the stage." Reference: 10px at the
       // standard Game.seatCats scale of 1.4.
       const nameFontPx = Math.round(10 * catScale / 1.4);
+      // At hero scale the default crisp/anti-aliased TTF render makes the
+      // nametag feel out of place next to the pixel cat. Drop the canvas
+      // resolution + NEAREST-filter the texture so the upscale looks
+      // pixelated like the rest of the sprite work. Same pattern as the
+      // cat-effects emoji pixelation. Below scale 2 the small canvas would
+      // be unreadable, so the original crisp path stays for stage size.
+      const heroPixelate = catScale >= 2;
       const nameSprite = this.scene.add
         .text(startX, startY + 4, 'BUTTERS', {
           fontFamily: '"Courier New", monospace',
@@ -173,9 +181,13 @@ export class TutorialCatOverlay {
           color: '#ffffff',
           stroke: '#000000',
           strokeThickness: 3,
+          ...(heroPixelate ? { resolution: 0.5 } : {}),
         })
         .setOrigin(0.5, 0)
         .setDepth(BUTTERS_DEPTH + 2);
+      if (heroPixelate) {
+        nameSprite.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+      }
       // Sits at the Butters depth (below scene mocks) instead of in the
       // bubble container so the menu drawer covers the nametag along
       // with the cat body.

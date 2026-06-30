@@ -1,3 +1,4 @@
+import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { SceneKeys } from '@/constants/scenes';
 import { AssetKeys } from '@/constants/assets';
@@ -918,6 +919,11 @@ export class TutorialOrchestrator extends Scene {
     // the merch cat (scale 2.7) gets ~19px and the stage cat (1.4)
     // stays at the canonical 10px.
     const nameFontPx = Math.round(10 * this.seatedCat.scaleX / 1.4);
+    // At hero scale (merch-intro Mochi etc.) drop the canvas resolution
+    // and NEAREST-filter the texture so the nametag looks pixelated to
+    // match the pixel-art cat. Stage scale (≈1.4) keeps the original
+    // crisp render — the canvas is too small to pixelate readably.
+    const heroPixelate = this.seatedCat.scaleX >= 2;
     this.seatedCatNameLabel = this.add
       .text(this.seatedCat.x, this.seatedCat.y + 4, name.toUpperCase(), {
         fontFamily: '"Courier New", monospace',
@@ -926,9 +932,13 @@ export class TutorialOrchestrator extends Scene {
         color: '#ffffff',
         stroke: '#000000',
         strokeThickness: 3,
+        ...(heroPixelate ? { resolution: 0.5 } : {}),
       })
       .setOrigin(0.5, 0)
       .setDepth(-90);
+    if (heroPixelate) {
+      this.seatedCatNameLabel.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    }
   }
 
   /** Mocked hamburger drawer + hamburger icon (top-right). Renders a
