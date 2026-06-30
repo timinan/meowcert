@@ -349,6 +349,23 @@ export class TutorialOrchestrator extends Scene {
       return;
     }
 
+    // Merch-reveal: cat now wearing both cosmetic + effect from the two
+    // box-open animations. New step per Tim's followup: 'have the cat
+    // equipped both with effect and cosmetic we'll add a text that say
+    // wow looking great! and then continue for next step'.
+    if (this.currentStep === 'merch-reveal') {
+      this.overlay = new TutorialCatOverlay(this);
+      this.overlay.show(line, {
+        continueLabel: 'Continue →',
+        onContinue: () => {
+          if (this.busy) return;
+          void this.advance();
+        },
+      });
+      this.renderSkipLinkIfUnlocked();
+      return;
+    }
+
     // Rehearsal-intro: a mocked hamburger drawer with REHEARSE
     // highlighted. Butters narrates from above. On Continue the
     // orchestrator transitions to a Decorate-like "ready to rehearse"
