@@ -147,35 +147,43 @@ export const TUTORIAL_CHART_DOUBLES: Chart = {
   ],
 };
 
-/** play-tutorial phase 5 — insane chart at canonical fall speed.
- *  Per Tim's followup: 'speed up the drops and dont have it as dense
- *  maybe do a harder hard level instead of what we have because that
- *  is literally unplayable.' 24 steps at 2× BPM (was 16 × 3×) — less
- *  overlapping density, mostly taps with a handful of chords and one
- *  slide. Player can pass on 10 hits, or fall back to the 15s cap. */
+/** play-tutorial phase 5 — insane chart: 'hard but playable' per Tim:
+ *  'make them also hit 20 notes... when you do an insane one dont
+ *  make it have like 0 space from one note to the other in same lane
+ *  just make it difficult in terms of there are lots of holds and
+ *  slides.' 32 steps at 2× BPM, 20 hit opportunities, density comes
+ *  from chords + holds + slides + slide-returns. Min 2-step gap on
+ *  same lane (most 3+) so it's tight but never literally back-to-back. */
 export const TUTORIAL_CHART_INSANE: Chart = {
-  ...base('Tutorial — Insane', 24, BPM * 2),
+  ...base('Tutorial — Insane', 32, BPM * 2),
   steps: [
+    chord(0, 2),  emptyStep(),
     tap(1),       emptyStep(),
     tap(0),       emptyStep(),
-    tap(2),       chord(0, 1),
-    emptyStep(),  tap(1),
-    chord(1, 2),  emptyStep(),
+    tap(2),       emptyStep(),
+    chord(0, 1),  emptyStep(),
+    emptyStep(),  emptyStep(),
     tap(0),       emptyStep(),
-    tap(2),       chord(0, 2),
-    emptyStep(),  tap(1),
-    tap(0),       chord(0, 1),
-    emptyStep(),  tap(2),
     tap(1),       emptyStep(),
-    tap(0),       tap(2),
+    emptyStep(),  emptyStep(),
+    chord(0, 1),  emptyStep(),
+    tap(2),       emptyStep(),
+    tap(1),       emptyStep(),
+    emptyStep(),  emptyStep(),
+    emptyStep(),  emptyStep(),
+    tap(0),       emptyStep(),
+    chord(0, 1),  emptyStep(),
   ],
   holds: [
-    { lane: 1, startStep: 16, endStep: 19 },
+    { lane: 2, startStep: 10, endStep: 13 },
+    { lane: 2, startStep: 26, endStep: 29 },
   ],
   slides: [
-    { startStep: 9, sourceLane: 0, targetLane: 2 },
+    { startStep: 16, sourceLane: 0, targetLane: 2 },
   ],
-  slideReturns: [],
+  slideReturns: [
+    { startStep: 24, sourceLane: 1, targetLane: 0 },
+  ],
 };
 
 /**
@@ -230,8 +238,8 @@ export const TUTORIAL_PHASE_CONFIGS: ReadonlyArray<TutorialPhaseConfig | null> =
   { chart: TUTORIAL_CHART_SLIDES_1, slideCompletionsToAdvance: 3 }, // 2 slides-1
   { chart: TUTORIAL_CHART_SLIDES_2, slideCompletionsToAdvance: 3 }, // 3 slides-2
   { chart: TUTORIAL_CHART_DOUBLES,  slideCompletionsToAdvance: 3 }, // 4 double-slides
-  // 5 — insane. Pass on 10 hits OR 15s cap, whichever fires first.
+  // 5 — insane. Pass on 20 hits OR 15s cap, whichever fires first.
   // noteFallMsOverride = 2400 drops notes at canonical chart speed.
-  { chart: TUTORIAL_CHART_INSANE, hitsToAdvance: 10, durationMs: 15000, preRollGate: true, noteFallMsOverride: 2400 },
+  { chart: TUTORIAL_CHART_INSANE, hitsToAdvance: 20, durationMs: 15000, preRollGate: true, noteFallMsOverride: 2400 },
   null,                                                                     // 6 outro (orchestrator handles)
 ];
