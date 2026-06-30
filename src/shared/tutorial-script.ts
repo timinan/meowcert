@@ -56,7 +56,7 @@ export const TUTORIAL_DIALOGUE: Record<TutorialStepId, string | string[]> = {
     // 6 — insane chart (5s timer). No bubble copy — let the chaos speak.
     "",
     // 7 — outro + menu mock w/ PUT ON A SHOW highlighted
-    "...just kidding 😼. you've got a long way to go before that. now i'll show you how to put on a show — let's first head to this tab.",
+    "just kidding — you've got a long way to go before that. now let's hit the put on a show tab and i'll guide you through it!",
   ],
   'editor-tour-intro':
     "now let's check out the editor — that's where you'll create your own shows.",

@@ -149,18 +149,35 @@ export const TUTORIAL_CHART_DOUBLES: Chart = {
   ],
 };
 
-/** play-tutorial phase 5 — insane density (5s timer in Game scene). */
+/** play-tutorial phase 6 — insane density (5s timer in Game scene).
+ *  Per Tim image 5 spec: 'slide taps, singles going opposite directions,
+ *  double slide holds, and lots of taps'. 16 steps at 3× BPM packs the
+ *  chaos into the 5-second window — player isn't expected to clear it,
+ *  it's the bait for the just-kidding line right after. */
 export const TUTORIAL_CHART_INSANE: Chart = {
-  ...base('Tutorial — Insane', STEPS, BPM * 2),  // 2x BPM = double density
+  ...base('Tutorial — Insane', 16, BPM * 3),
   steps: [
-    tap(0), chord(0, 1),
-    tap(1), emptyStep(),
-    tap(2), chord(0, 2),
+    chord(0, 2),    tap(1),
+    tap(0),         chord(1, 2),
+    tap(2),         chord(0, 1),
     chord(0, 1, 2), tap(1),
+    tap(0),         chord(0, 2),
+    tap(1),         chord(1, 2),
+    tap(2),         chord(0, 1, 2),
+    tap(0),         tap(2),
   ],
-  holds: [{ lane: 1, startStep: 3, endStep: 4 }],
-  slides: [{ startStep: 1, sourceLane: 0, targetLane: 2 }],
-  slideReturns: [{ startStep: 5, sourceLane: 1, targetLane: 0 }],
+  holds: [
+    { lane: 1, startStep: 4,  endStep: 8 },
+  ],
+  slides: [
+    { startStep: 1,  sourceLane: 0, targetLane: 2 },  // singles going opposite directions
+    { startStep: 5,  sourceLane: 2, targetLane: 0 },
+    { startStep: 11, sourceLane: 0, targetLane: 2 },
+  ],
+  slideReturns: [
+    { startStep: 9,  sourceLane: 1, targetLane: 0 },  // double-slide-holds
+    { startStep: 13, sourceLane: 1, targetLane: 2 },
+  ],
 };
 
 /**
