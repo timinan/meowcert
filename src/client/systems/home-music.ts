@@ -1,4 +1,4 @@
-import { Scene, Sound } from 'phaser';
+import Phaser, { Scene, Sound } from 'phaser';
 import { AssetKeys } from '@/constants/assets';
 
 /**
@@ -6,18 +6,27 @@ import { AssetKeys } from '@/constants/assets';
  *
  * Tim's spec: a single backing track ("Lantern Tutorial") loops under
  * every menu scene + tutorial beat. The play-tutorial insane phase
- * swaps to "Steel Phase Loop" for the joke run. When a player attends
- * someone else's post (VisitPost / Game-visitor-mode), the post's own
- * chart song takes over via MusicSystem and home music gets out of the
- * way.
+ * swaps to "Steel Phase Loop" for the joke run. ChartEditor swaps to
+ * Cozy until the author picks a song. When a player attends someone
+ * else's post (VisitPost / Game-visitor-mode), the post's own chart
+ * song takes over via MusicSystem and home music gets out of the way.
  *
  * Singleton on the Phaser global sound manager so the track survives
  * scene transitions without restarting mid-loop. Calling start() with
  * the same key is a no-op; switching keys cross-fades.
+ *
+ * The Lantern Tutorial + Steel Phase Loop mp3s LAZY-LOAD via the
+ * scene's loader on first request — saves ~3.6 MB from the Preloader
+ * boot pass. ThemeCozyMusic is already preloaded so it plays instantly.
  */
 
 const FADE_MS = 240;
 const VOLUME = 0.65;
+
+const ASSET_PATHS: Record<string, string> = {
+  [AssetKeys.Audio.TutorialMusic]: 'assets/audio/backings/lantern-tutorial.mp3',
+  [AssetKeys.Audio.InsaneMusic]: 'assets/audio/backings/steel-phase-loop.mp3',
+};
 
 let activeKey: string | null = null;
 let activeSound: Sound.BaseSound | null = null;
@@ -76,10 +85,30 @@ export function startHomeMusic(scene: Scene, key: string): void {
 }
 
 function spawn(scene: Scene, key: string): void {
-  if (!scene.cache.audio.exists(key)) {
+  if (scene.cache.audio.exists(key)) {
+    play(scene, key);
+    return;
+  }
+  // Lazy-load on first request.
+  const path = ASSET_PATHS[key];
+  if (!path) {
     console.warn(`[home-music] missing audio key ${key} — skipping`);
     return;
   }
+  const loader = scene.load;
+  loader.audio(key, path);
+  loader.once(Phaser.Loader.Events.COMPLETE, () => {
+    // Bail if a different key took over while loading.
+    if (activeKey !== key) return;
+    play(scene, key);
+  });
+  loader.once(`loaderror`, (file: { key: string }) => {
+    if (file.key === key) console.warn(`[home-music] load failed for ${key}`);
+  });
+  loader.start();
+}
+
+function play(scene: Scene, key: string): void {
   const sound = scene.sound.add(key, { loop: true, volume: 0 });
   sound.play();
   activeSound = sound;
@@ -103,7 +132,14 @@ export function playTutorialMusic(scene: Scene): void {
 }
 
 /** Convenience — Steel Phase Loop plays under the play-tutorial insane
- *  joke run. */
+ *  joke run. Lazy-loaded on first call. */
 export function playInsaneMusic(scene: Scene): void {
   startHomeMusic(scene, AssetKeys.Audio.InsaneMusic);
+}
+
+/** Cozy theme — plays in ChartEditor until the author picks a song.
+ *  ThemeCozyMusic is already preloaded in Preloader (it's a theme bg
+ *  music track), so this swap is instant. */
+export function playCozyMusic(scene: Scene): void {
+  startHomeMusic(scene, AssetKeys.Audio.ThemeCozyMusic);
 }
