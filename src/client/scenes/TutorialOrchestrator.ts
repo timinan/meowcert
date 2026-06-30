@@ -454,10 +454,19 @@ export class TutorialOrchestrator extends Scene {
       // names it.
       const highlightRehearse = this.currentStep === 'editor-tour' && this.dialogueIndex === 2;
       this.renderEditorMock(demoCount, highlightRehearse);
+      // Lift Continue so its bottom edge sits just above the editor
+      // mock's page-nav row (gridBottom = height - 62 - 26 = 492). The
+      // overlay's Continue button is 52px tall, so center it at
+      // gridBottom - 26 = 466. Keeps the REHEARSE row at the canvas
+      // bottom fully visible per Tim's complaint that Next was covering
+      // it.
+      const editorGridBottom = height - 62 - 26;
+      const editorContinueY = editorGridBottom - 26;
       this.overlay = new TutorialCatOverlay(this);
       this.overlay.show(line, {
         continueLabel: continueLabelE,
         bubbleY: 28,
+        continueY: editorContinueY,
         onContinue: () => {
           if (this.busy) return;
           if (hasMoreDialogue) {
@@ -1443,49 +1452,81 @@ export class TutorialOrchestrator extends Scene {
       this.editorMockObjects.push(tapBall, tapLetters);
     }
 
-    // Hold on lane 1 rows 5 → 7.
+    // Hold on lane 1 rows 5 → 8. Matches Note.configure's structure:
+    // head ball + letters at the top, TailBody TileSprite for the body
+    // (no rounded caps, tiles cleanly), TailCap for the rounded bottom.
+    // Previous mock used MeowcertTubeWhite stretched, which has rounded
+    // ends on both top AND bottom — that read as two stacked balls.
     if (demoCount >= 2) {
       const xLane = colCenterX(1);
       const yTop = rowCenterY(5);
-      const yBot = rowCenterY(7);
-      const yMid = (yTop + yBot) / 2;
-      const tubeH = yBot - yTop + 24;
-      const tube = this.add
-        .image(xLane, yMid, AssetKeys.Image.MeowcertTubeWhite)
+      const yBot = rowCenterY(8);
+      const TAIL_WIDTH = 22;
+      const TAIL_CAP_HEIGHT = 14;
+      const bodyHeight = Math.max(0, yBot - yTop - TAIL_CAP_HEIGHT);
+      const bodyMidY = yTop + bodyHeight / 2;
+      const tailBody = this.add
+        .tileSprite(xLane, bodyMidY, TAIL_WIDTH, bodyHeight, AssetKeys.Image.TailBody)
         .setTint(tints[1]!)
-        .setDisplaySize(18, tubeH)
-        .setDepth(54);
+        .setDepth(53);
+      const tailCap = this.add
+        .image(xLane, yTop + bodyHeight + TAIL_CAP_HEIGHT / 2, AssetKeys.Image.TailCap)
+        .setTint(tints[1]!)
+        .setDisplaySize(TAIL_WIDTH, TAIL_CAP_HEIGHT)
+        .setRotation(Math.PI)
+        .setDepth(53);
       const head = this.add
         .image(xLane, yTop, AssetKeys.Image.MeowcertElementBallWhite)
         .setTint(tints[1]!)
-        .setScale(0.65)
+        .setScale(0.7)
+        .setDepth(54);
+      const headLetters = this.add
+        .image(xLane, yTop, AssetKeys.Image.MeowcertElementLetters)
+        .setScale(0.7)
         .setDepth(55);
-      this.editorMockObjects.push(tube, head);
+      this.editorMockObjects.push(tailBody, tailCap, head, headLetters);
     }
 
-    // Slide on row 11, lane 0 → lane 2.
+    // Slide on row 12, lane 0 → lane 2. Mirrors Note.configure's slide
+    // tube setup EXACTLY: setDisplaySize(THICKNESS, tubeLen) BEFORE
+    // setRotation(PI/2) — Phaser applies displaySize in pre-rotation
+    // source space, so post-rotation the on-screen shape is
+    // tubeLen wide × thickness tall. (Previous mock had the args
+    // swapped which produced a vertical bar instead of a horizontal
+    // slide connector.)
     if (demoCount >= 3) {
-      const yMid = rowCenterY(11);
+      const yMid = rowCenterY(12);
       const xStart = colCenterX(0);
       const xEnd = colCenterX(2);
       const tubeLen = xEnd - xStart;
+      const SLIDE_TUBE_THICKNESS = 18;
       const slideTube = this.add
         .image((xStart + xEnd) / 2, yMid, AssetKeys.Image.MeowcertTubeWhite)
-        .setTint(tints[0]!)
-        .setDisplaySize(tubeLen, 14)
+        .setDisplaySize(SLIDE_TUBE_THICKNESS, tubeLen)
         .setRotation(Math.PI / 2)
-        .setDepth(54);
+        .setTint(tints[0]!)
+        .setDepth(53);
       const headStart = this.add
         .image(xStart, yMid, AssetKeys.Image.MeowcertElementBallWhite)
         .setTint(tints[0]!)
-        .setScale(0.65)
+        .setScale(0.7)
+        .setDepth(54);
+      const headStartLetters = this.add
+        .image(xStart, yMid, AssetKeys.Image.MeowcertElementLetters)
+        .setScale(0.7)
         .setDepth(55);
-      const headEnd = this.add
-        .image(xEnd, yMid, AssetKeys.Image.MeowcertElementBallWhite)
-        .setTint(tints[2]!)
-        .setScale(0.65)
+      const slideArrow = this.add
+        .text(xEnd, yMid, '▶', {
+          fontFamily: 'Pixeloid Sans, sans-serif',
+          fontStyle: 'bold',
+          fontSize: '20px',
+          color: '#ffffff',
+          stroke: '#1a0a2e',
+          strokeThickness: 3,
+        })
+        .setOrigin(0.5)
         .setDepth(55);
-      this.editorMockObjects.push(slideTube, headStart, headEnd);
+      this.editorMockObjects.push(slideTube, headStart, headStartLetters, slideArrow);
     }
 
     // ── PAGE NAV ROW (◀ chip + label + ▶ chip) ──────────────────

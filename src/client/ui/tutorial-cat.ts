@@ -60,6 +60,11 @@ interface ShowOptions {
    *  Push down on merch beats so the bubble sits just above the big
    *  seated cat instead of leaving a giant gap in the middle. */
   bubbleY?: number;
+  /** Override the Continue button's center Y. Defaults to `height - 60`.
+   *  Editor-tour passes a higher value so the Continue/Next button sits
+   *  above the editor mock's bottom strip (REHEARSE row) instead of
+   *  covering it. */
+  continueY?: number;
   /** Stage-mode layout — Butters is ALREADY rendered elsewhere on the
    *  canvas (e.g. seated at the left lane during play-tutorial); the
    *  overlay skips the inline Butters sprite and draws only the bubble
@@ -353,7 +358,7 @@ export class TutorialCatOverlay {
     let btnText: GameObjects.Text | undefined;
     if (opts.onContinue) {
       const label = opts.continueLabel ?? 'Continue →';
-      const btnY = height - 60;
+      const btnY = opts.continueY ?? height - 60;
       const btnW = 220;
       const btnH = 52;
       btnBg = this.scene.add
