@@ -452,17 +452,22 @@ export class TutorialOrchestrator extends Scene {
     // round 2). Stage rig stays in tree but the mock covers it.
     if (this.currentStep === 'editor-tour-intro' || this.currentStep === 'editor-tour') {
       const continueLabelE = hasMoreDialogue ? 'Next →' : 'Continue →';
+      // Demo notes are cumulative across the editor-tour cycle:
+      //   intro       — 0 notes ("Here is the editor for your chart...")
+      //   editor-tour[0] tap         — 1 note (tap)
+      //   editor-tour[1] hold        — 2 notes (tap + hold)
+      //   editor-tour[2] slide       — 3 notes (+ slide)
+      //   editor-tour[3] double-slide — 4 notes (+ double-slide)
+      //   editor-tour[4] rehearse    — 4 notes, REHEARSE pulse highlighted
+      //   editor-tour[5] must-pass   — 4 notes
       let demoCount: number;
       if (this.currentStep === 'editor-tour-intro') {
-        demoCount = 1; // tap demo only
+        demoCount = 0;
       } else {
-        // editor-tour[0] holds (2 total), [1] slides (3 total), [2-3] stay at 3
-        demoCount = Math.min(3, 2 + this.dialogueIndex);
+        demoCount = Math.min(4, 1 + this.dialogueIndex);
       }
-      // Highlight REHEARSE on editor-tour[2] ("when you're ready, press
-      // rehearse...") so the player's eye lands on the button as Butters
-      // names it.
-      const highlightRehearse = this.currentStep === 'editor-tour' && this.dialogueIndex === 2;
+      // REHEARSE pulse on editor-tour[4] ('Press the Rehearse button.').
+      const highlightRehearse = this.currentStep === 'editor-tour' && this.dialogueIndex === 4;
       this.renderEditorMock(demoCount, highlightRehearse);
       // Lift Continue so its bottom edge sits just above the editor
       // mock's page-nav row. gridBottom = height - BOTTOM_STRIP_H 78 -
@@ -1532,32 +1537,33 @@ export class TutorialOrchestrator extends Scene {
       this.editorMockObjects.push(tapBall, tapLetters);
     }
 
-    // Hold: head ball + letters at the start, TailBody TileSprite for
-    // the body (TAIL_WIDTH 44, no caps), TailCap (32 tall) at the
-    // bottom. Same structure as Note.configure's hold branch.
+    // Hold: per Tim image-10 follow-up — ball + letters at the BOTTOM,
+    // tail extending UP. Mirrors the editor's "drag UP from the tap to
+    // extend" convention. TailBody (no caps) covers the body, TailCap
+    // closes the top (rotated to mate with the body). The head (with
+    // ps letters) sits at the bottom anchor.
     if (demoCount >= 2) {
       const xLane = colCenterX(1);
-      const yTop = rowCenterY(5);
-      const yBot = rowCenterY(9);
+      const yTop = rowCenterY(5);   // tail-end (visual top of capsule)
+      const yBot = rowCenterY(9);   // head anchor
       const bodyHeight = Math.max(0, yBot - yTop - TAIL_CAP_HEIGHT);
-      const bodyMidY = yTop + bodyHeight / 2;
+      const bodyMidY = yTop + TAIL_CAP_HEIGHT + bodyHeight / 2;
       const tailBody = this.add
         .tileSprite(xLane, bodyMidY, TAIL_WIDTH, bodyHeight, AssetKeys.Image.TailBody)
         .setTint(tints[1]!)
         .setDepth(53);
       const tailCap = this.add
-        .image(xLane, yTop + bodyHeight + TAIL_CAP_HEIGHT / 2, AssetKeys.Image.TailCap)
+        .image(xLane, yTop + TAIL_CAP_HEIGHT / 2, AssetKeys.Image.TailCap)
         .setTint(tints[1]!)
         .setDisplaySize(TAIL_WIDTH, TAIL_CAP_HEIGHT)
-        .setRotation(Math.PI)
         .setDepth(53);
       const head = this.add
-        .image(xLane, yTop, AssetKeys.Image.MeowcertElementBallWhite)
+        .image(xLane, yBot, AssetKeys.Image.MeowcertElementBallWhite)
         .setTint(tints[1]!)
         .setDisplaySize(BALL_SIZE, BALL_SIZE)
         .setDepth(54);
       const headLetters = this.add
-        .image(xLane, yTop, AssetKeys.Image.MeowcertElementLetters)
+        .image(xLane, yBot, AssetKeys.Image.MeowcertElementLetters)
         .setDisplaySize(BALL_SIZE, BALL_SIZE)
         .setDepth(55);
       this.editorMockObjects.push(tailBody, tailCap, head, headLetters);
@@ -1567,7 +1573,7 @@ export class TutorialOrchestrator extends Scene {
     // order Note.configure uses, with SLIDE_TUBE_THICKNESS 64 (wider
     // than BALL_SIZE 54 — slide reads as a fat connector, not a pencil).
     if (demoCount >= 3) {
-      const yMid = rowCenterY(13);
+      const yMid = rowCenterY(12);
       const xStart = colCenterX(0);
       const xEnd = colCenterX(2);
       const tubeLen = xEnd - xStart;
@@ -1598,6 +1604,43 @@ export class TutorialOrchestrator extends Scene {
         .setOrigin(0.5)
         .setDepth(55);
       this.editorMockObjects.push(slideTube, headStart, headStartLetters, slideArrow);
+    }
+
+    // Double slide (slide-and-return) — ◀▶ arrows on both sides + the
+    // same fat tube horizontal. Sits one row below the single slide so
+    // both are visible simultaneously when demoCount >= 4.
+    if (demoCount >= 4) {
+      const yMid = rowCenterY(14);
+      const xStart = colCenterX(0);
+      const xEnd = colCenterX(2);
+      const tubeLen = xEnd - xStart;
+      const slideTube = this.add
+        .image((xStart + xEnd) / 2, yMid, AssetKeys.Image.MeowcertTubeWhite)
+        .setDisplaySize(SLIDE_TUBE_THICKNESS, tubeLen)
+        .setRotation(Math.PI / 2)
+        .setTint(tints[1]!)
+        .setDepth(53);
+      const headStart = this.add
+        .image(xStart, yMid, AssetKeys.Image.MeowcertElementBallWhite)
+        .setTint(tints[1]!)
+        .setDisplaySize(BALL_SIZE, BALL_SIZE)
+        .setDepth(54);
+      const headStartLetters = this.add
+        .image(xStart, yMid, AssetKeys.Image.MeowcertElementLetters)
+        .setDisplaySize(BALL_SIZE, BALL_SIZE)
+        .setDepth(55);
+      const doubleArrow = this.add
+        .text(xEnd, yMid, '◀▶', {
+          fontFamily: 'Pixeloid Sans, sans-serif',
+          fontStyle: 'bold',
+          fontSize: '20px',
+          color: '#ffffff',
+          stroke: '#1a0a2e',
+          strokeThickness: 3,
+        })
+        .setOrigin(0.5)
+        .setDepth(55);
+      this.editorMockObjects.push(slideTube, headStart, headStartLetters, doubleArrow);
     }
 
     // ── PAGE NAV ROW (canonical: arrow 36×28, font 14, label 12) ─
