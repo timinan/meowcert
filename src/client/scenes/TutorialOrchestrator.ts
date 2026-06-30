@@ -343,7 +343,10 @@ export class TutorialOrchestrator extends Scene {
       const boxId: BoxId = this.currentStep === 'box-cosmetic' ? 'cosmeticBox' : 'effectsBox';
       this.overlay = new TutorialCatOverlay(this);
       this.overlay.show(line, {
-        continueLabel: 'Open box →',
+        // Per Tim: 'no more open box buttons only continue for both the
+        // screens'. The tap still fires the box-open animation; the
+        // label just stays consistent with every other beat.
+        continueLabel: 'Continue →',
         onContinue: () => {
           if (this.busy) return;
           void this.runBoxOpen(boxId);
