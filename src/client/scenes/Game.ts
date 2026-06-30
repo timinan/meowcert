@@ -351,16 +351,16 @@ export class Game extends Scene {
 
   async create(): Promise<void> {
     // Home-music routing per Tim's spec:
-    //   - tutorialPhase 5 (insane joke run): Steel Phase Loop
-    //   - other tutorial phases (-1..4, 6): Lantern Tutorial
-    //   - non-tutorial (regular play): stop home music; MusicSystem
-    //     will play the chart's backing track.
-    if (this.tutorialPhase === 5) {
-      playInsaneMusic(this);
-    } else if (this.tutorialPhase !== null) {
+    //   - any tutorial phase: Lantern Tutorial keeps playing. For the
+    //     insane phase (5), Steel Phase Loop only kicks in AFTER the
+    //     player taps Yes on the pre-roll gate (handled below where
+    //     showTutorialPreRollGate fires) — 'do not play the hardcore
+    //     music until after the player clicks that they are ready'.
+    //   - non-tutorial (regular play): leave the menu music alone for
+    //     now; we stop it just before beginRound when the chart's own
+    //     backing is about to take over.
+    if (this.tutorialPhase !== null) {
       playTutorialMusic(this);
-    } else {
-      stopHomeMusic(this);
     }
 
     // Kick off music preload BEFORE any other scene setup. The mp3
@@ -470,6 +470,9 @@ export class Game extends Scene {
         await this.initChartPlayer();
         this.showTutorialPreRollGate(() => {
           this.clearTutorialDialogue();
+          // Swap to the hardcore Steel Phase Loop only after the player
+          // confirms — keeps the joke 'just kidding' framing intact.
+          playInsaneMusic(this);
           void this.beginRound();
         });
       } else {
