@@ -274,6 +274,7 @@ state.post('/stats/round', async (c) => {
     holdMsAccumulated: clampNonNeg(raw.holdMsAccumulated),
     longestHoldMs: clampNonNeg(raw.longestHoldMs),
     finished: raw.finished === true,
+    wasRehearsal: raw.wasRehearsal === true,
   };
 
   const username = await currentUsername();
@@ -294,6 +295,7 @@ state.post('/stats/round', async (c) => {
   if (delta.finished) {
     s.songsFinished += 1;
     if (delta.misses === 0 && delta.tapsAttempted > 0) s.perfectSongs += 1;
+    if (delta.wasRehearsal) s.songsRehearsed += 1;
   } else {
     s.songsAbandoned += 1;
   }
@@ -347,6 +349,27 @@ state.post('/stats/round', async (c) => {
     }
   }
 
+  await save(redis, player);
+  return c.json({ ok: true, state: player });
+});
+
+/** POST /api/stats/event — bump a single-counter stat that doesn't fit
+ *  the round-delta shape. Currently only 'restart' (RESTART button
+ *  press, mid-round or Play Again from the summary). Kept as a
+ *  discriminated-union body so new counters can slot in without a
+ *  route explosion. Unknown kinds no-op with 200 so a stale client
+ *  can't hard-fail. */
+state.post('/stats/event', async (c) => {
+  const body = (await c.req.json()) as { kind?: string };
+  const username = await currentUsername();
+  const player = await loadOrInit(redis, username);
+  switch (body.kind) {
+    case 'restart':
+      player.stats.restartsCount += 1;
+      break;
+    default:
+      return c.json({ ok: false, reason: 'unknown_kind' }, 200);
+  }
   await save(redis, player);
   return c.json({ ok: true, state: player });
 });

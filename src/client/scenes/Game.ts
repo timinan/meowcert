@@ -13,7 +13,7 @@ import * as L from '@/constants/scene-layout';
 import { AssetKeys } from '@/constants/assets';
 import { Balance } from '@/constants/balance';
 import { fetchState, loadChart, completeOnboarding } from '@/services/state-client';
-import { submitRoundStats } from '@/services/stats-client';
+import { submitRoundStats, submitStatsEvent } from '@/services/stats-client';
 import { CAT_CATALOG, emptyChart, CHART_PAGE_SIZE } from '@/../shared/state';
 import { resolveLaneTintsFromSeatedCats } from '@/constants/cat-colors';
 import type { PlayerState, LaneId, Chart, SeatId, RoundStatsDelta } from '@/../shared/state';
@@ -2236,6 +2236,11 @@ export class Game extends Scene {
       holdMsAccumulated: this.roundHoldMsAccumulated,
       longestHoldMs: this.roundLongestHoldMs,
       finished,
+      // Rehearsal = anything that isn't a visitor-mode play. Editor
+      // Test (testMode) and drawer Rehearse both count as practice.
+      // Tutorial rounds are guarded at the call site so we don't need
+      // to check it here.
+      wasRehearsal: !this.visitorMode,
     };
   }
 
@@ -2419,6 +2424,27 @@ export class Game extends Scene {
    *  attach the chart. Mirrors what create()'s replay branch would do
    *  on a restart, minus the scene teardown / rebuild. */
   private replayInPlace(chart: Chart): void {
+    // Stats — every RESTART press bumps the restarts counter, whether
+    // the round was mid-flight (RESTART chip) or already ended (Play
+    // Again on the summary). Fires before the state reset so the
+    // counter capture is unambiguous. Tutorial rounds skip stats
+    // entirely per the same guard used in endRound/cleanup.
+    if (this.tutorialPhase === null) {
+      void submitStatsEvent('restart');
+      // If the round was in-flight (started, not naturally ended, and
+      // stats haven't been submitted yet), emit an abandon delta so
+      // songsAbandoned counts restart-mid-round quits alongside the
+      // scene-leave abandons cleanup() catches.
+      if (
+        !this.roundStatsSubmitted &&
+        this.startTimeMs > 0 &&
+        !this.roundOver
+      ) {
+        this.roundStatsSubmitted = true;
+        this.score.finalizeInFlightCombo();
+        void submitRoundStats(this.buildRoundStatsDelta(/* finished= */ false));
+      }
+    }
     // Tear down the live music + chart-player so the new attach can
     // build fresh ones against the same chart.
     this.music?.destroy();

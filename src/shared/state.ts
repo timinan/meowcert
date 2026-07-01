@@ -622,6 +622,14 @@ export interface PlayerStats {
   songsAbandoned: number;
   /** Songs finished with zero misses. */
   perfectSongs: number;
+  /** Songs finished in rehearsal mode (drawer Rehearse or editor Test).
+   *  visitorMode plays don't count — those are competition runs, not
+   *  practice. Tutorial rounds don't count either. */
+  songsRehearsed: number;
+  /** RESTART button presses. Bumps whether the round was in-flight
+   *  (RESTART chip mid-round) or already ended (Play Again on the
+   *  summary). Any mode. */
+  restartsCount: number;
 
   // Slides + holds
   slidesHit: number;
@@ -697,6 +705,10 @@ export interface RoundStatsDelta {
   /** Longest single hold this round in ms. */
   longestHoldMs: number;
   finished: boolean;
+  /** True when the round was a rehearsal (drawer Rehearse or editor
+   *  Test) rather than a visitorMode play. Server bumps songsRehearsed
+   *  when this + finished are both true. */
+  wasRehearsal: boolean;
 }
 
 /** Fresh stats block for new players + forward-compat fill. Every
@@ -712,6 +724,8 @@ export function createFreshStats(): PlayerStats {
     songsFinished: 0,
     songsAbandoned: 0,
     perfectSongs: 0,
+    songsRehearsed: 0,
+    restartsCount: 0,
     slidesHit: 0,
     slidesMissed: 0,
     holdsStarted: 0,

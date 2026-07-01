@@ -29,3 +29,29 @@ export async function submitRoundStats(
     return { ok: false };
   }
 }
+
+export type StatsEventKind = 'restart';
+
+/** POST /api/stats/event — bump a single-counter stat that doesn't
+ *  fit the round-delta shape. Same fire-and-forget contract as
+ *  submitRoundStats — stats are best-effort, never block UX. */
+export async function submitStatsEvent(
+  kind: StatsEventKind,
+): Promise<{ ok: boolean }> {
+  try {
+    const r = await fetch('/api/stats/event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind }),
+    });
+    if (!r.ok) {
+      console.warn('[stats-client] event submit failed:', r.status);
+      return { ok: false };
+    }
+    const body = (await r.json()) as { ok?: boolean };
+    return { ok: body.ok === true };
+  } catch (err) {
+    console.warn('[stats-client] event submit threw:', err);
+    return { ok: false };
+  }
+}
