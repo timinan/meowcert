@@ -1394,12 +1394,20 @@ export class TutorialOrchestrator extends Scene {
       ease: 'Cubic.Out',
       onComplete: () => {
         this.renderSeatedCatNameLabel();
+        // Effect handle was anchored to the merch-layout position; the
+        // tween moved the cat + static cosmetics but the particle
+        // emitter was destroyed pre-tween. Re-apply the equipped effect
+        // at the new stage seat so the sparkle rides with the cat
+        // through stage-set-confirm + rehearsal-intro (Tim Image 11:
+        // "no effect on cat equipped here").
+        this.reapplyEffectHandleForSeatedCat();
       },
     });
 
-    // Effect handle: tear down — it's anchored to the previous cat
-    // position. Won't re-apply during the tutorial rehearsal beats; the
-    // real Game scene re-applies it when the rehearsal actually starts.
+    // Tear down the previous effect handle immediately — it's pinned
+    // to the merch-layout position and would render at the OLD anchor
+    // while the cat tweens away. The onComplete above re-applies it at
+    // the new stage seat.
     this.activeEffectHandle?.destroy();
     this.activeEffectHandle = undefined;
 
@@ -1508,6 +1516,30 @@ export class TutorialOrchestrator extends Scene {
       this.drawStageLanes();
     }
     this.stageRigBuilt = true;
+  }
+
+  /** Reattach the equipped effect's particle emitter to the current
+   *  seatedCat position. Used by switchToRehearsalStage's onComplete —
+   *  after the cat tweens to the stage seat, the effect (which was
+   *  torn down pre-tween because it was pinned to the old anchor)
+   *  needs a fresh apply() call so the sparkle rides with the cat.
+   *  Cosmetic SPRITES are NOT touched — they were already tweened to
+   *  the new position alongside the cat. */
+  private reapplyEffectHandleForSeatedCat(): void {
+    if (!this.playerState || !this.seatedCat) return;
+    const seatedCatInstance = this.playerState.ownedCats.find((c) => c.breed === this.seatedCatBreed);
+    if (!seatedCatInstance) return;
+    const slots = this.playerState.equippedCosmetics?.[seatedCatInstance.id] ?? {};
+    for (const cosmeticInstanceId of Object.values(slots)) {
+      if (!cosmeticInstanceId) continue;
+      const cosmeticType = this.playerState.equippedCosmeticTypes?.[cosmeticInstanceId];
+      if (!cosmeticType) continue;
+      const effectEntry = CAT_EFFECT_BY_ID[cosmeticType];
+      if (!effectEntry) continue;
+      this.activeEffectHandle?.destroy();
+      this.activeEffectHandle = effectEntry.apply(this, this.seatedCat, this.seatedCat.scaleX);
+      return;
+    }
   }
 
   /** Read playerState.equippedCosmetics for the seated cat and re-
