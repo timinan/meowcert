@@ -4,8 +4,39 @@ import { CAT_CATALOG, COSMETIC_CATALOG } from '@/../shared/state';
 import { AssetKeys } from '@/constants/assets';
 import { equipCosmetic } from '@/services/state-client';
 import { Cat, parentIdFor } from '@/entities/cat';
-import { CAT_EFFECT_BY_ID, getEffectById, type EffectHandle } from '@/effects/cat-effects';
+import { CAT_EFFECT_BY_ID, getEffectById, getEffectGridEntries, type EffectHandle } from '@/effects/cat-effects';
 import type { PlayerState, OwnedCosmetic } from '@/../shared/state';
+
+// Effect-tab category filter — matches EffectCategory from the generated
+// catalog + the legacy categories from cat-effects.ts. Order drives the
+// dropdown popup rows.
+const EFFECT_CATEGORY_ORDER = [
+  'Stagelights (live)',
+  'Halos & Rings',
+  'Beams',
+  'Pulse Waves',
+  'Orbiters',
+  'Tint FX',
+  'Floor / Ground',
+  'Weather',
+  'Decorative',
+  'Misc / Extras',
+] as const;
+
+/** Short label used inside the dropdown button + popup rows. */
+const CATEGORY_SHORT_LABEL: Record<string, string> = {
+  'all': 'ALL',
+  'Stagelights (live)': 'STAGELIGHTS',
+  'Halos & Rings': 'HALOS',
+  'Beams': 'BEAMS',
+  'Pulse Waves': 'PULSES',
+  'Orbiters': 'ORBITERS',
+  'Tint FX': 'TINTS',
+  'Floor / Ground': 'FLOORS',
+  'Weather': 'WEATHER',
+  'Decorative': 'DECOR',
+  'Misc / Extras': 'MISC',
+};
 
 // 3 cols × 3 rows = 9 visible cells; last slot is the ✕ "clear slot"
 // tile, so up to 8 cosmetics fit per page. Cells are a middle ground
@@ -38,6 +69,14 @@ export class DressingRoom extends Scene {
   private prevBtn!: GameObjects.Container;
   private nextBtn!: GameObjects.Container;
   private slotTabsContainer!: GameObjects.Container;
+  /** Category filter for the EFFECT tab (matches song-picker's dropdown
+   *  pattern per Tim 2026-06-30). 'all' shows every category. */
+  private effectCategoryFilter: string = 'all';
+  private effectFilterContainer!: GameObjects.Container;
+  private categoryPopupChildren: GameObjects.GameObject[] = [];
+  /** Cached id → category map so the grid filter doesn't re-scan the
+   *  catalog on every render. Populated on scene create. */
+  private effectCategoryById: Record<string, string> = {};
 
   constructor() {
     super(SceneKeys.DressingRoom);
@@ -190,12 +229,26 @@ export class DressingRoom extends Scene {
       .setOrigin(0.5);
     this.updateWearingLabel();
 
-    // Slot tabs (HEAD / FACE / NECK)
+    // Slot tabs (HEAD / FACE / NECK / EFFECT)
     this.slotTabsContainer = this.add.container(0, this.heroSprite.y + 92);
     this.renderSlotTabs();
 
+    // Effect-tab category filter — visible only when EFFECT is active.
+    // Popup opens as an overlay (setDepth 500) so it stacks on top of the
+    // grid without pushing anything down. Same pattern as SongPickerModal.
+    // Y offset is (slot-tabs top +92) + (tabs height 26) + 20 clearance =
+    // heroY+138, so the 28-tall dropdown centered here spans heroY+124
+    // to heroY+152 without touching the tabs (bottom heroY+118). Tim
+    // flagged the previous +124 anchor overlapped the tabs by 8 px.
+    this.effectFilterContainer = this.add.container(0, this.heroSprite.y + 138);
+    this.buildEffectCategoryIndex();
+    this.renderEffectCategoryFilter();
+
     // Grid container — filtered by activeSlot, showing AVAILABLE cosmetics only.
-    const gridTop = this.heroSprite.y + 130;
+    // Nudge grid down by 30 px so the filter row has breathing room without
+    // squishing anything when it's visible; when it's not visible, the
+    // extra headroom just reads as padding.
+    const gridTop = this.heroSprite.y + 160;
     this.gridContainer = this.add.container(0, gridTop);
     this.renderGrid();
 
@@ -400,12 +453,135 @@ export class DressingRoom extends Scene {
       bg.on('pointerdown', () => {
         this.activeSlot = tab.key;
         this.page = 0;
+        // Reset the category filter whenever we switch slots so the
+        // effect-tab picker doesn't remember a filter from a prior open.
+        if (tab.key === 'effect') this.effectCategoryFilter = 'all';
+        this.closeCategoryPopup();
         this.renderSlotTabs();
+        this.renderEffectCategoryFilter();
         this.renderGrid();
         this.updateWearingLabel();
         this.updatePagination();
       });
     });
+  }
+
+  /** Build the id → category map used to filter the grid on the EFFECT
+   *  tab. Runs once on scene create; cheap enough (~500 entries). */
+  private buildEffectCategoryIndex(): void {
+    const entries = getEffectGridEntries();
+    for (const e of entries) this.effectCategoryById[e.id] = e.category;
+  }
+
+  /** Render the `CATEGORY: X ▼` dropdown button below the slot tabs.
+   *  Only visible when the EFFECT slot is active; hidden otherwise so
+   *  head/face/neck grids stay uncluttered. */
+  private renderEffectCategoryFilter(): void {
+    this.effectFilterContainer.removeAll(true);
+    if (this.activeSlot !== 'effect') return;
+    const cx = this.scale.width / 2;
+    const w = 240, h = 28;
+    const current = this.effectCategoryFilter;
+    const isFiltered = current !== 'all';
+    const label = CATEGORY_SHORT_LABEL[current] ?? 'ALL';
+    const bg = this.add
+      .rectangle(cx, 0, w, h, 0x2c1856, 1)
+      .setStrokeStyle(1, isFiltered ? 0xffd34d : 0xc0a0e6, isFiltered ? 1 : 0.5)
+      .setInteractive({ useHandCursor: true });
+    const txt = this.add
+      .text(cx, 0, `CATEGORY: ${label} ▼`, {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontStyle: 'bold',
+        fontSize: '10px',
+        color: isFiltered ? '#ffd34d' : '#ffffff',
+      })
+      .setOrigin(0.5);
+    bg.on('pointerdown', () => this.openCategoryPopup(cx, h / 2 + 4, w));
+    this.effectFilterContainer.add([bg, txt]);
+  }
+
+  /** Open the category dropdown as an OVERLAY (setDepth 500) — doesn't
+   *  push the grid down. Backdrop rectangle catches taps-outside so the
+   *  popup dismisses cleanly. */
+  private openCategoryPopup(anchorX: number, topY: number, width: number): void {
+    this.closeCategoryPopup();
+    const options: string[] = ['all', ...EFFECT_CATEGORY_ORDER];
+    const rowH = 24;
+    const popupH = options.length * rowH + 6;
+    // Convert local topY (relative to effectFilterContainer origin) to
+    // absolute scene coords so the popup sits directly under the button
+    // even though the container Y varies per session.
+    const absTopY = this.effectFilterContainer.y + topY;
+    // Full-screen backdrop catches taps outside the popup for dismissal.
+    const scrim = this.add
+      .rectangle(this.scale.width / 2, this.scale.height / 2,
+                 this.scale.width, this.scale.height, 0x000000, 0.001)
+      .setInteractive();
+    scrim.setDepth(499);
+    scrim.on('pointerdown', () => this.closeCategoryPopup());
+    this.categoryPopupChildren.push(scrim);
+
+    const popupBg = this.add
+      .rectangle(anchorX, absTopY + popupH / 2, width, popupH, 0x1a0a2e, 1)
+      .setStrokeStyle(2, 0xffd34d, 1)
+      .setInteractive();
+    popupBg.on('pointerdown', (_p: unknown, _x: unknown, _y: unknown, e: Phaser.Types.Input.EventData) =>
+      e.stopPropagation(),
+    );
+    popupBg.setDepth(500);
+    this.categoryPopupChildren.push(popupBg);
+
+    // Count how many of each category the player owns so the popup shows
+    // "STAGELIGHTS  37" — same UX as the mockup.
+    const countByCat: Record<string, number> = { all: 0 };
+    for (const cos of this.playerState.ownedCosmetics) {
+      const cat = this.effectCategoryById[cos.type];
+      if (!cat) continue;
+      countByCat[cat] = (countByCat[cat] ?? 0) + 1;
+      countByCat.all += 1;
+    }
+
+    options.forEach((opt, i) => {
+      const y = absTopY + 3 + i * rowH + rowH / 2;
+      const isCurrent = opt === this.effectCategoryFilter;
+      const rowBg = this.add
+        .rectangle(anchorX, y, width - 4, rowH - 2,
+                   isCurrent ? 0x4d2d8c : 0x2c1856, 1)
+        .setInteractive({ useHandCursor: true });
+      rowBg.setDepth(501);
+      const label = CATEGORY_SHORT_LABEL[opt] ?? opt.toUpperCase();
+      const lbl = this.add
+        .text(anchorX - width / 2 + 12, y, label, {
+          fontFamily: 'Pixeloid Sans, sans-serif',
+          fontStyle: 'bold',
+          fontSize: '10px',
+          color: isCurrent ? '#ffd34d' : '#c0a0e6',
+        })
+        .setOrigin(0, 0.5);
+      lbl.setDepth(502);
+      const countText = this.add
+        .text(anchorX + width / 2 - 12, y, String(countByCat[opt] ?? 0), {
+          fontFamily: 'Pixeloid Sans, sans-serif',
+          fontSize: '9px',
+          color: '#8f7cb8',
+        })
+        .setOrigin(1, 0.5);
+      countText.setDepth(502);
+      rowBg.on('pointerdown', () => {
+        this.effectCategoryFilter = opt;
+        this.page = 0;
+        this.closeCategoryPopup();
+        this.renderEffectCategoryFilter();
+        this.renderGrid();
+        this.updatePagination();
+      });
+      this.categoryPopupChildren.push(rowBg, lbl, countText);
+    });
+  }
+
+  private closeCategoryPopup(): void {
+    for (const child of this.categoryPopupChildren) child.destroy();
+    this.categoryPopupChildren.length = 0;
   }
 
   private renderGrid(): void {
@@ -416,7 +592,13 @@ export class DressingRoom extends Scene {
     const ownedInSlot: OwnedCosmetic[] = this.playerState.ownedCosmetics.filter((cosItem) => {
       const cos = COSMETIC_CATALOG.find((c) => c.id === cosItem.type);
       const slot = cos?.slot ?? 'head';
-      return slot === this.activeSlot;
+      if (slot !== this.activeSlot) return false;
+      // Category dropdown filter — active only on the EFFECT tab.
+      if (this.activeSlot === 'effect' && this.effectCategoryFilter !== 'all') {
+        const cat = this.effectCategoryById[cosItem.type];
+        if (cat !== this.effectCategoryFilter) return false;
+      }
+      return true;
     });
 
     // Currently-equipped cosmetic in this slot (instance id + type id).
@@ -532,7 +714,15 @@ export class DressingRoom extends Scene {
       //  - Tapping the currently-equipped cosmetic → unequip it (toggle)
       // This matches Tim's request for a "click again to unselect"
       // pattern that mirrors the song picker's select/deselect.
+      //
+      // Instant feedback — flip the stroke to yellow BEFORE equipInSlot
+      // does its state mutation + optimistic re-render. Even though the
+      // re-render will replace this rectangle with a fresh one moments
+      // later, the pre-flash gives the tap an immediate "you selected
+      // it" cue so the interaction never feels like a dropped click
+      // while the interpreter spins up the effect handle.
       bg.on('pointerdown', () => {
+        bg.setStrokeStyle(3, 0xffd34d, 1);
         if (isEquipped) this.equipInSlot(null);
         else this.equipInSlot(cosItem);
       });
