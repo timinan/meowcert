@@ -170,6 +170,38 @@ export class TutorialOrchestrator extends Scene {
     // playTutorialPhase override — Game scene passes this after each
     // tutorial-mode round so we resume at the next phase, NOT 0.
     this.dialogueIndex = typeof data?.playTutorialPhase === 'number' ? data.playTutorialPhase : 0;
+
+    // Wipe every persistent-sprite reference. When play-tutorial hands
+    // off to Game via `scene.start`, Phaser's SceneManager calls
+    // `sys.shutdown()` on the orchestrator, which destroys the display
+    // list — but the JS class fields still point at the (now destroyed)
+    // sprite objects. On the return handoff `ensureStageRigForCurrentStep`
+    // sees `this.seatedCat` truthy and skips re-seating; renderEditorMock
+    // then depth-bumps a dead sprite; the rest of the tutorial reads as
+    // "cat missing" plus assorted `__MISSING` placeholders from other
+    // stale sprite references being touched. Nulling here is what makes
+    // the return-from-Game handoff behave like a fresh boot.
+    this.seatedCat = undefined;
+    this.seatedCatNameLabel = undefined;
+    this.seatedCatBreed = undefined;
+    this.equippedCosmeticSprites = [];
+    this.activeEffectHandle = undefined;
+    this.stageLaneGfx = [];
+    this.stageButters = undefined;
+    this.stageButtersGlasses = undefined;
+    this.stageButtersNameLabel = undefined;
+    this.stageRigBuilt = false;
+    this.stageBg = undefined;
+    this.stageBgId = undefined;
+    this.backdropFallback = undefined;
+    this.overlay = undefined;
+    this.picker = undefined;
+    this.stepUI = undefined;
+    this.hamburgerObjects = [];
+    this.editorMockObjects = [];
+    this.autoAdvanceTimer = undefined;
+    this.pendingPickerSelection = undefined;
+    this.busy = false;
   }
 
   create(): void {
