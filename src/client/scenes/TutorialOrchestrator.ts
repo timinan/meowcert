@@ -33,7 +33,7 @@ import { playBoxOpenAnimation } from '@/ui/box-open-animation';
 import { CatNamingModal } from '@/ui/cat-naming-modal';
 import { loadBgIfMissing } from '@/entities/background-manager';
 import { renameCat, equipCosmetic } from '@/services/state-client';
-import { CAT_EFFECT_BY_ID } from '@/effects/cat-effects';
+import { CAT_EFFECT_BY_ID, getEffectById } from '@/effects/cat-effects';
 import {
   BACKGROUND_CATALOG,
   CAT_CATALOG,
@@ -1073,7 +1073,7 @@ export class TutorialOrchestrator extends Scene {
 
     // Visual: effects use the cat-effects.ts apply() pattern; static
     // cosmetics stack a sprite at the seated cat's position.
-    const effectEntry = CAT_EFFECT_BY_ID[cosmeticId];
+    const effectEntry = getEffectById(cosmeticId);
     if (effectEntry && this.seatedCat) {
       // Tear down any previous effect before applying the new one.
       this.activeEffectHandle?.destroy();
@@ -1534,7 +1534,7 @@ export class TutorialOrchestrator extends Scene {
       const cosEntry = COSMETIC_CATALOG.find((c) => c.id === cosmeticType);
       if (!cosEntry) continue;
 
-      const effectEntry = CAT_EFFECT_BY_ID[cosmeticType];
+      const effectEntry = getEffectById(cosmeticType);
       if (effectEntry) {
         this.activeEffectHandle?.destroy();
         this.activeEffectHandle = effectEntry.apply(this, this.seatedCat, this.seatedCat.scaleX);

@@ -7,7 +7,7 @@ import { buildMenuItems } from '@/ui/menu-items';
 import { playLanternMusic } from '@/systems/home-music';
 import { openBox, fetchState, renameCat } from '@/services/state-client';
 import { CatNamingModal } from '@/ui/cat-naming-modal';
-import { CAT_EFFECT_BY_ID, isEffectCosmeticId } from '@/effects/cat-effects';
+import { CAT_EFFECT_BY_ID, isEffectCosmeticId, getEffectById } from '@/effects/cat-effects';
 import {
   BOX_CATALOG,
   CAT_CATALOG,
@@ -334,7 +334,7 @@ export class Purchase extends Scene {
       const isEffect = !isCat && isEffectCosmeticId(pull.itemId as string);
       const catEntry = isCat ? CAT_CATALOG.find((c) => c.id === (pull.itemId as CatBreed)) : undefined;
       const cosEntry = !isCat && !isEffect ? COSMETIC_CATALOG.find((c) => c.id === (pull.itemId as CosmeticId)) : undefined;
-      const effectEntry = isEffect ? CAT_EFFECT_BY_ID[pull.itemId as string] : undefined;
+      const effectEntry = isEffect ? getEffectById(pull.itemId as string) : undefined;
       const itemName = catEntry?.name ?? effectEntry?.name ?? cosEntry?.name ?? pull.itemId;
       const { frame, rainbow, tint } = resolveFrame(pull.itemId, isCat);
 

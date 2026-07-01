@@ -5,7 +5,7 @@ import {
   setUserSettings,
   type UserSettings,
 } from '@/systems/user-settings';
-import { CAT_EFFECT_BY_ID } from '@/effects/cat-effects';
+import { CAT_EFFECT_BY_ID, getEffectById } from '@/effects/cat-effects';
 
 /**
  * Settings modal — reuses the dressing-room visual language (yellow
@@ -396,7 +396,7 @@ export class SettingsModal {
    *  ⭐ burst every 1.4 s at the preview center using the live user-
    *  settings multipliers so the player can SEE their slider tweaks
    *  before closing the modal. Uses the existing makeParticleBurst path
-   *  (via CAT_EFFECT_BY_ID['effect-glow-star'].burst) so it tracks any
+   *  (via getEffectById('effect-glow-star').burst) so it tracks any
    *  future engine changes without drift. */
   private buildPreview(centerX: number, centerY: number): void {
     if (!this.container) return;
@@ -422,7 +422,7 @@ export class SettingsModal {
       .setDepth(400);
     this.container.add([box, label, fakeTarget]);
 
-    const sparkleBurst = CAT_EFFECT_BY_ID['effect-glow-star']?.burst;
+    const sparkleBurst = getEffectById('effect-glow-star')?.burst;
     if (!sparkleBurst) return;
     // Fire immediately so the preview isn't blank for the first 1.4 s
     sparkleBurst(this.scene, fakeTarget, 0.7);

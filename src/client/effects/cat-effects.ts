@@ -993,7 +993,69 @@ export const CAT_EFFECT_BY_ID: Record<string, CatEffect> = Object.fromEntries(
   CAT_EFFECTS.map((e) => [e.id, e]),
 );
 
+// ---------------------------------------------------------------------------
+// Metadata-driven effect catalog (Tim 2026-06-30 batch — 440 new effects
+// generated from the effects smoketest). These live in the generated
+// `src/shared/effect-catalog-gen.ts`; the runtime interpreter renders each
+// via Phaser Graphics + tweens on demand. Backward-compat: the existing
+// hand-authored CAT_EFFECTS above still ships identically; new effects are
+// looked up via getEffectById() below.
+// ---------------------------------------------------------------------------
+import { NEW_EFFECT_CATALOG, type EffectMeta, type EffectCategory } from '@/shared/effect-catalog-gen';
+import { makeCatEffectFromMeta } from './effect-interpreter';
+
+const NEW_EFFECT_BY_ID: Record<string, CatEffect> = {};
+for (const meta of NEW_EFFECT_CATALOG) {
+  NEW_EFFECT_BY_ID[meta.id] = makeCatEffectFromMeta(meta);
+}
+
+/** Return a CatEffect for any id — hand-authored or metadata-driven. */
+export function getEffectById(id: string): CatEffect | undefined {
+  return CAT_EFFECT_BY_ID[id] ?? NEW_EFFECT_BY_ID[id];
+}
+
+/** All effect ids the player can equip. */
+export function getAllEffectIds(): string[] {
+  return [
+    ...CAT_EFFECTS.map((e) => e.id),
+    ...NEW_EFFECT_CATALOG.map((m) => m.id),
+  ];
+}
+
+/** Metadata for grid rendering (id/name/iconEmoji/rarity/category). */
+export interface EffectGridEntry {
+  id: string;
+  name: string;
+  iconEmoji: string;
+  rarity: 'common' | 'uncommon' | 'rare' | 'legendary';
+  category: EffectCategory;
+}
+
+/** Bucket every equippable effect into its display category. */
+export function getEffectGridEntries(): EffectGridEntry[] {
+  const legacyCat = (id: string): EffectCategory => {
+    // The 132 hand-authored effects fall into 3 top-level categories.
+    if (id.endsWith('-glow')) return 'Stagelights (live)';
+    if (id === 'effect-ghost') return 'Misc / Extras';
+    return 'Orbiters';   // emoji particles + stars/hearts read as orbiter-style
+  };
+  const out: EffectGridEntry[] = [];
+  for (const e of CAT_EFFECTS) {
+    out.push({
+      id: e.id, name: e.name, iconEmoji: e.iconEmoji,
+      rarity: e.rarity, category: legacyCat(e.id),
+    });
+  }
+  for (const m of NEW_EFFECT_CATALOG) {
+    out.push({
+      id: m.id, name: m.name, iconEmoji: m.iconEmoji,
+      rarity: m.rarity, category: m.category,
+    });
+  }
+  return out;
+}
+
 /** Convenience for catalog filtering. */
 export function isEffectCosmeticId(id: string): boolean {
-  return id in CAT_EFFECT_BY_ID;
+  return id in CAT_EFFECT_BY_ID || id in NEW_EFFECT_BY_ID;
 }

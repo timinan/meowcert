@@ -5,7 +5,7 @@ import { Balance } from '@/constants/balance';
 import { hslToInt } from '@/util/color';
 import type { CatBreed, CatAnimationState, CatModel, CosmeticId } from '@/types/game';
 import { COSMETIC_CATALOG } from '@/../shared/state';
-import { CAT_EFFECT_BY_ID, type EffectHandle } from '@/effects/cat-effects';
+import { CAT_EFFECT_BY_ID, type EffectHandle, getEffectById } from '@/effects/cat-effects';
 
 // Cosmetic sprites are drawn on the same 91×64 canvas as the cats, so
 // when both share origin (0.5, 1) at the same screen position they
@@ -184,7 +184,7 @@ export class Cat {
     // the registered handler and stash the handle. Pass the cat's render
     // scale so flame width / particle size / spread amplify when seated
     // cats are scaled up (Game scene seats at 1.4×, DressingRoom at 1×).
-    const effect = CAT_EFFECT_BY_ID[cosmeticId];
+    const effect = getEffectById(cosmeticId);
     if (effect) {
       this.activeEffects[slot] = effect.apply(this.scene, this.sprite, this.sprite.scaleX);
       return;

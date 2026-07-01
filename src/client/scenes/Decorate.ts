@@ -10,7 +10,7 @@ import { buildMenuItems } from '@/ui/menu-items';
 import { playLanternMusic } from '@/systems/home-music';
 import * as L from '@/constants/scene-layout';
 import { CAT_CATALOG, COSMETIC_CATALOG, BACKGROUND_CATALOG } from '@/../shared/state';
-import { CAT_EFFECT_BY_ID } from '@/effects/cat-effects';
+import { CAT_EFFECT_BY_ID, getEffectById } from '@/effects/cat-effects';
 import { fetchState, setSeat, setBackground } from '@/services/state-client';
 import type {
   PlayerState,
@@ -733,7 +733,7 @@ export class Decorate extends Scene {
         // can't render as a static thumbnail overlay. Skip them silently here;
         // the tray still indicates the cat is wearing one via the cat sprite
         // itself in the preview stage.
-        if (CAT_EFFECT_BY_ID[cosTypeId]) continue;
+        if (getEffectById(cosTypeId)) continue;
         const cos = COSMETIC_CATALOG.find((c) => c.id === cosTypeId);
         if (!cos) continue;
         const cosParent = cos.sourceFrame?.match(/^cosmetic_(c\d+)_/)?.[1] ?? cos.id;
@@ -756,7 +756,7 @@ export class Decorate extends Scene {
       const equippedEffectInstanceId = equippedSlots['effect'];
       if (equippedEffectInstanceId) {
         const effectTypeId = equippedTypes[equippedEffectInstanceId];
-        const effectMeta = effectTypeId ? CAT_EFFECT_BY_ID[effectTypeId] : undefined;
+        const effectMeta = effectTypeId ? getEffectById(effectTypeId) : undefined;
         if (effectMeta) {
           const badgeBg = this.add
             .circle(x + 10, y + 10, 9, 0x0b041a, 0.85)

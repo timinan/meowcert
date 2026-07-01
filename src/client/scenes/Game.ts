@@ -37,7 +37,7 @@ import {
 } from '@/systems/home-music';
 import { PublishedModal } from '@/ui/published-modal';
 import { publishChart } from '@/services/publish-client';
-import { CAT_EFFECT_BY_ID, isEffectCosmeticId } from '@/effects/cat-effects';
+import { CAT_EFFECT_BY_ID, isEffectCosmeticId, getEffectById } from '@/effects/cat-effects';
 import { getUserSettings } from '@/systems/user-settings';
 import { submitPlay, submitComment } from '@/services/social-client';
 import { getBest, recordRun, type BestStats, type StatKey } from '@/services/rehearsal-best';
@@ -1695,7 +1695,7 @@ export class Game extends Scene {
   private burstEffectOnTail(n: Note): void {
     const effectId = this.laneEffects[n.laneId];
     if (!effectId) return;
-    const effect = CAT_EFFECT_BY_ID[effectId];
+    const effect = getEffectById(effectId);
     if (!effect) return;
     const scaleY = this.scale.height / L.DESIGN_H;
     const laneTopY = L.LANE_TOP_Y * scaleY;
@@ -1724,7 +1724,7 @@ export class Game extends Scene {
     if (!effectId) return;
     const target = this.hitTargets[laneId];
     if (!target) return;
-    const effect = CAT_EFFECT_BY_ID[effectId];
+    const effect = getEffectById(effectId);
     if (!effect) return;
     effect.burst(this, target);
   }
@@ -2779,7 +2779,7 @@ export class Game extends Scene {
         // leak into the editor scene after we transition back.
         const effectId = this.laneEffects[i];
         if (effectId) {
-          const effect = CAT_EFFECT_BY_ID[effectId];
+          const effect = getEffectById(effectId);
           if (effect) {
             const handle = effect.apply(this, cat.sprite, 1.6);
             // Pulse to the loud state so the snapshot grabs the

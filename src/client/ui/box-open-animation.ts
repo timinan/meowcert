@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { Scene, GameObjects } from 'phaser';
 import { hslToInt } from '@/util/color';
-import { CAT_EFFECT_BY_ID, type EffectHandle } from '@/effects/cat-effects';
+import { CAT_EFFECT_BY_ID, type EffectHandle, getEffectById } from '@/effects/cat-effects';
 import type { Rarity } from '@/../shared/state';
 
 const PARTICLE_TEXTURE = 'box-open-particle';
@@ -161,14 +161,14 @@ export function playBoxOpenAnimation(
     // depth-9000 dim — which is the "hamburger disappears" symptom.
     let item: GameObjects.Image | GameObjects.Sprite;
     let effectHandle: EffectHandle | null = null;
-    if (opts.effectId && CAT_EFFECT_BY_ID[opts.effectId]) {
+    if (opts.effectId && getEffectById(opts.effectId)) {
       const placeholder = scene.add
         .image(cx, cy + 60, opts.textureKey, opts.frame)
         .setOrigin(0.5, 1)
         .setAlpha(0) // invisible — only the effect itself reads
         .setDepth(ITEM_DEPTH);
       placeholder.setDisplaySize(110, 110);
-      effectHandle = CAT_EFFECT_BY_ID[opts.effectId]!.apply(scene, placeholder, 1.8);
+      effectHandle = getEffectById(opts.effectId)!.apply(scene, placeholder, 1.8);
       item = placeholder;
     } else {
       item = scene.add

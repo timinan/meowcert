@@ -4,7 +4,7 @@ import { CAT_CATALOG, COSMETIC_CATALOG } from '@/../shared/state';
 import { AssetKeys } from '@/constants/assets';
 import { equipCosmetic } from '@/services/state-client';
 import { Cat, parentIdFor } from '@/entities/cat';
-import { CAT_EFFECT_BY_ID, type EffectHandle } from '@/effects/cat-effects';
+import { CAT_EFFECT_BY_ID, getEffectById, type EffectHandle } from '@/effects/cat-effects';
 import type { PlayerState, OwnedCosmetic } from '@/../shared/state';
 
 // 3 cols × 3 rows = 9 visible cells; last slot is the ✕ "clear slot"
@@ -277,7 +277,7 @@ export class DressingRoom extends Scene {
       // EFFECT cosmetics are code-driven — apply them to the hero preview
       // so the player can see what they're equipping without leaving the
       // modal. Tracked separately so they tear down on slot swap / close.
-      const effect = CAT_EFFECT_BY_ID[cosTypeId];
+      const effect = getEffectById(cosTypeId);
       if (effect) {
         // Pass the hero's render scale so the effect's footprint
         // (flame width, particle size, spread, rise distance) matches
@@ -489,7 +489,7 @@ export class DressingRoom extends Scene {
       this.gridContainer.add(bg);
 
       // Effect cosmetics don't have atlas frames — render an emoji thumb.
-      const effect = CAT_EFFECT_BY_ID[cosItem.type];
+      const effect = getEffectById(cosItem.type);
       if (effect) {
         const icon = this.add
           .text(x, y + imageYOffset, effect.iconEmoji, { fontSize: '32px' })
