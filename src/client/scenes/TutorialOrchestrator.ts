@@ -1415,12 +1415,17 @@ export class TutorialOrchestrator extends Scene {
     this.editorMockObjects = [];
   }
 
-  /** Replant Mochi at her stage seat + draw the lanes when orchestrator
-   *  boots into a step past stage-set-confirm. No tween — the tween
-   *  already played the first time the player saw stage-set-confirm;
-   *  this is a "she's already there" presence guarantee for outro
-   *  beats where the orchestrator was just re-started by scene.start
-   *  returning from Game scene. */
+  /** Replant the player's cat at her stage seat when orchestrator boots
+   *  into a step past stage-set-confirm — orchestrator re-inits fresh
+   *  after every Game-scene return, so the seatedCat sprite is gone
+   *  even though the player conceptually still has her on the stage.
+   *  Re-applies equipped cosmetics + active effect from playerState so
+   *  she comes back in her current dressed state (Tim: "he needs to
+   *  keep his cosmetics and effects"). Small fade+scale-in tween on the
+   *  seat so the return reads as a soft entrance instead of a snap.
+   *  Post-editor-tour we do NOT re-draw stageLaneGfx — Tim spec: "once
+   *  we get to the edit section of the tutorial hide the chart it
+   *  should never appear back." */
   private ensureStageRigForCurrentStep(): void {
     if (!this.playerState) return;
     if (this.seatedCat) return;
@@ -1445,13 +1450,90 @@ export class TutorialOrchestrator extends Scene {
       .sprite(centerX, stageY, AssetKeys.Atlas.Cats, `${ownedCat.breed}_idle_00`)
       .setOrigin(0.5, 1)
       .setScale(stageScale)
-      .setDepth(-100);
+      .setDepth(-100)
+      .setAlpha(0);
     this.seatedCat.play(`${ownedCat.breed}_idle`, true);
     this.renderSeatedCatNameLabel();
+    this.seatedCatNameLabel?.setAlpha(0);
 
-    this.tearDownStageLanes();
-    this.drawStageLanes();
+    // Restore cosmetics + active effect that the player had equipped
+    // when they entered play-tutorial. Without this, editor-tour and
+    // route-a-outro land the cat back on stage naked, losing the
+    // wardrobe the player just picked (Tim: "hes missing his cosmetics
+    // and effects").
+    this.reapplyEquippedCosmeticsForSeatedCat();
+
+    // Soft entrance tween — Tim: "when he transitions spot always
+    // double check that is there". This is the Game→orchestrator
+    // handoff transition; fade the seat rig in over 260 ms.
+    const cosmetics = [...this.equippedCosmeticSprites];
+    const targets = [this.seatedCat, ...(this.seatedCatNameLabel ? [this.seatedCatNameLabel] : []), ...cosmetics];
+    this.tweens.add({
+      targets,
+      alpha: 1,
+      duration: 260,
+      ease: 'Quad.Out',
+    });
+
+    // Draw the rhythm-bar stage lanes ONLY if we're resuming into a
+    // pre-editor-tour step (rehearsal-intro / play-tutorial-intro / any
+    // browser-refresh mid-Game handoff). Post-editor-tour steps get a
+    // clean stage — Tim spec: "once we get to the edit section of the
+    // tutorial hide the chart it should never appear back."
+    const editorTourIdx = TUTORIAL_STEP_ORDER.indexOf('editor-tour-intro');
+    if (currentIdx < editorTourIdx) {
+      this.tearDownStageLanes();
+      this.drawStageLanes();
+    }
     this.stageRigBuilt = true;
+  }
+
+  /** Read playerState.equippedCosmetics for the seated cat and re-
+   *  create the visual layer (stacked sprites for static cosmetics +
+   *  particle handle for effects). Called from ensureStageRigForCurrentStep
+   *  so the Game→orchestrator handoff restores the wardrobe. Idempotent
+   *  in the sense that it clears the prior visuals first. */
+  private reapplyEquippedCosmeticsForSeatedCat(): void {
+    if (!this.playerState || !this.seatedCat) return;
+    // Tear down any prior visuals — cheap safety net.
+    for (const s of this.equippedCosmeticSprites) s.destroy();
+    this.equippedCosmeticSprites = [];
+    this.activeEffectHandle?.destroy();
+    this.activeEffectHandle = undefined;
+
+    const seatedCatInstance = this.playerState.ownedCats.find((c) => c.breed === this.seatedCatBreed);
+    if (!seatedCatInstance) return;
+    const slots = this.playerState.equippedCosmetics?.[seatedCatInstance.id] ?? {};
+
+    for (const cosmeticInstanceId of Object.values(slots)) {
+      if (!cosmeticInstanceId) continue;
+      const cosmeticType = this.playerState.equippedCosmeticTypes?.[cosmeticInstanceId];
+      if (!cosmeticType) continue;
+      const cosEntry = COSMETIC_CATALOG.find((c) => c.id === cosmeticType);
+      if (!cosEntry) continue;
+
+      const effectEntry = CAT_EFFECT_BY_ID[cosmeticType];
+      if (effectEntry) {
+        this.activeEffectHandle?.destroy();
+        this.activeEffectHandle = effectEntry.apply(this, this.seatedCat, this.seatedCat.scaleX);
+        continue;
+      }
+
+      const renderId = cosEntry.sourceFrame?.match(/^cosmetic_(c\d+)_/)?.[1] ?? cosmeticType;
+      const frame = `cosmetic_${renderId}_idle_00`;
+      const sprite = this.add
+        .sprite(this.seatedCat.x, this.seatedCat.y, AssetKeys.Atlas.Cosmetics, frame)
+        .setOrigin(0.5, 1)
+        .setScale(this.seatedCat.scaleX)
+        .setDepth(-90)
+        .setAlpha(0);
+      const cosmeticAnimKey = this.ensureCosmeticIdleAnim(renderId);
+      if (cosmeticAnimKey) sprite.play(cosmeticAnimKey, true);
+      if (cosEntry.tint) {
+        sprite.setTint(parseInt(cosEntry.tint.replace('#', ''), 16));
+      }
+      this.equippedCosmeticSprites.push(sprite);
+    }
   }
 
   /** Toggle the persistent stage rig's visibility. Called as
@@ -1490,23 +1572,20 @@ export class TutorialOrchestrator extends Scene {
    *  "when you're ready, press rehearse" beat. */
   private renderEditorMock(demoCount: number, highlightRehearse = false): void {
     this.tearDownEditorMock();
-    // Hide the persistent stage lanes (rhythm bars beneath the cat) but
-    // KEEP the seated cat onscreen — Tim spec: "he should remain in his
-    // position on the stage basically from when we are in the charts for
-    // the tutorial until the end of the tutorial, he can be overlayed
-    // on top for menus and graphics but he should never disappear."
-    // Cat depth lifts above the editor mock objects (max depth ~55) so
-    // the cat sits in front of the chart grid like a stage-bound cameo.
-    for (const gfx of this.stageLaneGfx) {
-      const node = gfx as Phaser.GameObjects.GameObject & { setVisible?: (v: boolean) => void };
-      node.setVisible?.(false);
-    }
-    const CAT_ABOVE_MOCK_DEPTH = 1100;
-    this.seatedCat?.setDepth(CAT_ABOVE_MOCK_DEPTH);
-    this.seatedCatNameLabel?.setDepth(CAT_ABOVE_MOCK_DEPTH + 1);
-    for (const sprite of this.equippedCosmeticSprites) {
-      sprite.setDepth(CAT_ABOVE_MOCK_DEPTH);
-    }
+    // Retire the chart lanes permanently — Tim spec: "once we get to
+    // the edit section of the tutorial hide the chart it should never
+    // appear back." Destroys the stage rhythm-bars if any are still
+    // hanging around from switchToRehearsalStage; they don't come back
+    // for the rest of the tutorial because ensureStageRigForCurrentStep
+    // no longer re-draws them post-editor.
+    this.tearDownStageLanes();
+    // Cat stays at its default -100 depth so the editor mock (opaque
+    // banner + 0.55-alpha lane washes at depth 50) renders IN FRONT of
+    // her — she reads as a stage-bound presence behind the editor UI
+    // (Tim: "he is not behind the editor" → he SHOULD be behind, which
+    // is fixed by not bumping depth here). Cosmetics stay at -90 (just
+    // above the cat, below the mock). The bg venue is at -150, so the
+    // cat is still visible on the venue where the mock is translucent.
     const { width, height } = this.scale;
 
     // Full-canvas layout per Tim image 7. Dimensions match ChartEditor

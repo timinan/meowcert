@@ -58,6 +58,11 @@ const emptyChart = () => ({
   slideReturns: [],
   updatedAt: Date.now(),
 });
+// Mock equipped state so the render harness verifies cosmetic + effect
+// reapplication after Game→orchestrator handoff. Butters gets Grey
+// Glasses (static, face slot) and Sparkles (effect).
+const MOCK_GLASSES_INSTANCE = 'inst-c2-1';
+const MOCK_SPARKLE_INSTANCE = 'inst-effect-sparkle-1';
 const mockPlayerState = (step = 'editor-tour-intro') => ({
   username: 'tester',
   coins: 100,
@@ -65,8 +70,13 @@ const mockPlayerState = (step = 'editor-tour-intro') => ({
     { id: MOCK_OWNED_CAT_ID, breed: 'cat13', name: 'BUTTERS', rarity: 'common' },
   ],
   ownedCosmetics: [],
-  equippedCosmetics: {},
-  equippedCosmeticTypes: {},
+  equippedCosmetics: {
+    [MOCK_OWNED_CAT_ID]: { face: MOCK_GLASSES_INSTANCE, effect: MOCK_SPARKLE_INSTANCE },
+  },
+  equippedCosmeticTypes: {
+    [MOCK_GLASSES_INSTANCE]: 'c2',
+    [MOCK_SPARKLE_INSTANCE]: 'effect-sparkle',
+  },
   bestScore: 0,
   onboardingDone: false,
   tutorialStep: step,
@@ -134,7 +144,7 @@ function serveStatic() {
   console.log(`serving on ${url}`);
 
   const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
 
   page.on('console', (msg) => {
     const t = msg.type();
