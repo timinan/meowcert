@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Cat Variants — meowcert tools</title>
+  <style>
+    body { margin: 0; padding: 16px; background: #14141c; color: #e8e8f0; font: 14px/1.5 -apple-system, system-ui, sans-serif; }
+    h1 { font-size: 20px; margin: 8px 0 4px; }
+    h2 { font-size: 16px; margin: 24px 0 8px; }
+    p.hint { color: #9a9ab0; margin: 0 0 16px; max-width: 720px; }
+    code { background: #22222e; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+    .card { background: #1c1c26; border: 1px solid #2e2e3c; border-radius: 10px; padding: 12px 16px; margin: 12px 0; }
+    .card h3 { margin: 0 0 2px; font-size: 15px; }
+    .card .meta { color: #9a9ab0; font-size: 12px; margin-bottom: 8px; }
+    .card img { max-width: 100%; image-rendering: pixelated; border-radius: 6px; background: #14141c; }
+    details { margin-top: 16px; }
+    details img { max-width: 100%; image-rendering: pixelated; border-radius: 6px; }
+    summary { cursor: pointer; color: #9a9ab0; }
+  </style>
+  <script src="/tools-nav.js"></script>
+</head>
+<body>
+  <h1>Cat Variants</h1>
+  <p class="hint">
+    Breeds generated from the frozen cat2 region template. A new breed is a small
+    JSON config in <code>variants/cats/</code> — run
+    <code>python3 scripts/gen-cat-variant.py variants/cats/&lt;config&gt;.json</code>
+    and refresh this page. Pipeline spec: <code>docs/cat-template-pipeline.md</code>.
+    Shipping still goes through the Cat Calibrator → sync → <code>npm run extract:assets</code>.
+  </p>
+
+  <div id="variants"><em>loading…</em></div>
+
+  <details>
+    <summary>Template QA sheet (region labels, all 63 frames — the frozen ground truth)</summary>
+    <img src="/assets-raw/cat-template/qa-sheet.png" alt="template QA sheet"/>
+  </details>
+
+  <script>
+    fetch('/variants/cats/manifest.json')
+      .then(r => r.json())
+      .then(entries => {
+        const box = document.getElementById('variants');
+        box.innerHTML = '';
+        const real = entries.filter(e => e.id !== 'cat999');
+        if (!real.length) { box.innerHTML = '<em>no variants yet</em>'; return; }
+        for (const e of real) {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <h3>${e.name} <code>${e.id}</code></h3>
+            <div class="meta">config: <code>variants/cats/${e.config}</code></div>
+            ${e.preview ? `<img src="/variants/cats/${e.preview}" alt="${e.name} preview"/>` : '<em>no preview generated yet</em>'}`;
+          box.appendChild(card);
+        }
+      })
+      .catch(() => { document.getElementById('variants').innerHTML = '<em>manifest.json missing — run the generator once</em>'; });
+  </script>
+</body>
+</html>

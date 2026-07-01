@@ -1,0 +1,20 @@
+[
+  {
+    "id": "cat200",
+    "name": "Buttermilk",
+    "config": "cat200-buttermilk.json",
+    "preview": "previews/cat200.png"
+  },
+  {
+    "id": "cat201",
+    "name": "Frost",
+    "config": "cat201-frost.json",
+    "preview": "previews/cat201.png"
+  },
+  {
+    "id": "cat999",
+    "name": "IdentityTest",
+    "config": "cat999-identity-test.json",
+    "preview": null
+  }
+]

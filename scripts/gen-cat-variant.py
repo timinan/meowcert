@@ -133,8 +133,27 @@ def generate(cfg_path):
     print(f'{cid} ({name}): {len(frames)} frames → {out_dir}, preview → {preview}')
 
 
+def write_manifest():
+    """Rebuild variants/cats/manifest.json from every config on disk —
+    the Cat Variants tools page renders from this."""
+    entries = []
+    for cfg_path in sorted(Path('variants/cats').glob('*.json')):
+        if cfg_path.name == 'manifest.json':
+            continue
+        cfg = json.loads(cfg_path.read_text())
+        preview = PREVIEWS / f"{cfg['id']}.png"
+        entries.append({
+            'id': cfg['id'],
+            'name': cfg['name'],
+            'config': cfg_path.name,
+            'preview': f"previews/{cfg['id']}.png" if preview.exists() else None,
+        })
+    Path('variants/cats/manifest.json').write_text(json.dumps(entries, indent=2))
+
+
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         raise SystemExit(__doc__)
     for cfg_path in sys.argv[1:]:
         generate(cfg_path)
+    write_manifest()

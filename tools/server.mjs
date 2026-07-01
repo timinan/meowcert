@@ -66,6 +66,14 @@ const TOOLS = {
     savePath: path.join(TOOL_DIR, 'cats', 'cats.json'),
     description: 'Name, rarity, scale, animation preview, and tint variants for the 6 base cats.',
   },
+  'cat-variants': {
+    label: 'Cat Variants',
+    href: '/tools/cat-variants/index.html',
+    // No save endpoint — read-only gallery of template-generated breeds.
+    // Path is set so the TOOLS table stays uniform; nothing reads it.
+    savePath: path.join(TOOL_DIR, 'cat-variants', 'placeholder.json'),
+    description: 'Breeds generated from the frozen cat2 region template (scripts/gen-cat-variant.py). Review previews here before registering them in the Cat Calibrator.',
+  },
   themes: {
     label: 'Theme Calibrator',
     href: '/tools/themes/calibrator.html',
