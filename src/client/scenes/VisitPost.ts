@@ -604,21 +604,24 @@ export class VisitPost extends Scene {
       .setOrigin(0, 0)
       .setDepth(1500);
 
-    // V21 logo centered upper-mid, matches Preloader's y=0.36 anchor +
-    // 220-wide size scaled for the wider portrait vs the 200 used in
-    // Preloader's loading screen. NEAREST scaling preserves the pixel
-    // grid at this downscale.
+    // V21 logo centered upper-mid at y=0.36 — exact same anchor
+    // Preloader's loading screen uses so the feed splash card → Devvit
+    // modal → Preloader → VisitPost transition reads as "logo stays
+    // put, bottom UI morphs". NEAREST scaling preserves the pixel grid
+    // at this downscale.
     const logo = this.add
       .image(cx, height * 0.36, AssetKeys.Image.Logo)
       .setDisplaySize(220, 220)
       .setDepth(1501);
     (logo.texture.source[0] as { scaleMode: number }).scaleMode = 0;
 
-    // PLAY NOW button — same size + brand yellow as the normal PLAY
-    // button. Sits lower (y=0.72) so the logo dominates the composition.
+    // PLAY NOW button — same brand yellow as the normal PLAY button.
+    // Centered on y=0.62, matching Preloader's loading-bar center so
+    // the loading-bar → PLAY button swap during the boot sequence
+    // reads as a hand-off at the same pixel row.
     const btnW = 220;
     const btnH = 48;
-    const btnY = height * 0.72;
+    const btnY = height * 0.62;
     const btnBg = this.add
       .rectangle(cx, btnY, btnW, btnH, 0xffd34d, 1)
       .setDepth(1501)
@@ -635,6 +638,19 @@ export class VisitPost extends Scene {
     btnBg.on('pointerover', () => btnBg.setFillStyle(0xffe680, 1));
     btnBg.on('pointerout', () => btnBg.setFillStyle(0xffd34d, 1));
     btnBg.on('pointerdown', () => this.onEmptyChartPlayNow());
+
+    // Subtle Butters memorial — two ticks lighter than the #1a0a2e
+    // brand purple so it reads as a ghost mark below the CTA, not
+    // chrome. Same easter-egg mirror the splash card renders under
+    // its PLAY button.
+    this.add
+      .text(cx, height * 0.70, '(in memory of Butters)', {
+        fontFamily: 'Pixeloid Sans, sans-serif',
+        fontSize: '9px',
+        color: '#2a1a4a',
+      })
+      .setOrigin(0.5)
+      .setDepth(1502);
   }
 
   /** PLAY NOW handler for the empty-chart splash. Routes to the tutorial

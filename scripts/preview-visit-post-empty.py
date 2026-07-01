@@ -33,7 +33,7 @@ logo = logo.resize((220, 220), Image.NEAREST)
 logo_cx, logo_cy = W // 2, int(H * 0.36)
 img.paste(logo, (logo_cx - 110, logo_cy - 110), logo)
 
-btn_cx, btn_cy = W // 2, int(H * 0.72)
+btn_cx, btn_cy = W // 2, int(H * 0.62)
 btn_w, btn_h = 220, 48
 draw = ImageDraw.Draw(img)
 draw.rectangle(
@@ -49,6 +49,16 @@ label = 'PLAY NOW'
 tb = draw.textbbox((0, 0), label, font=font)
 tw, th = tb[2] - tb[0], tb[3] - tb[1]
 draw.text((btn_cx - tw // 2, btn_cy - th // 2 - 2), label, fill=BTN_TEXT, font=font)
+
+# Butters memorial — barely visible below the button.
+try:
+    small_font = ImageFont.truetype('/System/Library/Fonts/Menlo.ttc', 10)
+except Exception:
+    small_font = font
+memoriam = '(in memory of Butters)'
+mb = draw.textbbox((0, 0), memoriam, font=small_font)
+mw = mb[2] - mb[0]
+draw.text((W // 2 - mw // 2, int(H * 0.70)), memoriam, fill=(0x2a, 0x1a, 0x4a), font=small_font)
 
 img.save(OUT)
 print(f'wrote {OUT.relative_to(ROOT)}  ({W}x{H})')
@@ -68,37 +78,46 @@ stage_draw.rectangle(
     fill=(0x1a, 0x0a, 0x2e),
 )
 
-# Logo centered vertically inside the stage. Width 66% capped at 260,
-# height maintains aspect (square logo).
+# Logo centered at 36% of viewport — matches Preloader loading-screen
+# anchor exactly so the feed splash → Devvit modal → Preloader chain
+# reads as "logo stays put".
 logo2 = Image.open(LOGO).convert('RGBA')
 LOGO_W = min(260, int(CARD_W * 0.66))
 logo2 = logo2.resize((LOGO_W, LOGO_W), Image.NEAREST)
-stage_h = (CARD_H - STAGE_INSET_BOT) - STAGE_INSET_TOP
 logo2_cx = CARD_W // 2
-logo2_cy = STAGE_INSET_TOP + stage_h // 2
+logo2_cy = int(CARD_H * 0.36)
 card.paste(logo2, (logo2_cx - LOGO_W // 2, logo2_cy - LOGO_W // 2), logo2)
 
-# Play button — matches splash.css (full-width minus 16px, yellow).
-BTN_H = 46
-BTN_MARGIN_X = 8
-BTN_MARGIN_BOT = 20
-btn_top = CARD_H - BTN_MARGIN_BOT - BTN_H
-btn_bot = CARD_H - BTN_MARGIN_BOT
+# Play button centered on 62% of viewport — Preloader loading-bar
+# center. Same width bounds as CSS (calc(100% - 32px), max 260).
 card_draw = ImageDraw.Draw(card)
+BTN_H = 46
+btn_w_target = min(260, CARD_W - 32)
+btn_cx = CARD_W // 2
+btn_cy = int(CARD_H * 0.62)
 card_draw.rectangle(
-    [BTN_MARGIN_X, btn_top, CARD_W - BTN_MARGIN_X, btn_bot],
+    [btn_cx - btn_w_target // 2, btn_cy - BTN_H // 2,
+     btn_cx + btn_w_target // 2, btn_cy + BTN_H // 2],
     fill=BTN,
-    outline=BTN,
-    width=2,
 )
 btn_label = '▶  TAP TO PLAY'
 tb2 = card_draw.textbbox((0, 0), btn_label, font=font)
 tw2, th2 = tb2[2] - tb2[0], tb2[3] - tb2[1]
 card_draw.text(
-    (CARD_W // 2 - tw2 // 2, (btn_top + btn_bot) // 2 - th2 // 2 - 2),
+    (btn_cx - tw2 // 2, btn_cy - th2 // 2 - 2),
     btn_label,
     fill=BTN_TEXT,
     font=font,
+)
+
+# Butters memorial under the button.
+mb2 = card_draw.textbbox((0, 0), memoriam, font=small_font)
+mw2 = mb2[2] - mb2[0]
+card_draw.text(
+    (CARD_W // 2 - mw2 // 2, int(CARD_H * 0.70)),
+    memoriam,
+    fill=(0x2a, 0x1a, 0x4a),
+    font=small_font,
 )
 
 OUT_CARD = OUT_DIR / 'empty-splash-card.png'

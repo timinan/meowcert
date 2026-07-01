@@ -109,29 +109,75 @@
 /* === Empty-chart mode (default seeded post + any empty publishes) =====
        Body class flipped by splash.ts when /api/preview-image returns
        hasChart=false OR the post has no owner mapping (404). Swaps the
-       marquee for the V21 logo, stretches the stage to fill the flex
-       column, and hides the info panel + plays banner so the CTA reads
-       as "install my game" instead of "0 plays". */
-.empty-chart .stage {
-  aspect-ratio: unset;
-  flex: 1 1 auto;
-  min-height: 300px;
-  background-color: #1a0a2e;
-  -webkit-mask-image: none;
-  mask-image: none;
-}
-.empty-chart .marquee-fallback {
-  display: none;
-}
-.empty-chart .brand-logo {
-  display: block;
+       marquee for the V21 logo, positions logo + PLAY button at the
+       exact same viewport % offsets Preloader uses for the loading
+       screen (logo center at 36vh, button center at 62vh) so the
+       feed → Devvit modal → Preloader → VisitPost transition reads as
+       "logo stays put, bottom UI morphs". Hides info + plays banner
+       so the CTA reads as "install my game" instead of "0 plays". */
+.empty-chart .splash {
+  position: relative;
+  min-height: 100vh;
+  padding: 0;
 }
 .empty-chart .info,
 .empty-chart .plays-banner {
   display: none !important;
 }
+.empty-chart .marquee-fallback {
+  display: none;
+}
+.empty-chart .stage {
+  position: absolute;
+  top: 36%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(66vw, 260px);
+  max-width: 260px;
+  aspect-ratio: 1;
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  overflow: visible;
+  -webkit-mask-image: none;
+  mask-image: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.empty-chart .brand-logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 260px;
+}
 .empty-chart .play-button {
-  margin: 12px 0 16px;
+  position: absolute;
+  top: 62%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(100% - 32px);
+  max-width: 260px;
+  margin: 0;
+}
+
+/* Barely-visible memorial line under the play button. Hidden outside
+   empty-chart mode. Tone: two ticks lighter than the #1a0a2e brand
+   purple so it reads as a ghost mark, not chrome. */
+.butters-memoriam {
+  display: none;
+  font-family: "Pixeloid Sans", "Courier New", Menlo, monospace;
+  font-size: 9px;
+  color: #2a1a4a;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+.empty-chart .butters-memoriam {
+  display: block;
+  position: absolute;
+  top: 70%;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 /* === Info panel — matches the in-game dark-purple box with yellow
