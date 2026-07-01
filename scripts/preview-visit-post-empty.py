@@ -50,15 +50,17 @@ tb = draw.textbbox((0, 0), label, font=font)
 tw, th = tb[2] - tb[0], tb[3] - tb[1]
 draw.text((btn_cx - tw // 2, btn_cy - th // 2 - 2), label, fill=BTN_TEXT, font=font)
 
-# Butters memorial — barely visible below the button.
+# Butters memorial — pinned to the very bottom in the slightly lighter
+# #4a3872 tone so it's visible but stays muted.
 try:
     small_font = ImageFont.truetype('/System/Library/Fonts/Menlo.ttc', 10)
 except Exception:
     small_font = font
 memoriam = '(in memory of Butters)'
+MEMORIAM_FILL = (0x4a, 0x38, 0x72)
 mb = draw.textbbox((0, 0), memoriam, font=small_font)
-mw = mb[2] - mb[0]
-draw.text((W // 2 - mw // 2, int(H * 0.70)), memoriam, fill=(0x2a, 0x1a, 0x4a), font=small_font)
+mw, mh = mb[2] - mb[0], mb[3] - mb[1]
+draw.text((W // 2 - mw // 2, H - 20 - mh // 2), memoriam, fill=MEMORIAM_FILL, font=small_font)
 
 img.save(OUT)
 print(f'wrote {OUT.relative_to(ROOT)}  ({W}x{H})')
@@ -110,13 +112,14 @@ card_draw.text(
     font=font,
 )
 
-# Butters memorial under the button.
+# Butters memorial pinned to the very bottom, matching splash.css's
+# `bottom: 12px` rule.
 mb2 = card_draw.textbbox((0, 0), memoriam, font=small_font)
-mw2 = mb2[2] - mb2[0]
+mw2, mh2 = mb2[2] - mb2[0], mb2[3] - mb2[1]
 card_draw.text(
-    (CARD_W // 2 - mw2 // 2, int(CARD_H * 0.70)),
+    (CARD_W // 2 - mw2 // 2, CARD_H - 12 - mh2),
     memoriam,
-    fill=(0x2a, 0x1a, 0x4a),
+    fill=MEMORIAM_FILL,
     font=small_font,
 )
 

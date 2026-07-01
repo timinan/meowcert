@@ -75,6 +75,18 @@ export class Preloader extends Scene {
       })
       .setOrigin(0.5);
 
+    // Subtle Butters memorial at the very bottom — same #4a3872 tone
+    // and 9px size as the splash card + VisitPost empty splash, so
+    // the tribute line stays anchored to the same viewport row across
+    // the whole feed → modal → Preloader → VisitPost handoff.
+    this.add
+      .text(cx, height - 20, '(in memory of Butters)', {
+        fontFamily: 'Pixeloid Sans, monospace',
+        fontSize: '9px',
+        color: '#4a3872',
+      })
+      .setOrigin(0.5);
+
     this.load.on('progress', (progress: number) => {
       fill.width = 2 + inner * progress;
     });

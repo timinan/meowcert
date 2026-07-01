@@ -161,21 +161,24 @@
   margin: 0;
 }
 
-/* Barely-visible memorial line under the play button. Hidden outside
-   empty-chart mode. Tone: two ticks lighter than the #1a0a2e brand
-   purple so it reads as a ghost mark, not chrome. */
+/* Subtle memorial line pinned to the bottom of the empty-chart splash.
+   Hidden outside empty-chart mode. Tone: #4a3872 — visibly lighter
+   than the #1a0a2e brand purple but well below the yellow / cream
+   text tiers so it reads as a quiet tribute at the edge of the frame.
+   Same treatment lives on Preloader + VisitPost's empty splash so the
+   line stays put across the whole loading-to-play sequence. */
 .butters-memoriam {
   display: none;
   font-family: "Pixeloid Sans", "Courier New", Menlo, monospace;
   font-size: 9px;
-  color: #2a1a4a;
+  color: #4a3872;
   text-align: center;
   letter-spacing: 0.5px;
 }
 .empty-chart .butters-memoriam {
   display: block;
   position: absolute;
-  top: 70%;
+  bottom: 12px;
   left: 50%;
   transform: translateX(-50%);
 }

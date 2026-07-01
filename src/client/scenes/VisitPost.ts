@@ -639,15 +639,17 @@ export class VisitPost extends Scene {
     btnBg.on('pointerout', () => btnBg.setFillStyle(0xffd34d, 1));
     btnBg.on('pointerdown', () => this.onEmptyChartPlayNow());
 
-    // Subtle Butters memorial — two ticks lighter than the #1a0a2e
-    // brand purple so it reads as a ghost mark below the CTA, not
-    // chrome. Same easter-egg mirror the splash card renders under
-    // its PLAY button.
+    // Subtle Butters memorial — visibly lighter than the #1a0a2e brand
+    // purple but well below the yellow / cream text tiers so it reads
+    // as a quiet tribute at the edge of the frame. Pinned to the very
+    // bottom so it mirrors the same line Preloader + the splash card
+    // paint at the same viewport row across the whole loading-to-play
+    // sequence.
     this.add
-      .text(cx, height * 0.70, '(in memory of Butters)', {
+      .text(cx, height - 20, '(in memory of Butters)', {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontSize: '9px',
-        color: '#2a1a4a',
+        color: '#4a3872',
       })
       .setOrigin(0.5)
       .setDepth(1502);
