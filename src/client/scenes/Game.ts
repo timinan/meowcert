@@ -2898,6 +2898,30 @@ export class Game extends Scene {
     butters.play('cat13_idle', true);
     this.tutorialButtersGfx.push(butters);
 
+    // Grey glasses — narrator Butters' signature cosmetic (see
+    // tutorial-cat.ts HOST_ACCESSORY_FRAME). Was missing from the
+    // in-chart seat which reads as "butters lost his cosmetic in the
+    // chart screen" (Tim playtest 2026-06-30). Registered lazily
+    // because the cosmetic atlas anims aren't preloaded.
+    const glasses = this.add
+      .sprite(cx, catY, AssetKeys.Atlas.Cosmetics, 'cosmetic_c2_idle_00')
+      .setOrigin(0.5, 1)
+      .setScale(CAT_SCALE);
+    const glassesAnimKey = 'cosmetic_c2_idle';
+    if (!this.anims.exists(glassesAnimKey)) {
+      const frames = this.anims.generateFrameNames(AssetKeys.Atlas.Cosmetics, {
+        prefix: 'cosmetic_c2_idle_',
+        start: 0,
+        end: 7,
+        zeroPad: 2,
+      });
+      if (frames.length > 0) {
+        this.anims.create({ key: glassesAnimKey, frames, frameRate: 8, repeat: -1 });
+      }
+    }
+    if (this.anims.exists(glassesAnimKey)) glasses.play(glassesAnimKey, true);
+    this.tutorialButtersGfx.push(glasses);
+
     const nameLabel = this.add
       .text(cx, catY + 4, 'BUTTERS', {
         fontFamily: '"Courier New", monospace',
