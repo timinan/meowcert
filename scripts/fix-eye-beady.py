@@ -282,17 +282,22 @@ def fix_frame(a: np.ndarray, fallback_eyes: list | None = None) -> tuple[np.ndar
         is_left = cx < frame_w / 2
 
         if is_blink:
-            # Closed slit: anchor at SAME X centroid but Y shifted down ~2 px
-            # so the slit sits at the lower-lid line, not centered on the open
-            # eye's vertical midpoint. cat42's frame 7 places the slit at
-            # cy_open + ~2 — verified against reference.
+            # Closed slit: anchor at SAME X centroid but Y shifted DOWN so the
+            # slit lands at the LOWER half of the open-eye socket (matches how
+            # eyelids naturally close down onto the lower rim). Tim 2026-06-30
+            # video review: `ty = round(cy)` placed the slit's TOP at the
+            # centroid → slit sat in the UPPER half, reading as "eyes drifted
+            # up". Nudging ty by +2 pushes the slit to the lower-eyelid line.
             tpl = BEADY_CLOSED_LEFT if is_left else BEADY_CLOSED_RIGHT
             th, tw = CLOSED_H, CLOSED_W
             # Closed template center: row 1 (middle of 3), col 4 (middle of 9)
             tx = int(round(cx - 4))
-            ty = int(round(cy))  # cy of open eye → top of closed slit
-            erase_top_pad = 4    # wipe original eye art that's ABOVE the slit
-            erase_bot_pad = 2
+            ty = int(round(cy + 2))  # +2 → slit sits at lower eyelid line
+            # Tim 2026-06-30: bump bot pad 2→7 so the artist's original blink
+            # frame's LOWER eyelid outline gets erased. Previously survived as
+            # a thin black bar just below the closed slit.
+            erase_top_pad = 4
+            erase_bot_pad = 7
         else:
             tpl = BEADY_LEFT if is_left else BEADY_RIGHT
             th, tw = TEMPLATE_H, TEMPLATE_W
