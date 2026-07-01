@@ -184,9 +184,20 @@ export class Cat {
     // the registered handler and stash the handle. Pass the cat's render
     // scale so flame width / particle size / spread amplify when seated
     // cats are scaled up (Game scene seats at 1.4×, DressingRoom at 1×).
+    //
+    // Stage boost — Tim 2026-06-30: 'effects can be more pronounced and
+    // intense on the stage for the cats but keep the effects how they are
+    // for the fuzzballs'. Small preview contexts (DressingRoom hero at
+    // 1.15×, box-reveal placeholders, tap-target fuzzballs) stay at their
+    // natural scale; anything drawn at ≥1.3× (Decorate + Game seated cats
+    // at 1.4×, visitor-mode preview at 1.6×) gets a 1.4× radius/thickness
+    // boost so the effect really lives on the cat rather than reading as
+    // a soft aura at the feet.
     const effect = getEffectById(cosmeticId);
     if (effect) {
-      this.activeEffects[slot] = effect.apply(this.scene, this.sprite, this.sprite.scaleX);
+      const s = this.sprite.scaleX;
+      const boosted = s >= 1.3 ? s * 1.4 : s;
+      this.activeEffects[slot] = effect.apply(this.scene, this.sprite, boosted);
       return;
     }
 
