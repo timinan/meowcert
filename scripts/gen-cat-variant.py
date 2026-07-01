@@ -43,7 +43,7 @@ def from_hsv(h, s, v):
     return tuple(round(c * 255) for c in colorsys.hsv_to_rgb(h % 1.0, min(max(s, 0), 1), min(max(v, 0), 1)))
 
 
-def derive(base_rgb, ref_base, ref_target):
+def derive(base_rgb, ref_base, ref_target, v_cap=None):
     """Color for a ramp slot: apply cat2's base→slot HSV relationship to
     a new base. Hue shifts add; S/V scale multiplicatively (with S
     falling back to the reference's own S for grey bases, so grey coats
@@ -55,6 +55,8 @@ def derive(base_rgb, ref_base, ref_target):
     h = bh + (th - rh)
     s = bs * (ts / rs) if rs > 0 else bs
     v = bv * (tv / rv) if rv > 0 else bv
+    if v_cap is not None:
+        v = min(v, v_cap)
     return from_hsv(h, s, v)
 
 
@@ -75,7 +77,11 @@ def build_palette(cfg):
             return
         base = hex_rgb(val)
         for slot in slots:
-            pal[slot] = derive(base, ref_base, CAT2[slot])
+            # Pupils/nose/mouth must stay dark on light coats or the eye
+            # reads as a milky film — cap derived accent brightness at
+            # cat2's own accent level.
+            cap = 0.32 if slot == 'accent' else None
+            pal[slot] = derive(base, ref_base, CAT2[slot], v_cap=cap)
 
     ramp('coat', ['coat1', 'coat2', 'coat3', 'accent'], CAT2['coat1'])
     ramp('markings', ['mark1', 'mark2', 'mark3'], CAT2['mark1'])
@@ -120,14 +126,14 @@ def generate(cfg_path):
                 op[x, y] = (*sp[x, y][:3], 255) if region == 'fx' else (*pal[region], 255)
         out.save(out_dir / f'{cid}_{f.stem}.png')
 
-    # Preview contact sheet: one representative frame per animation, 4x.
-    picks = ['idle_00', 'meow_05', 'hiss_05', 'lick_04', 'sleep_05', 'stretch_06']
+    # Preview contact sheet: the four anims that actually ship, 4x.
+    picks = ['idle_00', 'lick_04', 'meow_05', 'hiss_05']
     SCALE = 4
-    sheet = Image.new('RGBA', (W * SCALE * 3, H * SCALE * 2), (30, 30, 40, 255))
+    sheet = Image.new('RGBA', (W * SCALE * 2, H * SCALE * 2), (30, 30, 40, 255))
     for i, pick in enumerate(picks):
         im = Image.open(out_dir / f'{cid}_{pick}.png')
         im = im.resize((W * SCALE, H * SCALE), Image.NEAREST)
-        sheet.paste(im, ((i % 3) * W * SCALE, (i // 3) * H * SCALE), im)
+        sheet.paste(im, ((i % 2) * W * SCALE, (i // 2) * H * SCALE), im)
     preview = PREVIEWS / f'{cid}.png'
     sheet.save(preview)
     print(f'{cid} ({name}): {len(frames)} frames → {out_dir}, preview → {preview}')
