@@ -1,0 +1,453 @@
+<!doctype html>
+<html><head><meta charset="utf-8"/>
+<title>meowcert · economy</title>
+<style>
+  body { margin: 0; background: #1a0a2e; color: #fff;
+    font-family: system-ui, -apple-system, sans-serif; padding-top: 50px; }
+  .hdr { padding: 14px 20px 10px; border-bottom: 1px solid #341c5a;
+    position: sticky; top: 40px; background: #1a0a2e; z-index: 50; }
+  .hdr h1 { margin: 0 0 4px; font-size: 18px; color: #ffd34d; }
+  .hdr .sub { color: #c0a0e6; font-size: 12px; max-width: 980px; }
+  section { padding: 20px; border-bottom: 1px solid #341c5a; }
+  section h2 { margin: 0 0 6px; font-size: 16px; color: #ffd34d; }
+  section .desc { color: #c0a0e6; font-size: 12px; margin-bottom: 14px; max-width: 900px; line-height: 1.5; }
+  .card { background: #261540; border: 1px solid #4a2e7a; border-radius: 8px; padding: 16px; }
+  .grid { display: grid; gap: 14px; }
+  .grid.c2 { grid-template-columns: 1fr 1fr; }
+  .grid.c3 { grid-template-columns: 1fr 1fr 1fr; }
+  .grid.c4 { grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 900px) { .grid.c2, .grid.c3, .grid.c4 { grid-template-columns: 1fr; } }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { border: 1px solid #4a2e7a; padding: 6px 10px; text-align: left; }
+  th { background: #341c5a; color: #ffd34d; font-size: 12px; }
+  td { color: #e0d0f5; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+  .pill.common { background: #4a5568; color: #e2e8f0; }
+  .pill.uncommon { background: #2e6b3a; color: #c6f6d5; }
+  .pill.rare { background: #2b4d8f; color: #bee3f8; }
+  .pill.legendary { background: #7a5a12; color: #ffd34d; }
+  label { font-size: 12px; color: #c0a0e6; display: block; margin: 8px 0 3px; }
+  select, input[type=number] { background: #1a0a2e; color: #fff; border: 1px solid #4a2e7a;
+    border-radius: 4px; padding: 5px 8px; font-size: 13px; width: 100%; box-sizing: border-box; }
+  input[type=range] { width: 100%; }
+  .check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #e0d0f5; margin: 6px 0; }
+  .check input { width: auto; }
+  .result-big { font-size: 30px; font-weight: 800; color: #ffd34d; }
+  .breakdown { font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: #c0a0e6;
+    line-height: 1.7; margin-top: 10px; white-space: pre; }
+  .flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0; }
+  .node { background: #341c5a; border: 1px solid #6b4dab; border-radius: 8px; padding: 10px 14px;
+    font-size: 13px; font-weight: 700; color: #fff; text-align: center; }
+  .node .tag { display: block; font-size: 10px; font-weight: 400; color: #c0a0e6; margin-top: 3px; }
+  .node.gold { border-color: #ffd34d; color: #ffd34d; }
+  .arrow { color: #ffd34d; font-size: 18px; font-weight: 700; }
+  .faucet { border-left: 3px solid #ffd34d; padding: 8px 12px; background: #261540;
+    border-radius: 0 6px 6px 0; margin-bottom: 8px; font-size: 13px; color: #e0d0f5; }
+  .faucet b { color: #ffd34d; }
+  .bar-row { display: grid; grid-template-columns: 84px 1fr 150px; gap: 8px; align-items: center;
+    margin: 4px 0; font-size: 12px; }
+  .bar-track { background: #1a0a2e; border: 1px solid #341c5a; border-radius: 4px; height: 16px;
+    position: relative; overflow: hidden; }
+  .bar-fill { position: absolute; left: 0; top: 0; bottom: 0; }
+  .bar-target { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #ffd34d; }
+  .delta { font-variant-numeric: tabular-nums; color: #c0a0e6; }
+  .delta.over { color: #7ee08a; }
+  .delta.under { color: #ff9d9d; }
+  .muted { color: #8a6fb8; font-size: 11px; }
+  .warn { background: #4d1f1f; border: 1px solid #8f3a3a; border-radius: 6px; padding: 8px 12px;
+    color: #ffc0c0; font-size: 12px; margin-top: 10px; }
+</style></head>
+<body>
+  <div class="hdr">
+    <h1>economy</h1>
+    <div class="sub">
+      The full scoring → coins → boxes → collection design, tunable in one place.
+      Every number on this page reads from the <code>ECONOMY</code> config at the top of the inline script —
+      edit there, reload, retune. Spec: <code>PM-OS/outputs/portfolio/meowcert/economy-design-2026-07-01.md</code>.
+      Catalog counts regen: <code>python3 scripts/gen-economy-data.py</code>.
+    </div>
+  </div>
+
+  <section>
+    <h2>1 · The loop</h2>
+    <div class="desc">Play well → earn coins → open boxes → show off → your show earns while you're away → come back to collect.</div>
+    <div class="flow">
+      <div class="node">PLAY SHOWS<span class="tag">accuracy tier + skill bonuses × difficulty</span></div>
+      <div class="arrow">→</div>
+      <div class="node gold">COINS<span class="tag">one currency, four faucets</span></div>
+      <div class="arrow">→</div>
+      <div class="node">BOXES<span class="tag">4 categories × 3 tiers</span></div>
+      <div class="arrow">→</div>
+      <div class="node">COLLECTION<span class="tag">~1000 items, rarity chase</span></div>
+      <div class="arrow">→</div>
+      <div class="node">SHOW OFF<span class="tag">your post = your stage</span></div>
+      <div class="arrow">↺</div>
+    </div>
+    <div class="grid c2" style="margin-top:12px;">
+      <div>
+        <div class="faucet"><b>Faucet 1 — visitor plays.</b> The primary earn. Reward calculator below.</div>
+        <div class="faucet"><b>Faucet 2 — host collect pot.</b> 25% royalty on every visitor reward, cap 300/day. "Your show earned N while you were away — COLLECT."</div>
+        <div class="faucet"><b>Faucet 3 — daily quests + login streak.</b> 3 rotating dailies (all 3 = Standard box of choice); 7-day streak (day 7 = Golden box).</div>
+        <div class="faucet"><b>Faucet 4 — weeklies, achievements, community, events.</b> Golden boxes; gold-tier achievements are the only earned Mythics.</div>
+      </div>
+      <div>
+        <div class="faucet"><b>Valve 1 — per-chart decay.</b> Same chart same day: 100% → 50% → 25% floor.</div>
+        <div class="faucet"><b>Valve 2 — daily play-income budget.</b> First 1200 coins/day from plays pay full, beyond that 10%. The master valve.</div>
+        <div class="faucet"><b>Valve 3 — own shows pay 0.</b> Owners can play their own show (leaderboard + <code>playsOnOwnShow</code> stat) but earn no coins and no self-royalty.</div>
+        <div class="faucet"><b>UI honesty.</b> When a valve triggers, the summary shows a "reduced reward" chip. Never silently pay less.</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>2 · Reward calculator</h2>
+    <div class="desc">reward = (tier base + skill bonuses) × difficulty, then anti-farm valves, +50 first comment on the post.</div>
+    <div class="grid c3">
+      <div class="card">
+        <label>Accuracy %</label>
+        <input type="range" id="calc-acc" min="0" max="100" value="88" oninput="calc()"/>
+        <div class="muted" id="calc-acc-label"></div>
+        <label>Difficulty</label>
+        <select id="calc-diff" onchange="calc()"></select>
+        <label>Max combo</label>
+        <input type="number" id="calc-combo" value="32" min="0" oninput="calc()"/>
+        <label>Perfect hits</label>
+        <input type="number" id="calc-perfects" value="24" min="0" oninput="calc()"/>
+      </div>
+      <div class="card">
+        <div class="check"><input type="checkbox" id="calc-fc" onchange="calc()"/><span>FULL COMBO (no misses, ≥30-note chart)</span></div>
+        <div class="check"><input type="checkbox" id="calc-fp" onchange="calc()"/><span>FULL PERFECT (all perfects — replaces FC)</span></div>
+        <div class="check"><input type="checkbox" id="calc-comment" onchange="calc()"/><span>First comment on this post (+50 flat)</span></div>
+        <label>Play # of this chart today (decay)</label>
+        <select id="calc-decay" onchange="calc()">
+          <option value="1">1st — 100%</option>
+          <option value="2">2nd — 50%</option>
+          <option value="3">3rd+ — 25%</option>
+        </select>
+        <div class="check"><input type="checkbox" id="calc-over" onchange="calc()"/><span>Over 1200/day play-income budget (×10%)</span></div>
+        <div class="check"><input type="checkbox" id="calc-own" onchange="calc()"/><span>Own show (pays 0)</span></div>
+      </div>
+      <div class="card">
+        <div class="muted">VISITOR EARNS</div>
+        <div class="result-big" id="calc-total">—</div>
+        <div class="muted" id="calc-host"></div>
+        <div class="breakdown" id="calc-breakdown"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>3 · Boxes</h2>
+    <div class="desc">All three tiers purchasable. Mythic is also earned — gold-tier achievements only. No duplicate pulls (backgrounds refund 50 on dupe). Pool empty → fall back to nearest non-empty tier.</div>
+    <div id="box-tables" class="grid c3"></div>
+  </section>
+
+  <section>
+    <h2>4 · Persona budget simulator</h2>
+    <div class="desc">Does the pacing hold? Target: engaged daily player earns 2-3 boxes/day; grinder ceiling ~1850/day + quest box.</div>
+    <div class="grid c2">
+      <div class="card">
+        <label>Rewarded plays / day: <b id="sim-plays-label"></b></label>
+        <input type="range" id="sim-plays" min="0" max="30" value="5" oninput="sim()"/>
+        <label>Typical result</label>
+        <select id="sim-tier" onchange="sim()">
+          <option value="25">Fail (25)</option>
+          <option value="100">Pass (100)</option>
+          <option value="200" selected>Great (200)</option>
+          <option value="300">Perfect (300)</option>
+          <option value="400">Flawless (400)</option>
+        </select>
+        <label>Typical difficulty</label>
+        <select id="sim-diff" onchange="sim()"></select>
+        <label>Typical skill bonus</label>
+        <select id="sim-bonus" onchange="sim()">
+          <option value="0">None</option>
+          <option value="20" selected>Light (+20)</option>
+          <option value="70">Solid (+70)</option>
+          <option value="180">Max (+180)</option>
+        </select>
+        <label>Daily quests done</label>
+        <select id="sim-quests" onchange="sim()">
+          <option value="0">0</option><option value="1">1</option>
+          <option value="2">2</option><option value="3" selected>All 3 (+ Standard box)</option>
+        </select>
+        <label>Visitor plays your shows / day: <b id="sim-hostplays-label"></b></label>
+        <input type="range" id="sim-hostplays" min="0" max="60" value="4" oninput="sim()"/>
+      </div>
+      <div class="card">
+        <div class="muted">COINS / DAY</div>
+        <div class="result-big" id="sim-total">—</div>
+        <div class="breakdown" id="sim-breakdown"></div>
+        <div class="muted" style="margin-top:10px;" id="sim-collect"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>5 · Rarity re-bucket tracker</h2>
+    <div class="desc">
+      Target distribution per category: <span class="pill common">50% common</span>
+      <span class="pill uncommon">30% uncommon</span> <span class="pill rare">15% rare</span>
+      <span class="pill legendary">5% legendary</span>. Bars = current catalog; yellow tick = target.
+      Regen counts after any catalog change: <code>python3 scripts/gen-economy-data.py</code>.
+    </div>
+    <div id="rarity-tracker" class="grid c2"></div>
+  </section>
+
+  <section>
+    <h2>6 · Quest &amp; reward calendar</h2>
+    <div id="quest-cards" class="grid c3"></div>
+  </section>
+
+  <section>
+    <h2>7 · Host rewards</h2>
+    <div class="grid c3" id="host-cards"></div>
+  </section>
+
+  <section>
+    <h2>8 · v1 wiring gaps (code audit 2026-07-01)</h2>
+    <div class="desc">The coin-earning half of the loop is currently stubbed. What implementation must fix:</div>
+    <div class="card" style="max-width:900px;">
+      <ol style="margin:0; padding-left:20px; font-size:13px; color:#e0d0f5; line-height:1.9;">
+        <li><code>syncCoins()</code> has zero callers — <code>Game.ts:2596</code> computes the reward then only logs it.</li>
+        <li><code>coinsFromShow</code> declared, never incremented — hosts earn nothing today.</li>
+        <li>Legendary drop rate is 0 on every box (<code>BOX_CATALOG</code> 70/25/5/0).</li>
+        <li><code>effectsBox</code> missing from the Purchase shop grid; Purchase scene gated COMING SOON.</li>
+        <li>Consolidate reward tables (<code>social-loop.ts</code> tiers, <code>balance.ts</code> points, inline <code>SELL_PRICE</code>) into one shared economy constants module.</li>
+        <li>New server needs: collect pot + <code>/api/rewards/collect</code>, daily counters (per-chart plays, play income, host pot) with midnight reset, quest/streak state + claim routes, first-comment-per-post flag, <code>playsOnOwnShow</code> stat.</li>
+      </ol>
+    </div>
+  </section>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+// ECONOMY CONFIG — the single source for every number on this page.
+// Tune here, reload. Keep in sync with the design spec + (eventually)
+// src/shared economy constants when implementation lands.
+// ══════════════════════════════════════════════════════════════════
+const ECONOMY = {
+  tiers: [ // plain accuracy (hits/total), first match wins
+    { id: 'flawless', minAcc: 99, base: 400 },
+    { id: 'perfect',  minAcc: 95, base: 300 },
+    { id: 'great',    minAcc: 85, base: 200 },
+    { id: 'pass',     minAcc: 75, base: 100 },
+    { id: 'fail',     minAcc: 0,  base: 25 },
+  ],
+  difficulty: { easy: 1.0, medium: 1.25, spicy: 1.5, hard: 1.75, insane: 2.0 },
+  comboMilestones:   [ [100, 40], [50, 20], [25, 10] ], // [threshold, bonus] highest wins
+  perfectMilestones: [ [100, 40], [50, 20], [20, 10] ],
+  fullComboBonus: 50,
+  fullPerfectBonus: 100,   // replaces FC bonus
+  minNotesForFcBonus: 30,
+  firstCommentFlat: 50,    // once per post, ever (replaces old 2x multiplier)
+  decay: [1.0, 0.5, 0.25], // per-chart plays that day; last value is the floor
+  dailyPlayBudget: 1200,   // full pay up to here, then...
+  overBudgetRate: 0.10,
+  hostRoyalty: 0.25,
+  hostDailyCap: 300,
+  ownShowPays: 0,
+  boxes: {
+    tiers: {
+      standard: { label: 'Standard', rates: { common: 60, uncommon: 30, rare: 9, legendary: 1 } },
+      golden:   { label: 'Golden',   rates: { common: 0, uncommon: 60, rare: 32, legendary: 8 } },
+      mythic:   { label: 'Mythic',   rates: { common: 0, uncommon: 0, rare: 70, legendary: 30 } },
+    },
+    prices: { // per category per tier
+      cosmetic:   { standard: 200, golden: 600,  mythic: 2000 },
+      effects:    { standard: 200, golden: 600,  mythic: 2000 },
+      cat:        { standard: 400, golden: 1200, mythic: 2000 },
+      background: { standard: 350, golden: 1000, mythic: 2000 },
+    },
+    dupePolicy: 'No duplicates. Backgrounds refund 50 on dupe. Empty pool → nearest non-empty tier.',
+  },
+  targets: { common: 0.50, uncommon: 0.30, rare: 0.15, legendary: 0.05 },
+  launchTargets: { cats: 100, cosmetics: 400, effects: 400, backgrounds: 100 },
+  quests: {
+    daily: { count: 3, coinsEach: [50, 100], allBonus: 'Standard box of your choice',
+      pool: ['play 3 shows', 'post a show (+50)', 'hit a 20-combo', 'comment on a show', 'play a hard+ chart', 'open a box'] },
+    streak: { days: 7, coins: [25, 50, 50, 75, 75, 100], finale: 'Golden box (day 7)', reset: 'missed day resets' },
+    weekly: { count: 3, reward: 'Golden box + coins each', allBonus: 'Golden box + 500 (NOT Mythic)',
+      pool: ['15 plays', '5 hard+ passes', 'host 25 plays'] },
+    achievements: { tiers: 'bronze → silver → gold', reward: 'coins → Golden → gold tier = MYTHIC (only earned source)',
+      pool: ['songsFinished 10/100/1000', 'perfects 100/1k/10k', 'own 25/50/100 cats', '30-day streak', '100 plays received'] },
+    community: { reward: 'flexible — coins / Golden boxes / exclusive item for contributors', example: 'community hits 25k plays this week' },
+    events: { reward: 'pure-FOMO exclusives that NEVER enter boxes', cadence: 'seasonal' },
+  },
+  hostMilestones: [ ['first play', 50], ['first pass', 100], ['10 plays', 100], ['50 plays', 250], ['100 plays', 500] ],
+  starterCoins: 600,
+  avgStandardBoxPrice: 250, // rough blended price for boxes/day + collection math
+  totalItems: 1000,
+};
+
+const $ = id => document.getElementById(id);
+const fmt = n => Math.round(n).toLocaleString();
+
+// ── reward calculator ──────────────────────────────────────────────
+function tierFor(acc) { return ECONOMY.tiers.find(t => acc >= t.minAcc) || ECONOMY.tiers.at(-1); }
+function milestone(list, v) { for (const [th, b] of list) if (v >= th) return b; return 0; }
+
+function computeReward(o) {
+  const tier = tierFor(o.acc);
+  const comboB = milestone(ECONOMY.comboMilestones, o.combo);
+  const perfB = milestone(ECONOMY.perfectMilestones, o.perfects);
+  const fcB = o.fp ? ECONOMY.fullPerfectBonus : (o.fc ? ECONOMY.fullComboBonus : 0);
+  const mult = ECONOMY.difficulty[o.diff];
+  let subtotal = (tier.base + comboB + perfB + fcB) * mult;
+  const decayIdx = Math.min(o.playNum - 1, ECONOMY.decay.length - 1);
+  subtotal *= ECONOMY.decay[decayIdx];
+  if (o.overBudget) subtotal *= ECONOMY.overBudgetRate;
+  if (o.ownShow) subtotal = ECONOMY.ownShowPays;
+  const comment = o.firstComment && !o.ownShow ? ECONOMY.firstCommentFlat : 0;
+  return { tier, comboB, perfB, fcB, mult, decay: ECONOMY.decay[decayIdx],
+    total: Math.round(subtotal + comment), comment,
+    host: o.ownShow ? 0 : Math.round(subtotal * ECONOMY.hostRoyalty) };
+}
+
+function calc() {
+  const acc = +$('calc-acc').value;
+  const o = { acc, diff: $('calc-diff').value, combo: +$('calc-combo').value,
+    perfects: +$('calc-perfects').value, fc: $('calc-fc').checked, fp: $('calc-fp').checked,
+    firstComment: $('calc-comment').checked, playNum: +$('calc-decay').value,
+    overBudget: $('calc-over').checked, ownShow: $('calc-own').checked };
+  const r = computeReward(o);
+  $('calc-acc-label').textContent = `${acc}% → ${r.tier.id.toUpperCase()} (base ${r.tier.base})`;
+  $('calc-total').textContent = `${fmt(r.total)} 🪙`;
+  $('calc-host').textContent = r.host > 0 ? `host royalty: +${fmt(r.host)} to their collect pot (cap ${ECONOMY.hostDailyCap}/day)` : 'host royalty: 0';
+  $('calc-breakdown').textContent = o.ownShow ? 'own show → 0 coins\n(leaderboard + playsOnOwnShow only)' : [
+    `base       ${r.tier.base}`,
+    `combo      +${r.comboB}`,
+    `perfects   +${r.perfB}`,
+    r.fcB ? `${o.fp ? 'FULL PERF' : 'FULL COMBO'}  +${r.fcB}` : null,
+    `× diff     ${r.mult}`,
+    r.decay < 1 ? `× decay    ${r.decay}` : null,
+    o.overBudget ? `× budget   ${ECONOMY.overBudgetRate}` : null,
+    r.comment ? `+ comment  ${r.comment}` : null,
+  ].filter(Boolean).join('\n');
+}
+
+// ── boxes ──────────────────────────────────────────────────────────
+function renderBoxes() {
+  const cats = { cosmetic: 'Cosmetic', effects: 'Effects', cat: 'Cat', background: 'Background' };
+  $('box-tables').innerHTML = Object.entries(ECONOMY.boxes.tiers).map(([tid, t]) => `
+    <div class="card">
+      <h3 style="margin:0 0 8px; color:#ffd34d; font-size:14px;">${t.label}${tid === 'mythic' ? ' <span class="muted">(also earned: gold achievements)</span>' : ''}</h3>
+      <table>
+        <tr><th>Rates</th>${Object.entries(t.rates).map(([r, v]) => `<td class="num"><span class="pill ${r}">${v}%</span></td>`).join('')}</tr>
+        ${Object.entries(cats).map(([cid, label]) =>
+          `<tr><td>${label} box</td><td class="num" colspan="4"><b style="color:#ffd34d">${ECONOMY.boxes.prices[cid][tid]}</b> 🪙</td></tr>`).join('')}
+      </table>
+    </div>`).join('');
+}
+
+// ── persona simulator ──────────────────────────────────────────────
+function sim() {
+  const plays = +$('sim-plays').value;
+  const tierBase = +$('sim-tier').value;
+  const mult = ECONOMY.difficulty[$('sim-diff').value];
+  const bonus = +$('sim-bonus').value;
+  const quests = +$('sim-quests').value;
+  const hostPlays = +$('sim-hostplays').value;
+  $('sim-plays-label').textContent = plays;
+  $('sim-hostplays-label').textContent = hostPlays;
+
+  const perPlay = (tierBase + bonus) * mult;
+  let raw = perPlay * plays;
+  const playIncome = raw <= ECONOMY.dailyPlayBudget ? raw
+    : ECONOMY.dailyPlayBudget + (raw - ECONOMY.dailyPlayBudget) * ECONOMY.overBudgetRate;
+  const questCoins = quests * 75; // midpoint of 50-100
+  const questBox = quests >= 3 ? 1 : 0;
+  const loginCoins = 60; // avg of the 7-day track
+  const hostPot = Math.min(hostPlays * perPlay * ECONOMY.hostRoyalty, ECONOMY.hostDailyCap);
+  const total = playIncome + questCoins + loginCoins + hostPot;
+  const boxes = total / ECONOMY.avgStandardBoxPrice + questBox;
+  const months = ECONOMY.totalItems / (boxes * 30.4);
+
+  $('sim-total').textContent = `${fmt(total)} 🪙`;
+  $('sim-breakdown').textContent = [
+    `plays      ${fmt(playIncome)}${raw > ECONOMY.dailyPlayBudget ? `  (raw ${fmt(raw)}, budget-capped)` : ''}`,
+    `quests     ${fmt(questCoins)}${questBox ? ' + Standard box' : ''}`,
+    `login      ${fmt(loginCoins)}`,
+    `host pot   ${fmt(hostPot)}${hostPot >= ECONOMY.hostDailyCap ? '  (capped)' : ''}`,
+  ].join('\n');
+  $('sim-collect').textContent =
+    `≈ ${boxes.toFixed(1)} Standard boxes/day (blended ${ECONOMY.avgStandardBoxPrice}) → full ~${ECONOMY.totalItems}-item collection in ~${months.toFixed(0)} months`;
+}
+
+// ── rarity tracker ─────────────────────────────────────────────────
+const RARITY_COLORS = { common: '#4a5568', uncommon: '#2e6b3a', rare: '#2b4d8f', legendary: '#b8860b' };
+async function renderRarity() {
+  let data;
+  try { data = await (await fetch('catalog-counts.json', { cache: 'no-store' })).json(); }
+  catch { $('rarity-tracker').innerHTML = '<div class="warn">catalog-counts.json missing — run python3 scripts/gen-economy-data.py</div>'; return; }
+  $('rarity-tracker').innerHTML = Object.entries(data.categories).map(([cat, counts]) => {
+    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+    const launch = ECONOMY.launchTargets[cat] || total;
+    const rows = Object.keys(ECONOMY.targets).map(r => {
+      const cur = counts[r] || 0;
+      const target = Math.round(launch * ECONOMY.targets[r]);
+      const maxScale = Math.max(cur, target, 1) * 1.15;
+      const delta = cur - target;
+      return `<div class="bar-row">
+        <span class="pill ${r}">${r}</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${(cur / maxScale) * 100}%; background:${RARITY_COLORS[r]};"></div>
+          <div class="bar-target" style="left:${(target / maxScale) * 100}%;"></div>
+        </div>
+        <span class="delta ${delta >= 0 ? 'over' : 'under'}">${cur} / ${target} (${delta >= 0 ? '+' : ''}${delta})</span>
+      </div>`;
+    }).join('');
+    return `<div class="card">
+      <h3 style="margin:0 0 8px; color:#ffd34d; font-size:14px;">${cat}
+        <span class="muted">— ${total} today, launch target ${launch}</span></h3>
+      ${rows}</div>`;
+  }).join('') + `<div class="muted" style="grid-column:1/-1;">counts snapshot: ${data.generatedAt}</div>`;
+}
+
+// ── quest calendar + host cards ────────────────────────────────────
+function renderQuests() {
+  const q = ECONOMY.quests;
+  const card = (title, cadence, lines) => `<div class="card">
+    <h3 style="margin:0 0 2px; color:#ffd34d; font-size:14px;">${title}</h3>
+    <div class="muted" style="margin-bottom:8px;">${cadence}</div>
+    <div style="font-size:13px; color:#e0d0f5; line-height:1.7;">${lines.join('<br/>')}</div></div>`;
+  $('quest-cards').innerHTML = [
+    card('Daily quests', 'every day · 3 rotating', [
+      `pool: ${q.daily.pool.join(' · ')}`,
+      `<b>${q.daily.coinsEach[0]}-${q.daily.coinsEach[1]} coins each</b>`,
+      `all 3 → <b style="color:#ffd34d">${q.daily.allBonus}</b>`]),
+    card('Login streak', '7-day track · resets on miss', [
+      `coins: ${q.streak.coins.join(' → ')}`,
+      `day 7 → <b style="color:#ffd34d">${q.streak.finale}</b>`]),
+    card('Weekly quests', 'every week · 3 bigger', [
+      `pool: ${q.weekly.pool.join(' · ')}`,
+      `each: <b>${q.weekly.reward}</b>`,
+      `all 3 → <b style="color:#ffd34d">${q.weekly.allBonus}</b>`]),
+    card('Achievements', 'lifetime · bronze/silver/gold', [
+      `pool: ${q.achievements.pool.join(' · ')}`,
+      `<b style="color:#ffd34d">${q.achievements.reward}</b>`]),
+    card('Community quests', 'event · global milestones', [
+      `e.g. ${q.community.example}`, `<b>${q.community.reward}</b>`]),
+    card('Seasonal events', q.events.cadence, [`<b style="color:#ffd34d">${q.events.reward}</b>`]),
+  ].join('');
+
+  $('host-cards').innerHTML = [
+    card('Collect pot', 'passive · the comeback hook', [
+      `<b>${ECONOMY.hostRoyalty * 100}% royalty</b> on every visitor reward`,
+      `cap <b>${ECONOMY.hostDailyCap}/day</b>`,
+      `"💰 Your shows earned N while you were away — COLLECT"`]),
+    card('Posting reward', 'via daily quest — once/day', [
+      `"post a show today" → +50`, `no per-post payout = no spam-posting incentive`]),
+    card('Per-post milestones', 'one-time each', ECONOMY.hostMilestones.map(([m, c]) => `${m} → <b>+${c}</b>`)),
+  ].join('');
+}
+
+// ── init ───────────────────────────────────────────────────────────
+for (const sel of ['calc-diff', 'sim-diff']) {
+  $(sel).innerHTML = Object.entries(ECONOMY.difficulty)
+    .map(([d, m]) => `<option value="${d}" ${d === 'medium' ? 'selected' : ''}>${d} ×${m}</option>`).join('');
+}
+calc(); renderBoxes(); sim(); renderRarity(); renderQuests();
+</script>
+<script src="/tools-nav.js"></script>
+</body></html>

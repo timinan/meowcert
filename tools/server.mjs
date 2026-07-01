@@ -164,6 +164,17 @@ const TOOLS = {
     savePath: path.join(TOOL_DIR, 'user-management', 'users.json'),
     description: 'Per-user dev overrides — force tutorial replay + godmode unlocks.',
   },
+  economy: {
+    label: 'Economy',
+    href: '/tools/economy/index.html',
+    // Scoring → coins → boxes → collection design, tunable in one place.
+    // All numbers live in the page's ECONOMY config object. Rarity
+    // re-bucket tracker reads tools/economy/catalog-counts.json —
+    // regenerate via `python3 scripts/gen-economy-data.py` after any
+    // catalog change. Design spec lives in PM-OS:
+    // outputs/portfolio/meowcert/economy-design-2026-07-01.md
+    description: 'Rewards economy — reward calculator, box odds, persona budget sim, rarity re-bucket tracker, quest calendar.',
+  },
   'visit-post-preview': {
     label: 'Visit-Post Preview',
     href: '/tools/visit-post-preview/index.html',

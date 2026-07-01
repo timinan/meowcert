@@ -1,0 +1,29 @@
+{
+  "generatedAt": "2026-07-01",
+  "categories": {
+    "cats": {
+      "common": 6,
+      "uncommon": 1,
+      "rare": 2,
+      "legendary": 1
+    },
+    "cosmetics": {
+      "common": 472,
+      "uncommon": 18,
+      "rare": 11,
+      "legendary": 11
+    },
+    "effects": {
+      "common": 89,
+      "uncommon": 118,
+      "rare": 161,
+      "legendary": 110
+    },
+    "backgrounds": {
+      "common": 0,
+      "uncommon": 0,
+      "rare": 72,
+      "legendary": 2
+    }
+  }
+}
