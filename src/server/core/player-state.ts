@@ -1,5 +1,5 @@
 import type { PlayerState } from '../../shared/state';
-import { createFreshPlayerState } from '../../shared/state';
+import { createFreshPlayerState, createFreshStats } from '../../shared/state';
 
 /**
  * Minimal interface to Redis — the only operations player-state needs.
@@ -28,7 +28,14 @@ export async function loadOrInit(
   if (raw) {
     try {
       const parsed = JSON.parse(raw) as Partial<PlayerState>;
-      return { ...freshState(username), ...parsed };
+      const fresh = freshState(username);
+      // Deep-merge PlayerStats so old saves get any newly-added counter
+      // filled with its zero-default on next load. Top-level fields
+      // still fall through the shallow spread — PlayerStats is the only
+      // sub-shape that grows regularly, and shallow-spreading it would
+      // lose defaults for fields not present in the stored JSON.
+      const stats = { ...fresh.stats, ...(parsed.stats ?? createFreshStats()) };
+      return { ...fresh, ...parsed, stats };
     } catch {
       // Corrupt JSON in Redis — fall back to a clean init so the user
       // isn't blocked.

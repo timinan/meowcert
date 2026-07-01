@@ -584,6 +584,130 @@ export interface PlayerHouseState {
   ownedThemes: ThemeId[];
 }
 
+/** Per-song aggregate a player accumulates across rounds. Keyed by
+ *  `chart.audioKey ?? chart.title` inside `PlayerStats.perSong`. */
+export interface PerSongStats {
+  plays: number;
+  bestScore: number;
+  bestCombo: number;
+  /** 0..1 — perfects+hits divided by taps attempted on the best run. */
+  bestAccuracy: number;
+  lastPlayedAt: number;
+}
+
+/** Every fun stat we track for a player. Nested under PlayerState.stats
+ *  so the growing surface stays scoped in one place. Forward-compat is
+ *  handled by loadOrInit which deep-merges parsed.stats into a fresh
+ *  stats block, so old saves get any newly-added counter filled with
+ *  zero (or its type default) on next load. */
+export interface PlayerStats {
+  // Rhythm gameplay counters (aggregate over lifetime)
+  /** Hits with perfect timing tier. */
+  totalPerfects: number;
+  /** Hits with non-perfect timing tier (good / bad). */
+  totalHits: number;
+  totalMisses: number;
+  /** perfects + hits + misses. Nice for accuracy formulas that don't
+   *  want to re-derive from the three counters every read. */
+  totalTapsAttempted: number;
+  /** Longest single tap-streak the player has ever reached. */
+  longestCombo: number;
+  /** Number of tap-streaks that ended (each combo of length >= 2 counts
+   *  once when it drops, so this is a rough measure of "how many combo
+   *  moments" the player has strung together). */
+  totalCombos: number;
+  /** Rounds that reached the end of the chart. */
+  songsFinished: number;
+  /** Rounds that ended before the chart finished (back-out / skip). */
+  songsAbandoned: number;
+  /** Songs finished with zero misses. */
+  perfectSongs: number;
+
+  // Slides + holds
+  slidesHit: number;
+  slidesMissed: number;
+  holdsStarted: number;
+  holdsCompleted: number;
+  /** Cumulative ms spent holding — feeds "held X seconds total" quest
+   *  content. */
+  totalHoldMs: number;
+  /** Longest single hold in ms. */
+  longestHoldMs: number;
+
+  // Per-song aggregate
+  perSong: Record<string, PerSongStats>;
+
+  // Host-side — the player as a show poster
+  showsPosted: number;
+  /** Splash opens on your published posts. */
+  visitsReceived: number;
+  /** Rounds finished on your published posts. */
+  playsReceived: number;
+  /** Coins the host has earned from other people playing their show. */
+  coinsFromShow: number;
+
+  // Visitor-side — the player as an audience
+  showsVisited: number;
+  /** Dedup source for showsVisited — bounded to the most recent 500. */
+  visitedPostIds: string[];
+  /** Rounds finished on other people's posts. */
+  playsOnOthers: number;
+
+  // Economy
+  coinsEarnedLifetime: number;
+  coinsSpentLifetime: number;
+  /** Count of each box type opened. Optional per-key so new box types
+   *  land as `undefined` and readers treat that as 0. */
+  boxesOpened: Partial<Record<BoxId, number>>;
+
+  // Time / streaks
+  firstPlayAt: number | null;
+  lastPlayAt: number | null;
+  /** Sorted ascending list of "YYYY-MM-DD" strings the player was
+   *  active on. Bounded to the last 365 days. */
+  daysPlayedISO: string[];
+  longestDailyStreak: number;
+  currentDailyStreak: number;
+}
+
+/** Fresh stats block for new players + forward-compat fill. Every
+ *  counter starts at zero; timestamps at null; lists empty. */
+export function createFreshStats(): PlayerStats {
+  return {
+    totalPerfects: 0,
+    totalHits: 0,
+    totalMisses: 0,
+    totalTapsAttempted: 0,
+    longestCombo: 0,
+    totalCombos: 0,
+    songsFinished: 0,
+    songsAbandoned: 0,
+    perfectSongs: 0,
+    slidesHit: 0,
+    slidesMissed: 0,
+    holdsStarted: 0,
+    holdsCompleted: 0,
+    totalHoldMs: 0,
+    longestHoldMs: 0,
+    perSong: {},
+    showsPosted: 0,
+    visitsReceived: 0,
+    playsReceived: 0,
+    coinsFromShow: 0,
+    showsVisited: 0,
+    visitedPostIds: [],
+    playsOnOthers: 0,
+    coinsEarnedLifetime: 0,
+    coinsSpentLifetime: 0,
+    boxesOpened: {},
+    firstPlayAt: null,
+    lastPlayAt: null,
+    daysPlayedISO: [],
+    longestDailyStreak: 0,
+    currentDailyStreak: 0,
+  };
+}
+
 export interface PlayerState {
   /** Reddit username — the key under which this lives in Redis. */
   username: string;
@@ -639,6 +763,11 @@ export interface PlayerState {
   ownedBackgrounds: BackgroundId[];
   /** Currently active background. */
   activeBackground: BackgroundId;
+  /** Every fun stat we track for the player — hits/misses/holds/slides,
+   *  per-song aggregates, host + visitor + economy counters, streaks.
+   *  Populated by round-complete + box-open + publish + visit
+   *  instrumentation. See PlayerStats + createFreshStats above. */
+  stats: PlayerStats;
 }
 
 /**
@@ -730,6 +859,7 @@ export function createFreshPlayerState(username: string = ''): PlayerState {
     // ['stage'] before shipping (alongside DEV_RESET_ON_LOAD = false).
     ownedBackgrounds: Object.keys(BACKGROUND_CATALOG) as BackgroundId[],
     activeBackground: 'stage',
+    stats: createFreshStats(),
   };
 }
 
