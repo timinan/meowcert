@@ -329,7 +329,11 @@ function runRingEmoji(scene: Scene, target: EffectTarget, scale: number, glyph: 
   for (let i = 0; i < 12; i++) {
     const t = scene.add.text(0, 0, glyph, {
       fontSize: `${Math.round(16 * scale)}px`, resolution: 0.42, padding: { x: 3, y: 4 },
-    }).setOrigin(0.5).setDepth(target.depth - 1);
+      // depth+1: the smoketest draws the cat first and the glyphs on top
+      // (mkOrbiter, tools/effects/index.html:880-905). At depth-1 the whole
+      // ring hides behind a stage cat (orbit radius ~45px < half-width
+      // ~63px) — same convention as the hand-authored particle effects.
+    }).setOrigin(0.5).setDepth(target.depth + 1);
     t.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     texts.push(t);
   }
@@ -368,7 +372,9 @@ function runOrbiter(scene: Scene, target: EffectTarget, scale: number, p: Orbite
   for (let i = 0; i < n; i++) {
     const t = scene.add.text(0, 0, p.glyph, {
       fontSize: `${sz}px`, resolution: 0.42, padding: { x: 3, y: 4 },
-    }).setOrigin(0.5).setDepth(target.depth - 1);
+      // depth+1 — see runRingEmoji: glyphs orbit IN FRONT of the cat per
+      // the smoketest; behind the cat the whole orbit is invisible.
+    }).setOrigin(0.5).setDepth(target.depth + 1);
     t.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     texts.push(t);
   }
@@ -405,7 +411,10 @@ type PulseParams = {
   flatness?: number; alpha?: number;
 };
 function runPulse(scene: Scene, target: EffectTarget, scale: number, p: PulseParams): EffectHandle {
-  const g = scene.add.graphics().setDepth(target.depth - 1);
+  // depth+1: pulses are born small at the cat's mid/feet — at depth-1 the
+  // bright young rings/hearts are fully hidden behind the sprite and only
+  // the faded tails ever peek out. The smoketest draws pulses over the cat.
+  const g = scene.add.graphics().setDepth(target.depth + 1);
   const pulses: { start: number }[] = [];
   let lastSpawn = -1e9;
   const interval = p.intervalMs ?? 900;
@@ -1249,7 +1258,8 @@ function runStarCircleMulti(scene: Scene, target: EffectTarget, scale: number, c
   for (let i = 0; i < N; i++) {
     const t = scene.add.text(0, 0, '⭐', {
       fontSize: `${Math.round(14 * scale)}px`, resolution: 0.42, padding: { x: 3, y: 4 },
-    }).setOrigin(0.5).setDepth(target.depth - 1);
+      // depth+1 — see runRingEmoji: orbiting glyphs render in front.
+    }).setOrigin(0.5).setDepth(target.depth + 1);
     t.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     texts.push(t);
   }
