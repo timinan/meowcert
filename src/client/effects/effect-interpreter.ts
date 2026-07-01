@@ -1504,8 +1504,21 @@ export function runKind(
     case 'tint':
       return runTint(scene, target, scale, params as unknown as TintParams);
     case 'lightning_colored': {
-      const args = (params.args as unknown[]) ?? [];
-      return runLightning(scene, target, scale, (args[0] as string), (args[1] as string));
+      // The extractor mangled these params (dropped the first rgb channel:
+      // '102,180,255' → ["", 180, "255'"]) so runLightning's .split(',')
+      // threw a TypeError on the numeric slot and killed the RAF loop —
+      // total game freeze on equip AND on every boot while equipped.
+      // Colors restored verbatim from the smoketest's mkLightningColored
+      // calls (tools/effects/index.html:2308-2312).
+      const LIGHTNING_RGB: Record<string, [string, string]> = {
+        'effect-beam-lightning-blue':   ['102,180,255', '220,240,255'],
+        'effect-beam-lightning-white':  ['220,220,255', '255,255,255'],
+        'effect-beam-lightning-purple': ['180,120,255', '235,220,255'],
+        'effect-beam-lightning-green':  ['120,255,150', '220,255,230'],
+        'effect-beam-lightning-red':    ['255,100,100', '255,220,220'],
+      };
+      const [glow, core] = LIGHTNING_RGB[meta.id] ?? ['255,228,77', '255,255,255'];
+      return runLightning(scene, target, scale, glow, core);
     }
     // ---------- ported from the smoketest canvas renders ----------
     case 'pentagram': {
@@ -1838,20 +1851,49 @@ function catFallbackColor(category: string): number {
 
 // Convert an EffectMeta from the generated catalog into a CatEffect the rest
 // of the runtime can consume identically to the hand-authored entries.
+//
+// Every entry point is guarded: Phaser schedules the next RAF frame only
+// after the current step returns, so an uncaught throw inside the game step
+// (equip tap, scene create re-applying a persisted equip, teardown during a
+// scene swap) permanently stops the render loop — a total game freeze that
+// survives reloads because the equip is persisted server-side. A bad effect
+// downgrades to the soft fallback aura instead.
 export function makeCatEffectFromMeta(meta: EffectMeta): CatEffect {
+  const guardHandle = (h: EffectHandle): EffectHandle => ({
+    destroy: () => {
+      try { h.destroy(); } catch (err) {
+        console.warn(`[effects] ${meta.id} destroy failed:`, err);
+      }
+    },
+    pulseHit: h.pulseHit && (() => {
+      try { h.pulseHit!(); } catch { /* non-fatal */ }
+    }),
+    pulseMiss: h.pulseMiss && (() => {
+      try { h.pulseMiss!(); } catch { /* non-fatal */ }
+    }),
+  });
   return {
     id: meta.id,
     name: meta.name,
     iconEmoji: meta.iconEmoji,
     rarity: meta.rarity,
     apply(scene, target, scale = 1) {
-      return runKind(meta, scene, target, scale);
+      try {
+        return guardHandle(runKind(meta, scene, target, scale));
+      } catch (err) {
+        console.warn(`[effects] ${meta.id} apply failed, using fallback:`, err);
+        return runFallback(scene, target, scale, catFallbackColor(meta.category));
+      }
     },
     burst(scene, target, scale = 1) {
       // Reuse the apply's first ~200 ms for a light burst feel — most of the
       // meta-driven effects don't need a distinct burst pattern.
-      const h = runKind(meta, scene, target, scale);
-      scene.time.delayedCall(220, () => h.destroy());
+      try {
+        const h = guardHandle(runKind(meta, scene, target, scale));
+        scene.time.delayedCall(220, () => h.destroy());
+      } catch (err) {
+        console.warn(`[effects] ${meta.id} burst failed:`, err);
+      }
     },
   };
 }
