@@ -17,11 +17,16 @@ import {
   type PerSongStats,
 } from '../../shared/state';
 import type { TutorialStepId } from '../../shared/tutorial-types';
+import { getUserOverride } from '../../shared/user-overrides.generated';
 
 // DEV ONLY — every GET /api/state wipes the player's record and hands
 // back a fresh one with DEV_STARTER_COINS. Onboarding re-runs each page
 // load and you have plenty of coins to test premium boxes. Flip
 // DEV_RESET_ON_LOAD to false (or delete this block) before shipping.
+// Godmode users are OPTED OUT of this reset — their state persists so
+// their in-game changes (renames, seating, equipped cosmetics) survive
+// across page loads (Tim 2026-06-30: "when i have godmode on it
+// doesnt set the 3 cats for me and my changes persists").
 const DEV_RESET_ON_LOAD = true;
 const DEV_STARTER_COINS = 5000;
 
@@ -35,7 +40,13 @@ async function currentUsername(): Promise<string> {
 /** GET /api/state — current player state, initializes on first hit. */
 state.get('/state', async (c) => {
   const username = await currentUsername();
-  const player = DEV_RESET_ON_LOAD
+  // Godmode users skip the DEV_RESET_ON_LOAD wipe so their in-game
+  // changes (renames, seating, equipped cosmetics) survive across page
+  // loads. Non-godmode users still get the fresh state every load
+  // while we're pre-launch and the dev-reset flag is on.
+  const override = getUserOverride(username);
+  const skipReset = override?.godmode === true;
+  const player = DEV_RESET_ON_LOAD && !skipReset
     ? await resetState(redis, username, DEV_STARTER_COINS)
     : await loadOrInit(redis, username);
   return c.json({ state: player });
@@ -238,6 +249,18 @@ state.post('/dev/apply-godmode', async (c) => {
   // it's already been cleared this session. Kept separate.
   player.onboardingDone = true;
   player.tutorialStep = null;
+
+  // Clear the fresh-state headliner seating + pre-equipped effects
+  // (Tim 2026-06-30: "when i have godmode on it doesnt set the 3
+  // cats for me"). The stage lands empty so Tim can arrange his own
+  // lineup; god-mode still grants every cat/cosmetic/background so
+  // he has full inventory to pick from. Reset happens once per
+  // godmode-override consumption (setAt-gated), then GET /state's
+  // skipReset branch preserves whatever he arranges after.
+  player.seatedCats = {};
+  player.equippedCosmetics = {};
+  player.equippedCosmeticTypes = {};
+
   player.forcedGodmodeAppliedAt = Date.now();
   await save(redis, player);
   return c.json({ ok: true, state: player });
