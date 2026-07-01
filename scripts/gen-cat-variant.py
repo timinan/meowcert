@@ -96,6 +96,10 @@ def build_palette(cfg):
     ramp('eyes', ['iris', 'irisHi1', 'irisHi2'], CAT2['iris'])
     if 'accent' in cfg:
         pal['accent'] = hex_rgb(cfg['accent'])
+    # Whisker flecks follow the markings color (they're white on cat2
+    # because his markings are white; on a solid cat they melt into the
+    # coat). Explicit "whisker" still overrides.
+    pal['whisker'] = pal['mark1']
     for key in ('tongue', 'outline', 'whisker', 'glint'):
         if key in cfg:
             pal[key] = hex_rgb(cfg[key])
