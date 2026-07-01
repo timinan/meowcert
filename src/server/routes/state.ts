@@ -209,6 +209,22 @@ state.post('/dev/apply-godmode', async (c) => {
     }
   }
 
+  // Godmode also flips onboardingDone. Tim's intent: godmode = "set
+  // this player up for dev / testing, skip every gate". Without this,
+  // DEV_RESET_ON_LOAD=true wipes state to a fresh PlayerState every
+  // page load (onboardingDone: false), and the Preloader's tutorial
+  // routing wins over godmode — player lands in TutorialOrchestrator
+  // regardless of how loaded they are.
+  //
+  // NOTE: we deliberately do NOT stamp forcedTutorialClearedAt here.
+  // Godmode + tutorialCheck are independent overrides — if the player
+  // has both on, the Preloader's tutorialCheck block fires after
+  // godmode and locally mutates onboardingDone=false before routing.
+  // Stamping forcedTutorialClearedAt here would consume the tutorial
+  // override at the same instant and the tutorial block would think
+  // it's already been cleared this session. Kept separate.
+  player.onboardingDone = true;
+  player.tutorialStep = null;
   player.forcedGodmodeAppliedAt = Date.now();
   await save(redis, player);
   return c.json({ ok: true, state: player });

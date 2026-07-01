@@ -266,7 +266,10 @@ export class DressingRoom extends Scene {
     const heroScale = this.heroSprite.scaleX;
 
     const equippedTypes = this.playerState.equippedCosmeticTypes ?? {};
-    let i = 1;
+    // Tim 06-30: depth comes from the slot name (head > face > neck) so the
+    // hero preview matches the in-game cat.ts layering, not from equip
+    // order which produced inconsistent stacking.
+    const SLOT_DEPTH: Record<string, number> = { neck: 1, face: 2, head: 3, effect: 0 };
     for (const [slotKey, cosInstanceId] of Object.entries(slots)) {
       if (!cosInstanceId) continue;
       // Resolve the catalog type via the sidecar.
@@ -321,7 +324,7 @@ export class DressingRoom extends Scene {
         .sprite(cosX, cosY, AssetKeys.Atlas.Cosmetics, frame)
         .setScale(cosScale)
         .setOrigin(this.heroSprite.originX, this.heroSprite.originY)
-        .setDepth(this.heroSprite.depth + i++);
+        .setDepth(this.heroSprite.depth + (SLOT_DEPTH[slotKey] ?? 1));
       if (cos.tint) {
         sprite.setTint(parseInt(cos.tint.replace('#', ''), 16));
       }

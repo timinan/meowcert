@@ -1527,7 +1527,7 @@
   {
     "id": "c170",
     "name": "c170",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -1536,7 +1536,7 @@
   {
     "id": "c171",
     "name": "c171",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -1545,7 +1545,7 @@
   {
     "id": "c172",
     "name": "c172",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -1554,7 +1554,7 @@
   {
     "id": "c173",
     "name": "c173",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -1563,7 +1563,7 @@
   {
     "id": "c174",
     "name": "c174",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -1572,7 +1572,7 @@
   {
     "id": "c175",
     "name": "c175",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -1581,7 +1581,7 @@
   {
     "id": "c176",
     "name": "c176",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -1590,7 +1590,7 @@
   {
     "id": "c177",
     "name": "c177",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -1599,7 +1599,7 @@
   {
     "id": "c178",
     "name": "c178",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -1608,7 +1608,7 @@
   {
     "id": "c179",
     "name": "c179",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": 1,
     "offsetY": 20,
@@ -1617,7 +1617,7 @@
   {
     "id": "c180",
     "name": "c180",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": 1,
     "offsetY": 20,
@@ -1626,7 +1626,7 @@
   {
     "id": "c181",
     "name": "c181",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": 1,
     "offsetY": 14,
@@ -1635,7 +1635,7 @@
   {
     "id": "c182",
     "name": "c182",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 33,
@@ -1644,7 +1644,7 @@
   {
     "id": "c183",
     "name": "c183",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 33,
@@ -1653,7 +1653,7 @@
   {
     "id": "c184",
     "name": "c184",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 33,
@@ -1662,7 +1662,7 @@
   {
     "id": "c185",
     "name": "c185",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 33,
@@ -1671,7 +1671,7 @@
   {
     "id": "c186",
     "name": "c186",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 33,
@@ -1680,7 +1680,7 @@
   {
     "id": "c187",
     "name": "c187",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 33,
@@ -1689,7 +1689,7 @@
   {
     "id": "c188",
     "name": "c188",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 33,
@@ -1698,7 +1698,7 @@
   {
     "id": "c189",
     "name": "c189",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 33,
@@ -1707,7 +1707,7 @@
   {
     "id": "c190",
     "name": "c190",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 32,
@@ -1716,7 +1716,7 @@
   {
     "id": "c191",
     "name": "c191",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 32,
@@ -1725,7 +1725,7 @@
   {
     "id": "c192",
     "name": "c192",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 32,
@@ -1734,7 +1734,7 @@
   {
     "id": "c193",
     "name": "c193",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 32,
@@ -1743,7 +1743,7 @@
   {
     "id": "c194",
     "name": "c194",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 32,
@@ -1752,7 +1752,7 @@
   {
     "id": "c195",
     "name": "c195",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 32,
@@ -1761,7 +1761,7 @@
   {
     "id": "c196",
     "name": "c196",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 32,
@@ -1770,7 +1770,7 @@
   {
     "id": "c197",
     "name": "c197",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 34,
@@ -1779,7 +1779,7 @@
   {
     "id": "c198",
     "name": "c198",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 34,
@@ -1788,7 +1788,7 @@
   {
     "id": "c199",
     "name": "c199",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 34,
@@ -1797,7 +1797,7 @@
   {
     "id": "c200",
     "name": "c200",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 34,
@@ -1806,7 +1806,7 @@
   {
     "id": "c201",
     "name": "c201",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 34,
@@ -1815,7 +1815,7 @@
   {
     "id": "c202",
     "name": "c202",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 34,
@@ -1824,7 +1824,7 @@
   {
     "id": "c203",
     "name": "c203",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 34,
@@ -1833,7 +1833,7 @@
   {
     "id": "c204",
     "name": "c204",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 34,
@@ -1842,7 +1842,7 @@
   {
     "id": "c205",
     "name": "c205",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 34,
@@ -1851,7 +1851,7 @@
   {
     "id": "c206",
     "name": "c206",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 37,
@@ -1860,7 +1860,7 @@
   {
     "id": "c207",
     "name": "c207",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 37,
@@ -1869,7 +1869,7 @@
   {
     "id": "c208",
     "name": "c208",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 37,
@@ -1878,7 +1878,7 @@
   {
     "id": "c209",
     "name": "c209",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 37,
@@ -1887,7 +1887,7 @@
   {
     "id": "c210",
     "name": "c210",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 37,
@@ -1896,7 +1896,7 @@
   {
     "id": "c211",
     "name": "c211",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 37,
@@ -1905,7 +1905,7 @@
   {
     "id": "c212",
     "name": "c212",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 37,
@@ -1914,7 +1914,7 @@
   {
     "id": "c213",
     "name": "c213",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 37,
@@ -1923,7 +1923,7 @@
   {
     "id": "c214",
     "name": "c214",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 38,
@@ -1932,7 +1932,7 @@
   {
     "id": "c215",
     "name": "c215",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 38,
@@ -1941,7 +1941,7 @@
   {
     "id": "c216",
     "name": "c216",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 38,
@@ -1950,7 +1950,7 @@
   {
     "id": "c217",
     "name": "c217",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 38,
@@ -1959,7 +1959,7 @@
   {
     "id": "c218",
     "name": "c218",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 38,
@@ -1968,7 +1968,7 @@
   {
     "id": "c219",
     "name": "c219",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 38,
@@ -1977,7 +1977,7 @@
   {
     "id": "c220",
     "name": "c220",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 39,
@@ -1986,7 +1986,7 @@
   {
     "id": "c221",
     "name": "c221",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 39,
@@ -1995,7 +1995,7 @@
   {
     "id": "c222",
     "name": "c222",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 39,
@@ -2004,7 +2004,7 @@
   {
     "id": "c223",
     "name": "c223",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -2013,7 +2013,7 @@
   {
     "id": "c224",
     "name": "c224",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -2022,7 +2022,7 @@
   {
     "id": "c225",
     "name": "c225",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -2031,7 +2031,7 @@
   {
     "id": "c226",
     "name": "c226",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -2040,7 +2040,7 @@
   {
     "id": "c227",
     "name": "c227",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -2049,7 +2049,7 @@
   {
     "id": "c228",
     "name": "c228",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -2058,7 +2058,7 @@
   {
     "id": "c229",
     "name": "c229",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -2067,7 +2067,7 @@
   {
     "id": "c230",
     "name": "c230",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -2076,7 +2076,7 @@
   {
     "id": "c231",
     "name": "c231",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -2085,7 +2085,7 @@
   {
     "id": "c232",
     "name": "c232",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -2094,7 +2094,7 @@
   {
     "id": "c233",
     "name": "c233",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -2103,7 +2103,7 @@
   {
     "id": "c234",
     "name": "c234",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -2112,7 +2112,7 @@
   {
     "id": "c235",
     "name": "c235",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -2121,7 +2121,7 @@
   {
     "id": "c236",
     "name": "c236",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -2130,7 +2130,7 @@
   {
     "id": "c237",
     "name": "c237",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -2139,7 +2139,7 @@
   {
     "id": "c238",
     "name": "c238",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": 1,
     "offsetY": 14,
@@ -2148,7 +2148,7 @@
   {
     "id": "c239",
     "name": "c239",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": 1,
     "offsetY": 14,
@@ -2157,7 +2157,7 @@
   {
     "id": "c240",
     "name": "c240",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": 1,
     "offsetY": 14,
@@ -2166,7 +2166,7 @@
   {
     "id": "c241",
     "name": "c241",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": 1,
     "offsetY": 14,
@@ -2175,7 +2175,7 @@
   {
     "id": "c242",
     "name": "c242",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": 1,
     "offsetY": 14,
@@ -2184,7 +2184,7 @@
   {
     "id": "c243",
     "name": "c243",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": 1,
     "offsetY": 14,
@@ -2193,7 +2193,7 @@
   {
     "id": "c244",
     "name": "c244",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": 1,
     "offsetY": 14,
@@ -2202,7 +2202,7 @@
   {
     "id": "c245",
     "name": "c245",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": 1,
     "offsetY": 14,
@@ -2292,7 +2292,7 @@
   {
     "id": "c255",
     "name": "c255",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 32,
@@ -2301,7 +2301,7 @@
   {
     "id": "c256",
     "name": "c256",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 38,
@@ -2310,7 +2310,7 @@
   {
     "id": "c257",
     "name": "c257",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 38,
@@ -2319,7 +2319,7 @@
   {
     "id": "c258",
     "name": "c258",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 38,
@@ -2328,7 +2328,7 @@
   {
     "id": "c259",
     "name": "c259",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 38,
@@ -2337,7 +2337,7 @@
   {
     "id": "c260",
     "name": "c260",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 38,
@@ -2346,7 +2346,7 @@
   {
     "id": "c261",
     "name": "c261",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 38,
@@ -3714,7 +3714,7 @@
   {
     "id": "c413",
     "name": "c413",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -3723,7 +3723,7 @@
   {
     "id": "c414",
     "name": "c414",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -3732,7 +3732,7 @@
   {
     "id": "c415",
     "name": "c415",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -3741,7 +3741,7 @@
   {
     "id": "c416",
     "name": "c416",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -3750,7 +3750,7 @@
   {
     "id": "c417",
     "name": "c417",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -3759,7 +3759,7 @@
   {
     "id": "c418",
     "name": "c418",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -3768,7 +3768,7 @@
   {
     "id": "c419",
     "name": "c419",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -3777,7 +3777,7 @@
   {
     "id": "c420",
     "name": "c420",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -3786,7 +3786,7 @@
   {
     "id": "c421",
     "name": "c421",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -3795,7 +3795,7 @@
   {
     "id": "c422",
     "name": "c422",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -3804,7 +3804,7 @@
   {
     "id": "c423",
     "name": "c423",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -3813,7 +3813,7 @@
   {
     "id": "c424",
     "name": "c424",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -3822,7 +3822,7 @@
   {
     "id": "c425",
     "name": "c425",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -3831,7 +3831,7 @@
   {
     "id": "c426",
     "name": "c426",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -3840,7 +3840,7 @@
   {
     "id": "c427",
     "name": "c427",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -3849,7 +3849,7 @@
   {
     "id": "c428",
     "name": "c428",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 17,
@@ -3858,7 +3858,7 @@
   {
     "id": "c429",
     "name": "c429",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 18,
@@ -3867,7 +3867,7 @@
   {
     "id": "c430",
     "name": "c430",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 18,
@@ -3876,7 +3876,7 @@
   {
     "id": "c431",
     "name": "c431",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 18,
@@ -3885,7 +3885,7 @@
   {
     "id": "c432",
     "name": "c432",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 18,
@@ -3894,7 +3894,7 @@
   {
     "id": "c433",
     "name": "c433",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": 1,
     "offsetY": 20,
@@ -3903,7 +3903,7 @@
   {
     "id": "c434",
     "name": "c434",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": 1,
     "offsetY": 20,
@@ -3912,7 +3912,7 @@
   {
     "id": "c435",
     "name": "c435",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": 1,
     "offsetY": 20,
@@ -3921,7 +3921,7 @@
   {
     "id": "c436",
     "name": "c436",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": 1,
     "offsetY": 20,
@@ -3930,7 +3930,7 @@
   {
     "id": "c437",
     "name": "c437",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": 1,
     "offsetY": 14,
@@ -3939,7 +3939,7 @@
   {
     "id": "c438",
     "name": "c438",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": 1,
     "offsetY": 14,
@@ -3948,7 +3948,7 @@
   {
     "id": "c439",
     "name": "c439",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": 1,
     "offsetY": 14,
@@ -3957,7 +3957,7 @@
   {
     "id": "c440",
     "name": "c440",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": 1,
     "offsetY": 14,
@@ -3966,7 +3966,7 @@
   {
     "id": "c441",
     "name": "c441",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 18,
@@ -3975,7 +3975,7 @@
   {
     "id": "c442",
     "name": "c442",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 18,
@@ -3984,7 +3984,7 @@
   {
     "id": "c443",
     "name": "c443",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 18,
@@ -3993,7 +3993,7 @@
   {
     "id": "c444",
     "name": "c444",
-    "slot": "head",
+    "slot": "face",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 18,
@@ -4002,7 +4002,7 @@
   {
     "id": "c445",
     "name": "c445",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 32,
@@ -4011,7 +4011,7 @@
   {
     "id": "c446",
     "name": "c446",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 32,
@@ -4020,7 +4020,7 @@
   {
     "id": "c447",
     "name": "c447",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 32,
@@ -4029,7 +4029,7 @@
   {
     "id": "c448",
     "name": "c448",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 32,
@@ -4038,7 +4038,7 @@
   {
     "id": "c449",
     "name": "c449",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 33,
@@ -4047,7 +4047,7 @@
   {
     "id": "c450",
     "name": "c450",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 33,
@@ -4056,7 +4056,7 @@
   {
     "id": "c451",
     "name": "c451",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 33,
@@ -4065,7 +4065,7 @@
   {
     "id": "c452",
     "name": "c452",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 33,
@@ -4074,7 +4074,7 @@
   {
     "id": "c453",
     "name": "c453",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 38,
@@ -4083,7 +4083,7 @@
   {
     "id": "c454",
     "name": "c454",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 38,
@@ -4092,7 +4092,7 @@
   {
     "id": "c455",
     "name": "c455",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 38,
@@ -4101,7 +4101,7 @@
   {
     "id": "c456",
     "name": "c456",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 38,
@@ -4110,7 +4110,7 @@
   {
     "id": "c457",
     "name": "c457",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 38,
@@ -4119,7 +4119,7 @@
   {
     "id": "c458",
     "name": "c458",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 38,
@@ -4128,7 +4128,7 @@
   {
     "id": "c459",
     "name": "c459",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 38,
@@ -4137,7 +4137,7 @@
   {
     "id": "c460",
     "name": "c460",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 38,
@@ -4146,7 +4146,7 @@
   {
     "id": "c461",
     "name": "c461",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 34,
@@ -4155,7 +4155,7 @@
   {
     "id": "c462",
     "name": "c462",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 34,
@@ -4164,7 +4164,7 @@
   {
     "id": "c463",
     "name": "c463",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 34,
@@ -4173,7 +4173,7 @@
   {
     "id": "c464",
     "name": "c464",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 37,
@@ -4182,7 +4182,7 @@
   {
     "id": "c465",
     "name": "c465",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 37,
@@ -4191,7 +4191,7 @@
   {
     "id": "c466",
     "name": "c466",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 37,
@@ -4200,7 +4200,7 @@
   {
     "id": "c467",
     "name": "c467",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 35,
@@ -4209,7 +4209,7 @@
   {
     "id": "c468",
     "name": "c468",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 35,
@@ -4218,7 +4218,7 @@
   {
     "id": "c469",
     "name": "c469",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 34,
@@ -4227,7 +4227,7 @@
   {
     "id": "c470",
     "name": "c470",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 34,
@@ -4236,7 +4236,7 @@
   {
     "id": "c471",
     "name": "c471",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4245,7 +4245,7 @@
   {
     "id": "c472",
     "name": "c472",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4254,7 +4254,7 @@
   {
     "id": "c473",
     "name": "c473",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4263,7 +4263,7 @@
   {
     "id": "c474",
     "name": "c474",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4272,7 +4272,7 @@
   {
     "id": "c475",
     "name": "c475",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4281,7 +4281,7 @@
   {
     "id": "c476",
     "name": "c476",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4290,7 +4290,7 @@
   {
     "id": "c477",
     "name": "c477",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4299,7 +4299,7 @@
   {
     "id": "c478",
     "name": "c478",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4308,7 +4308,7 @@
   {
     "id": "c479",
     "name": "c479",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4317,7 +4317,7 @@
   {
     "id": "c480",
     "name": "c480",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4326,7 +4326,7 @@
   {
     "id": "c481",
     "name": "c481",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4335,7 +4335,7 @@
   {
     "id": "c482",
     "name": "c482",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4344,7 +4344,7 @@
   {
     "id": "c483",
     "name": "c483",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4353,7 +4353,7 @@
   {
     "id": "c484",
     "name": "c484",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4362,7 +4362,7 @@
   {
     "id": "c485",
     "name": "c485",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4371,7 +4371,7 @@
   {
     "id": "c486",
     "name": "c486",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4380,7 +4380,7 @@
   {
     "id": "c487",
     "name": "c487",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4389,7 +4389,7 @@
   {
     "id": "c488",
     "name": "c488",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4398,7 +4398,7 @@
   {
     "id": "c489",
     "name": "c489",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4407,7 +4407,7 @@
   {
     "id": "c490",
     "name": "c490",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4416,7 +4416,7 @@
   {
     "id": "c491",
     "name": "c491",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4425,7 +4425,7 @@
   {
     "id": "c492",
     "name": "c492",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4434,7 +4434,7 @@
   {
     "id": "c493",
     "name": "c493",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4443,7 +4443,7 @@
   {
     "id": "c494",
     "name": "c494",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4452,7 +4452,7 @@
   {
     "id": "c495",
     "name": "c495",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4461,7 +4461,7 @@
   {
     "id": "c496",
     "name": "c496",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4470,7 +4470,7 @@
   {
     "id": "c497",
     "name": "c497",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4479,7 +4479,7 @@
   {
     "id": "c498",
     "name": "c498",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 36,
@@ -4488,7 +4488,7 @@
   {
     "id": "c499",
     "name": "c499",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 37,
@@ -4497,7 +4497,7 @@
   {
     "id": "c500",
     "name": "c500",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 37,
@@ -4506,7 +4506,7 @@
   {
     "id": "c501",
     "name": "c501",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 37,
@@ -4515,7 +4515,7 @@
   {
     "id": "c502",
     "name": "c502",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 37,
@@ -4524,7 +4524,7 @@
   {
     "id": "c503",
     "name": "c503",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 37,
@@ -4533,7 +4533,7 @@
   {
     "id": "c504",
     "name": "c504",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 37,
@@ -4542,7 +4542,7 @@
   {
     "id": "c505",
     "name": "c505",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 37,
@@ -4551,7 +4551,7 @@
   {
     "id": "c506",
     "name": "c506",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 37,
@@ -4560,7 +4560,7 @@
   {
     "id": "c507",
     "name": "c507",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 37,
@@ -4569,7 +4569,7 @@
   {
     "id": "c508",
     "name": "c508",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 38,
@@ -4578,7 +4578,7 @@
   {
     "id": "c509",
     "name": "c509",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 38,
@@ -4587,7 +4587,7 @@
   {
     "id": "c510",
     "name": "c510",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 38,
@@ -4596,7 +4596,7 @@
   {
     "id": "c511",
     "name": "c511",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 38,
@@ -4605,7 +4605,7 @@
   {
     "id": "c512",
     "name": "c512",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 39,
@@ -4614,7 +4614,7 @@
   {
     "id": "c513",
     "name": "c513",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 39,
@@ -4623,7 +4623,7 @@
   {
     "id": "c514",
     "name": "c514",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 39,
@@ -4632,7 +4632,7 @@
   {
     "id": "c515",
     "name": "c515",
-    "slot": "head",
+    "slot": "neck",
     "rarity": "common",
     "offsetX": -5,
     "offsetY": 39,

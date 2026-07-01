@@ -19,7 +19,7 @@ export interface UserOverride {
 }
 
 export const USER_OVERRIDES: Readonly<Record<string, UserOverride>> = {
-  "timmymmit": { tutorialCheck: false, godmode: true, setAt: 1782857000000 },
+  "timmymmit": { tutorialCheck: true, godmode: false, setAt: 1782867691744 },
 };
 
 /** Lookup helper: case-insensitive, returns undefined when the user

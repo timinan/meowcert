@@ -528,10 +528,7 @@ function mkHalo(opts) {
   });
 }
 // Tim 06-30: head halos look like floating decals — move all single rings to
-// body-mid + add rotation bead so the spin reads visually.
-FX.halo_golden       = mkHalo({ color: 0xffd34d, radius: 28, thickness: 3, pos: 'mid', glow: true, rotateMs: 3200, tiltOscMs: 1800 });
-FX.halo_white_holy   = mkHalo({ color: 0xffffff, radius: 30, thickness: 2, pos: 'mid', glow: true, alpha: 0.9, rotateMs: 3600, tiltOscMs: 2000 });
-FX.halo_segments     = mkHalo({ color: 0x66ccff, radius: 32, thickness: 3, pos: 'mid', shape: 'segments', segments: 12, rotateMs: 2400, tiltOscMs: 1600 });
+// body-mid + add rotation bead so the spin reads visually.X.halo_segments     = mkHalo({ color: 0x66ccff, radius: 32, thickness: 3, pos: 'mid', shape: 'segments', segments: 12, rotateMs: 2400, tiltOscMs: 1600 });
 // Saturn now spins TWO rings in opposite directions per Tim's note.
 FX.halo_saturn_ring = (cat) => {
   const ringA = mkHalo({ color: 0xffaa66, radius: 38, thickness: 3, pos: 'mid', shape: 'ellipse', glow: true, rotateMs: 4800, tiltOscMs: 2400, beadColor: 0xffd34d })(cat);
@@ -648,22 +645,25 @@ FX.halo_ring_of_fire = (cat) => ({
   },
 });
 
-// --- BEAMS & SPOTLIGHTS ----------------------------------------------------/ Tim 06-30 round 2: shifted further down to the body midline.
+// --- BEAMS & SPOTLIGHTS ----------------------------------------------------
+// Tim 06-30 round 4: much brighter + longer rays so they actually shine
+// through visibly against the dark preview.
 FX.beam_sun_rays = (cat) => ({
   render: (ctx, t) => {
-    const cx = cat.footX, cy = cat.y + cat.h * 0.5;  // body center
-    const rays = 12;
+    const cx = cat.footX, cy = cat.y + cat.h * 0.5;
+    const rays = 16;
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(t / 4000);
     for (let i = 0; i < rays; i++) {
       const a = (i / rays) * Math.PI * 2;
-      const len = 60 + 8 * Math.sin(t / 300 + i);
+      const len = 90 + 14 * Math.sin(t / 300 + i);
       const grad = ctx.createLinearGradient(0, 0, Math.cos(a) * len, Math.sin(a) * len);
-      grad.addColorStop(0, 'rgba(255,220,120,0.85)');
-      grad.addColorStop(1, 'rgba(255,220,120,0)');
+      grad.addColorStop(0, 'rgba(255,240,180,1)');
+      grad.addColorStop(0.35, 'rgba(255,220,110,0.85)');
+      grad.addColorStop(1, 'rgba(255,220,110,0)');
       ctx.strokeStyle = grad;
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 5;
       ctx.beginPath();
       ctx.moveTo(0, 0);
       ctx.lineTo(Math.cos(a) * len, Math.sin(a) * len);
@@ -732,6 +732,14 @@ FX.beam_lightning = (cat) => {
         strikes.push({ untilT: t + 150, ...buildBolt() });
       }
       let anyLive = false;
+      // Tim round 5: strike is on only ~25% of the time — during the
+      // "dark" ~75% window, paint the whole canvas nearly black so the
+      // storm feels like night sky with rare flashes.
+      const hasLive = strikes.some(s => t <= s.untilT);
+      if (!hasLive) {
+        ctx.fillStyle = 'rgba(0,0,0,0.85)';
+        ctx.fillRect(0, 0, W, H);
+      }
       const drawPath = (pts, glowAlpha, glowW, coreAlpha) => {
         ctx.strokeStyle = rgbStr(0xffe44d, glowAlpha);
         ctx.lineWidth = glowW;
@@ -838,27 +846,28 @@ function mkPulse(opts) {
       },
     };
   };
-}// Tim 06-30 round 3: even more rings (interval 500→320 ms, 4+ alive at once).
-FX.pulse_heart      = mkPulse({ color: 0xff66cc, maxR: 72, intervalMs: 320, lifeMs: 1500, shape: 'heart', thickness: 5, pos: 'mid' });
+}// Tim 06-30 round 4: even more rings + thicker outline so heart edges read.
+FX.pulse_heart      = mkPulse({ color: 0xff66cc, maxR: 72, intervalMs: 240, lifeMs: 1500, shape: 'heart', thickness: 7, pos: 'mid', alpha: 0.9 });
 // Tim 06-30: sonar multi-rings.
 FX.pulse_sonar      = mkPulse({ color: 0x33ffd4, maxR: 70, intervalMs: 600, lifeMs: 1800, thickness: 2 });
+// Tim 06-30 round 4: more intensity — thicker stroke + higher alpha + a bit
+// faster spawn so more rings overlap.
 FX.pulse_echo       = (cat) => {
   const pulses = [];
   let lastSpawn = -1e9;
-  const intervalMs = 600;
+  const intervalMs = 420;
   return {
     render: (ctx, t) => {
-      drawCat(ctx, cat);
       if (t - lastSpawn > intervalMs) { pulses.push({ start: t }); lastSpawn = t; }
       for (let i = pulses.length - 1; i >= 0; i--) {
         const p = pulses[i];
         const age = (t - p.start) / 1600;
         if (age >= 1) { pulses.splice(i, 1); continue; }
-        const r = 60 * cat.scale * age;
-        const alpha = (1 - age) * 0.55;
+        const r = 65 * cat.scale * age;
+        const alpha = (1 - age) * 0.9;
         ctx.save();
         ctx.translate(cat.footX, cat.footY);
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 3;
         ctx.strokeStyle = rgbStr(0xffaa66, alpha);
         ctx.beginPath();
         ctx.ellipse(0, 0, r, r * 0.3, 0, 0, Math.PI * 2);
@@ -867,10 +876,8 @@ FX.pulse_echo       = (cat) => {
       }
     },
   };
-};
-FX.pulse_ripples_water = mkPulse({ color: 0x6688ff, maxR: 50, intervalMs: 700, lifeMs: 1400, thickness: 2, flatness: 0.28 });
-// Tim 06-30: radio wave multi-rings.
-FX.pulse_radio_wave    = mkPulse({ color: 0xff6633, maxR: 60, intervalMs: 500, lifeMs: 1700, shape: 'semicircle', flatness: 1 });
+};// Tim 06-30 round 4: even more rings (interval 500→300 ms).
+FX.pulse_radio_wave    = mkPulse({ color: 0xff6633, maxR: 60, intervalMs: 300, lifeMs: 1700, shape: 'semicircle', flatness: 1 });
 
 // --- ORBITERS --------------------------------------------------------------
 function mkOrbiter(opts) {
@@ -963,7 +970,9 @@ function mkTint(mode, colors, cycleMs = 2400, alphaScale = 1) {
       const c = colors ? cycleColor(colors, t, cycleMs) : null;
       offCtx.globalCompositeOperation = 'source-atop';
       if (mode === 'rainbow') {
-        const hue = (t / 16) % 360;
+        // Rainbow uses cycleMs to control transition speed. 1200 ms → full
+        // 360° wheel in 1.2 s (Tim 06-30 round 4: "transition faster").
+        const hue = ((t / cycleMs) * 360) % 360;
         offCtx.fillStyle = `hsla(${hue}, 95%, 55%, ${0.7 * alphaScale})`;
       } else if (mode === 'strobe') {
         const phase = Math.floor(t / 120) % 2;
@@ -997,10 +1006,11 @@ function mkTint(mode, colors, cycleMs = 2400, alphaScale = 1) {
 // Tim 06-30 round 3: rainbow + holographic both dialed back further —
 // the cat was getting too washed out at 0.85 / 1.85. All tint effects use
 // 'source-atop' inside mkTint so the background stays untouched.
-FX.tint_rainbow   = mkTint('rainbow', null, 2400, 0.55);
+// Tim 06-30 round 4: rainbow + holographic transition faster (cycle ~half).
+FX.tint_rainbow   = mkTint('rainbow', null, 1200, 0.55);
 FX.tint_strobe    = mkTint('strobe');
 FX.tint_inverted  = mkTint('inverted-flash');
-FX.tint_holographic = mkTint('flash', [0xff66cc, 0x66ccff, 0xffd34d], 3600, 1.2);
+FX.tint_holographic = mkTint('flash', [0xff66cc, 0x66ccff, 0xffd34d], 1800, 1.2);
 FX.tint_neon      = mkTint('flash', [0xff33aa, 0x33ffe6], 800);
 
 // --- FLOOR / GROUND FX -----------------------------------------------------
@@ -1212,12 +1222,15 @@ function mkWeather(kind, opts = {}) {
           ctx.lineTo(it.x + 2, it.y + 14);
           ctx.stroke();
         } else if (kind === 'wind') {
-          // Tim 06-30 round 2: stop the rain-style fall, force diagonal
-          // travel — particles drift down-right with horizontal momentum
-          // matching the streak angle.
+          // Tim 06-30 round 4: bias streaks toward the upper half — "more
+          // wind up top". Re-spawns respect an upper-band probability, and
+          // streaks that reach beyond the mid-band respawn at the top.
           it.x += 2;
           it.y += 0.8;
-          if (it.x > W + 20) { it.x = -20; it.y = Math.random() * H; }
+          if (it.x > W + 20) {
+            it.x = -20;
+            it.y = Math.random() < 0.7 ? Math.random() * H * 0.55 : Math.random() * H;
+          }
           ctx.strokeStyle = `rgba(200,210,255,${0.55 + 0.3 * Math.sin(t / 400 + it.x)})`;
           ctx.lineWidth = 1.5;
           ctx.beginPath();
@@ -1345,10 +1358,10 @@ FX.decor_tail_flame = (cat) => ({
       }
     }
   },
-});// Tim 06-30: combo uses the new pixel wings + the body-mid halo.// Tim 06-30: ghost double more visible (alpha 0.4→0.65) + faster (600→260 ms).
+});// Tim 06-30: combo uses the new pixel wings + the body-mid halo.// Tim 06-30 round 4: even faster (260→130 ms).
 FX.decor_ghost_double = (cat) => ({
   render: (ctx, t) => {
-    const off = Math.sin(t / 260) * 8;
+    const off = Math.sin(t / 130) * 8;
     ctx.globalAlpha = 0.65;
     ctx.save();
     ctx.imageSmoothingEnabled = false;
@@ -1421,15 +1434,15 @@ FX.extra_fairy_lights = (cat) => ({
     }
   },
 });
-// Tim 06-30 round 3: keep the morphing constellation, bigger pattern radius
-// (60→90), bigger dots (2.5→3.5 px), brighter lines/dots.
+// Tim 06-30 round 4: slower dot cycle (dots stay visible longer) + brighter
+// connecting lines so the constellation reads.
 FX.extra_constellation = (cat) => {
   const POOL = 12;
-  const RANGE = 45;  // dot positions in [-RANGE, RANGE]
+  const RANGE = 45;
   const dots = Array.from({ length: POOL }, (_, i) => ({
     dx: -RANGE + Math.random() * RANGE * 2,
     dy: -RANGE + Math.random() * RANGE * 2,
-    period: 2200 + Math.random() * 1800,
+    period: 4400 + Math.random() * 2600,  // slowed from 2200-4000 to 4400-7000
     phaseOffset: Math.random() * 1,
   }));
   return {
@@ -1456,8 +1469,9 @@ FX.extra_constellation = (cat) => {
       });
       // Connect each dot to its nearest VISIBLE neighbor (alpha > 0.3).
       const visible = live.filter(d => d.alpha > 0.3);
-      ctx.strokeStyle = `rgba(180,210,255,0.75)`;
-      ctx.lineWidth = 2;
+      // Round 4: brighter, thicker connecting lines.
+      ctx.strokeStyle = `rgba(220,235,255,0.95)`;
+      ctx.lineWidth = 2.8;
       ctx.beginPath();
       for (let i = 0; i < visible.length; i++) {
         let bestJ = -1, bestD = Infinity;
@@ -1605,13 +1619,13 @@ FX.extra_aurora_ribbon = (cat) => ({
     }
   },
 });
-// Tim 06-30 round 3: even bigger — rays 140→180, 20 rays.
+// Tim 06-30 round 4: bigger again — rays 180→220, 20→24 rays.
 FX.extra_starburst_lines = (cat) => ({
   render: (ctx, t) => {
     const cx = cat.footX, cy = cat.y + cat.h * 0.4;
     const flash = Math.sin(t / 240) * 0.5 + 0.5;
-    for (let i = 0; i < 20; i++) {
-      const a = (i / 20) * Math.PI * 2 + t / 4000;
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2 + t / 4000;
       const grad = ctx.createLinearGradient(cx, cy, cx + Math.cos(a) * 60, cy + Math.sin(a) * 60);
       grad.addColorStop(0, `rgba(255,240,180,${0.8 * flash})`);
       grad.addColorStop(1, 'rgba(255,240,180,0)');
@@ -1619,11 +1633,870 @@ FX.extra_starburst_lines = (cat) => ({
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(cx, cy);
-      ctx.lineTo(cx + Math.cos(a) * 140, cy + Math.sin(a) * 140);
+      ctx.lineTo(cx + Math.cos(a) * 180, cy + Math.sin(a) * 180);
       ctx.stroke();
     }
   },
 });
+
+// ============================================================================
+// ROUND-4 GENERATED BATCH — new effects from Tim's category prompts.
+// Each category expands via color variants + a few new shapes. Existing
+// helpers (mkHalo, mkPulse, mkOrbiter, mkTint, drawStagelight, etc) are
+// reused so behaviour matches the family. Rarity defaults to 'common' —
+// re-tune per Tim on ship.
+// ============================================================================
+
+// --- Stagelights: solo colors + split combos ------------------------------
+FX.stagelight_cyan     = (cat) => ({ render: (ctx, t) => drawStagelight(ctx, cat, [0x33ffe6], t, 2000) });
+FX.stagelight_magenta  = (cat) => ({ render: (ctx, t) => drawStagelight(ctx, cat, [0xff33cc], t, 2000) });
+FX.stagelight_lime     = (cat) => ({ render: (ctx, t) => drawStagelight(ctx, cat, [0x88ff33], t, 2000) });
+FX.stagelight_orange   = (cat) => ({ render: (ctx, t) => drawStagelight(ctx, cat, [0xff7a1a], t, 2000) });
+FX.stagelight_white    = (cat) => ({ render: (ctx, t) => drawStagelight(ctx, cat, [0xffffff], t, 2000) });
+FX.stagelight_split_rb = (cat) => ({ render: (ctx, t) => drawStagelight(ctx, cat, [0xff3333, 0x3399ff], t, 2400) });
+FX.stagelight_split_gp = (cat) => ({ render: (ctx, t) => drawStagelight(ctx, cat, [0x33ff66, 0xa64dff], t, 2400) });
+FX.stagelight_split_cm = (cat) => ({ render: (ctx, t) => drawStagelight(ctx, cat, [0x33ffe6, 0xff33cc], t, 2400) });
+FX.stagelight_tri_rgb  = (cat) => ({ render: (ctx, t) => drawStagelight(ctx, cat, [0xff3333, 0x33ff66, 0x3399ff], t, 2100) });
+FX.stagelight_tri_cmy  = (cat) => ({ render: (ctx, t) => drawStagelight(ctx, cat, [0x33ffe6, 0xff33cc, 0xffe44d], t, 2100) });
+FX.stagelight_tri_neon = (cat) => ({ render: (ctx, t) => drawStagelight(ctx, cat, [0xff33aa, 0x33ffe6, 0x88ff33], t, 1800) });
+
+// --- Halos: color variants of the golden/segmented/double + more ground portals + more Saturn ringslo_segments_red    = mkHalo({ color: 0xff3333, radius: 32, thickness: 3, pos: 'mid', shape: 'segments', segments: 12, rotateMs: 2400, tiltOscMs: 1600 });
+FX.halo_segments_purple = mkHalo({ color: 0xa64dff, radius: 32, thickness: 3, pos: 'mid', shape: 'segments', segments: 12, rotateMs: 2400, tiltOscMs: 1600 });
+FX.halo_segments_gold   = mkHalo({ color: 0xffd34d, radius: 32, thickness: 3, pos: 'mid', shape: 'segments', segments: 12, rotateMs: 2400, tiltOscMs: 1600 });
+// Saturn variants — two-ring opposite direction, different color pairs.
+function mkSaturn(colorA, colorB) {
+  return (cat) => {
+    const a = mkHalo({ color: colorA, radius: 38, thickness: 3, pos: 'mid', shape: 'ellipse', glow: true, rotateMs: 4800, tiltOscMs: 2400 })(cat);
+    const b = mkHalo({ color: colorB, radius: 28, thickness: 2, pos: 'mid', shape: 'ellipse', glow: true, rotateMs: 3600, tiltOscMs: 2000, reverse: true })(cat);
+    return { render: (ctx, t) => { a.render(ctx, t); b.render(ctx, t); } };
+  };
+}
+FX.halo_saturn_silver  = mkSaturn(0xcccccc, 0xffffff);
+FX.halo_saturn_red     = mkSaturn(0xff3333, 0xffaa66);
+FX.halo_saturn_purple  = mkSaturn(0xa64dff, 0xff66cc);
+FX.halo_saturn_green   = mkSaturn(0x33ff66, 0xffd34d);
+// Ground portals in different color palettes.
+function mkGroundPortal(coreColor, ringColor, midColor, pulseColor) {
+  return (cat) => ({
+    render: (ctx, t) => {
+      const cx = cat.footX, cy = cat.footY + 2;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(1, 0.36);
+      const portalR = 44 * cat.scale;
+      const grad = ctx.createRadialGradient(0, 0, 2, 0, 0, portalR);
+      grad.addColorStop(0, rgbStr(coreColor, 0.75));
+      grad.addColorStop(0.55, rgbStr(midColor, 0.4));
+      grad.addColorStop(1, rgbStr(coreColor, 0));
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.arc(0, 0, portalR, 0, Math.PI * 2); ctx.fill();
+      ctx.rotate(t / 1400);
+      ctx.strokeStyle = rgbStr(ringColor, 0.85);
+      ctx.lineWidth = 2;
+      for (let arm = 0; arm < 3; arm++) {
+        ctx.save();
+        ctx.rotate((arm / 3) * Math.PI * 2);
+        ctx.beginPath();
+        for (let a = 0; a <= Math.PI * 2; a += 0.05) {
+          const r = (a / (Math.PI * 2)) * portalR;
+          const px = Math.cos(a) * r, py = Math.sin(a) * r;
+          if (a === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+      for (let i = 0; i < 3; i++) {
+        const phase = ((t / 1500 + i / 3) % 1);
+        const r = phase * portalR;
+        ctx.strokeStyle = rgbStr(pulseColor, (1 - phase) * 0.6);
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.restore();
+    },
+  });
+}
+FX.halo_ground_blue   = mkGroundPortal(0x3399ff, 0xa0d0ff, 0x4d88cc, 0x66ccff);
+FX.halo_ground_red    = mkGroundPortal(0xff3333, 0xffb0b0, 0xcc4d4d, 0xff8888);
+FX.halo_ground_green  = mkGroundPortal(0x33ff66, 0xb0ffb0, 0x4dcc66, 0x88ffaa);
+FX.halo_ground_gold   = mkGroundPortal(0xffd34d, 0xffe89b, 0xcc9a2b, 0xffee99);
+FX.halo_double_silver = (cat) => {
+  const a = mkHalo({ color: 0xcccccc, radius: 32, thickness: 2.5, pos: 'mid', shape: 'ellipse', glow: true, rotateMs: 2800, tiltOscMs: 1700 })(cat);
+  const b = mkHalo({ color: 0xffffff, radius: 22, thickness: 2.5, pos: 'mid', shape: 'ellipse', glow: true, rotateMs: 2400, tiltOscMs: 1400, reverse: true })(cat);
+  return { render: (ctx, t) => { a.render(ctx, t); b.render(ctx, t); } };
+};
+FX.halo_double_neon = (cat) => {
+  const a = mkHalo({ color: 0xff33aa, radius: 32, thickness: 2.5, pos: 'mid', shape: 'ellipse', glow: true, rotateMs: 2800, tiltOscMs: 1700 })(cat);
+  const b = mkHalo({ color: 0x33ffe6, radius: 22, thickness: 2.5, pos: 'mid', shape: 'ellipse', glow: true, rotateMs: 2400, tiltOscMs: 1400, reverse: true })(cat);
+  return { render: (ctx, t) => { a.render(ctx, t); b.render(ctx, t); } };
+};
+// Ring of dots color variants (12 dots orbiting body mid, different color).
+function mkRingOfDots(colorFn) {
+  return (cat) => ({
+    render: (ctx, t) => {
+      const cx = cat.footX, cy = cat.y + cat.h * 0.5;
+      const r = 38 * cat.scale;
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * Math.PI * 2 + t / 1500;
+        const wobble = 1 + 0.1 * Math.sin(t / 200 + i);
+        ctx.fillStyle = colorFn(i, t);
+        ctx.beginPath();
+        ctx.arc(cx + Math.cos(a) * r * wobble, cy + Math.sin(a) * r * 0.4 * wobble, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    },
+  });
+}
+FX.halo_dots_blue    = mkRingOfDots(() => 'rgba(102,204,255,0.85)');
+FX.halo_dots_pink    = mkRingOfDots(() => 'rgba(255,102,204,0.85)');
+FX.halo_dots_green   = mkRingOfDots(() => 'rgba(102,255,153,0.85)');
+FX.halo_dots_rainbow = mkRingOfDots((i, t) => `hsla(${(i * 30 + t / 20) % 360},95%,60%,0.9)`);
+
+// --- Beams: color variants -------------------------------------------------
+function mkSunRays(inner, outer) {
+  return (cat) => ({
+    render: (ctx, t) => {
+      const cx = cat.footX, cy = cat.y + cat.h * 0.5;
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(t / 4000);
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * Math.PI * 2;
+        const len = 90 + 14 * Math.sin(t / 300 + i);
+        const grad = ctx.createLinearGradient(0, 0, Math.cos(a) * len, Math.sin(a) * len);
+        grad.addColorStop(0, inner);
+        grad.addColorStop(0.35, outer);
+        grad.addColorStop(1, outer.replace(/[\d\.]+\)$/, '0)'));
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a) * len, Math.sin(a) * len);
+        ctx.stroke();
+      }
+      ctx.restore();
+    },
+  });
+}
+FX.beam_sun_rays_cyan    = mkSunRays('rgba(220,255,255,1)', 'rgba(110,230,255,0.85)');
+FX.beam_sun_rays_magenta = mkSunRays('rgba(255,220,240,1)', 'rgba(255,110,200,0.85)');
+FX.beam_sun_rays_white   = mkSunRays('rgba(255,255,255,1)', 'rgba(255,255,255,0.85)');
+// God rays with different tints.
+function mkGodRays(hot, warm) {
+  return (cat) => ({
+    render: (ctx, t) => {
+      const cx = cat.footX;
+      for (let i = 0; i < 5; i++) {
+        const offset = -40 + i * 22;
+        const flick = 0.55 + 0.45 * Math.sin(t / 220 + i * 1.3);
+        const grad = ctx.createLinearGradient(cx + offset, 0, cx + offset + 30, H);
+        grad.addColorStop(0, `rgba(${hot},${0.45 * flick})`);
+        grad.addColorStop(0.45, `rgba(${warm},${0.32 * flick})`);
+        grad.addColorStop(1, `rgba(${warm},0)`);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(cx + offset - 6, 0);
+        ctx.lineTo(cx + offset + 6, 0);
+        ctx.lineTo(cx + offset + 22, H);
+        ctx.lineTo(cx + offset - 22, H);
+        ctx.closePath(); ctx.fill();
+      }
+    },
+  });
+}
+FX.beam_god_rays_pink = mkGodRays('255,220,240', '255,140,200');
+FX.beam_god_rays_blue = mkGodRays('220,240,255', '120,180,255');
+// Twin pillars variants.
+function mkTwinPillars(colors) {
+  return (cat) => ({
+    render: (ctx, t) => {
+      const burst = (Math.sin(t / 220) * 0.5 + 0.5);
+      const pillars = colors.map((c, idx) => ({ xo: -54 + (108 / (colors.length - 1)) * idx, color: c }));
+      for (const p of pillars) {
+        const x = cat.footX + p.xo;
+        const flicker = 1 + 0.22 * Math.sin(t / 60 + p.xo * 0.1);
+        const grad = ctx.createLinearGradient(0, cat.y - 30, 0, cat.footY);
+        grad.addColorStop(0, rgbStr(p.color, 0.0));
+        grad.addColorStop(0.55, rgbStr(p.color, 0.9 * flicker));
+        grad.addColorStop(1, rgbStr(p.color, 1.0 * flicker));
+        ctx.fillStyle = grad;
+        ctx.fillRect(x - 6, cat.y - 30, 12, cat.footY - (cat.y - 30));
+        ctx.fillStyle = rgbStr(0xffffff, 0.55 + 0.45 * burst);
+        ctx.fillRect(x - 2, cat.y - 30, 4, cat.footY - (cat.y - 30));
+      }
+    },
+  });
+}
+FX.beam_pillars_green = mkTwinPillars([0x33ff66, 0x88ffaa, 0x33ff99, 0x00cc66]);
+FX.beam_pillars_gold  = mkTwinPillars([0xffd34d, 0xffe89b, 0xffbb00, 0xff8833]);
+FX.beam_pillars_neon  = mkTwinPillars([0xff33aa, 0x33ffe6, 0xffe44d, 0x88ff33]);
+
+// --- Pulses: color variants + alternating -----------------------------------
+FX.pulse_heart_gold    = mkPulse({ color: 0xffd34d, maxR: 72, intervalMs: 240, lifeMs: 1500, shape: 'heart', thickness: 7, pos: 'mid', alpha: 0.9 });
+FX.pulse_heart_cyan    = mkPulse({ color: 0x33ffe6, maxR: 72, intervalMs: 240, lifeMs: 1500, shape: 'heart', thickness: 7, pos: 'mid', alpha: 0.9 });
+FX.pulse_heart_red     = mkPulse({ color: 0xff3333, maxR: 72, intervalMs: 240, lifeMs: 1500, shape: 'heart', thickness: 7, pos: 'mid', alpha: 0.9 });
+FX.pulse_sonar_red     = mkPulse({ color: 0xff3333, maxR: 70, intervalMs: 600, lifeMs: 1800, thickness: 2 });
+FX.pulse_sonar_green   = mkPulse({ color: 0x33ff66, maxR: 70, intervalMs: 600, lifeMs: 1800, thickness: 2 });
+FX.pulse_sonar_purple  = mkPulse({ color: 0xa64dff, maxR: 70, intervalMs: 600, lifeMs: 1800, thickness: 2 });
+FX.pulse_radio_cyan    = mkPulse({ color: 0x33ffe6, maxR: 60, intervalMs: 300, lifeMs: 1700, shape: 'semicircle', flatness: 1 });
+FX.pulse_radio_purple  = mkPulse({ color: 0xa64dff, maxR: 60, intervalMs: 300, lifeMs: 1700, shape: 'semicircle', flatness: 1 });
+// Alternating heart — each new ring cycles color via a palette.
+FX.pulse_heart_alt = (cat) => {
+  const pulses = [];
+  let lastSpawn = -1e9;
+  const palette = [0xff66cc, 0xffd34d, 0x66ccff, 0x66ff99, 0xff33aa];
+  let colorIdx = 0;
+  return {
+    render: (ctx, t) => {
+      if (t - lastSpawn > 260) {
+        pulses.push({ start: t, color: palette[colorIdx % palette.length] });
+        colorIdx++;
+        lastSpawn = t;
+      }
+      const cy = cat.y + cat.h * 0.5;
+      for (let i = pulses.length - 1; i >= 0; i--) {
+        const p = pulses[i];
+        const age = (t - p.start) / 1500;
+        if (age >= 1) { pulses.splice(i, 1); continue; }
+        const r = 72 * cat.scale * age;
+        const alpha = (1 - age) * 0.9;
+        ctx.save();
+        ctx.translate(cat.footX, cy);
+        ctx.lineWidth = 7;
+        ctx.strokeStyle = rgbStr(p.color, alpha);
+        const sc = r / 30;
+        ctx.beginPath();
+        for (let a = 0; a <= Math.PI * 2; a += 0.1) {
+          const hx = 16 * Math.pow(Math.sin(a), 3);
+          const hy = -(13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a));
+          const px = hx * sc, py = hy * sc;
+          if (a === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+    },
+  };
+};
+
+// --- Orbiters: new emoji spinners -----------------------------------------
+FX.orbit_money       = mkOrbiter({ glyph: '💰', count: 5, radius: 32, pos: 'mid', size: 14, speedMs: 1800 });
+FX.orbit_diamonds    = mkOrbiter({ glyph: '💎', count: 5, radius: 32, pos: 'mid', size: 14, speedMs: 1800 });
+FX.orbit_fire        = mkOrbiter({ glyph: '🔥', count: 6, radius: 34, pos: 'mid', size: 14, speedMs: 1200 });
+FX.orbit_pizza       = mkOrbiter({ glyph: '🍕', count: 4, radius: 32, pos: 'mid', size: 14, speedMs: 2400 });
+FX.orbit_crowns      = mkOrbiter({ glyph: '👑', count: 4, radius: 32, pos: 'mid', size: 14, speedMs: 2400 });
+FX.orbit_gifts       = mkOrbiter({ glyph: '🎁', count: 4, radius: 32, pos: 'mid', size: 14, speedMs: 2400 });
+FX.orbit_pumpkins    = mkOrbiter({ glyph: '🎃', count: 4, radius: 32, pos: 'mid', size: 14, speedMs: 2400 });
+FX.orbit_skulls      = mkOrbiter({ glyph: '💀', count: 5, radius: 32, pos: 'mid', size: 14, speedMs: 2000 });
+FX.orbit_music       = mkOrbiter({ glyph: '🎵', count: 5, radius: 32, pos: 'mid', size: 14, speedMs: 2000 });
+FX.orbit_lightning   = mkOrbiter({ glyph: '⚡', count: 6, radius: 34, pos: 'mid', size: 14, speedMs: 1200 });
+
+// --- Floor: color variants + new patterns ----------------------------------
+function mkMagicCircle(color, glowColor) {
+  return (cat) => ({
+    render: (ctx, t) => {
+      const cx = cat.footX, cy = cat.y + cat.h * 0.5;
+      const r = 38 * cat.scale;
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(t / 3000);
+      ctx.strokeStyle = rgbStr(color, 0.75);
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(0, 0, r, r * 0.32, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(0, 0, r * 0.7, r * 0.7 * 0.32, 0, 0, Math.PI * 2); ctx.stroke();
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * r * 0.7, Math.sin(a) * r * 0.7 * 0.32);
+        ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r * 0.32);
+        ctx.stroke();
+      }
+      ctx.restore();
+    },
+  });
+}
+FX.floor_magic_red    = mkMagicCircle(0xff3333, 0xffaaaa);
+FX.floor_magic_gold   = mkMagicCircle(0xffd34d, 0xffe89b);
+FX.floor_magic_green  = mkMagicCircle(0x33ff66, 0x88ffaa);
+FX.floor_magic_cyan   = mkMagicCircle(0x33ffe6, 0x88ffee);
+// Pentagram color variants — flashing bright default per round 3.
+function mkPentagram(color) {
+  return (cat) => ({
+    render: (ctx, t) => {
+      const cx = cat.footX, cy = cat.footY;
+      const r = 30 * cat.scale;
+      const cyc = (t / 3000) % 1;
+      const bright = cyc < 0.08 ? 0.4 : Math.min(1.0, 0.4 + (cyc - 0.08) * 6);
+      ctx.save(); ctx.translate(cx, cy); ctx.scale(1, 0.32);
+      ctx.rotate(-Math.PI / 2 + Math.sin(t / 2000) * 0.05);
+      ctx.strokeStyle = rgbStr(color, 0.95 * bright);
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let i = 0; i < 5; i++) {
+        const a = (i * 4 / 5) * Math.PI * 2;
+        const px = Math.cos(a) * r, py = Math.sin(a) * r;
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.closePath(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, r * 1.05, 0, Math.PI * 2); ctx.stroke();
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = rgbStr(color, 0.4 * bright);
+      ctx.beginPath(); ctx.arc(0, 0, r * 1.15, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    },
+  });
+}
+FX.floor_pentagram_gold   = mkPentagram(0xffd34d);
+FX.floor_pentagram_purple = mkPentagram(0xa64dff);
+FX.floor_pentagram_cyan   = mkPentagram(0x33ffe6);
+// Circle + inner pattern (star / heart / hexagon).
+function mkCirclePattern(shape, color) {
+  return (cat) => ({
+    render: (ctx, t) => {
+      const cx = cat.footX, cy = cat.footY;
+      const r = 32 * cat.scale;
+      const cyc = (t / 3000) % 1;
+      const bright = cyc < 0.08 ? 0.4 : Math.min(1.0, 0.4 + (cyc - 0.08) * 6);
+      ctx.save(); ctx.translate(cx, cy); ctx.scale(1, 0.32);
+      ctx.rotate(t / 4000);
+      ctx.strokeStyle = rgbStr(color, 0.85 * bright);
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath();
+      if (shape === 'heart') {
+        for (let a = 0; a <= Math.PI * 2; a += 0.1) {
+          const hx = 16 * Math.pow(Math.sin(a), 3);
+          const hy = -(13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a));
+          const px = hx * (r / 24), py = hy * (r / 24);
+          if (a === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+      } else if (shape === 'star6') {
+        for (let i = 0; i < 12; i++) {
+          const a = (i / 12) * Math.PI * 2 - Math.PI / 2;
+          const rr = (i % 2 === 0) ? r * 0.75 : r * 0.3;
+          const px = Math.cos(a) * rr, py = Math.sin(a) * rr;
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+      } else if (shape === 'hexagon') {
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2;
+          const px = Math.cos(a) * r * 0.7, py = Math.sin(a) * r * 0.7;
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+      } else {  // triangle
+        for (let i = 0; i < 3; i++) {
+          const a = (i / 3) * Math.PI * 2 - Math.PI / 2;
+          const px = Math.cos(a) * r * 0.75, py = Math.sin(a) * r * 0.75;
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+      }
+      ctx.stroke();
+      ctx.restore();
+    },
+  });
+}
+FX.floor_circle_heart_pink   = mkCirclePattern('heart', 0xff66cc);
+FX.floor_circle_heart_gold   = mkCirclePattern('heart', 0xffd34d);
+FX.floor_circle_star_gold    = mkCirclePattern('star6', 0xffd34d);
+FX.floor_circle_star_cyan    = mkCirclePattern('star6', 0x33ffe6);
+FX.floor_circle_hex_green    = mkCirclePattern('hexagon', 0x33ff66);
+FX.floor_circle_tri_purple   = mkCirclePattern('triangle', 0xa64dff);
+
+// Ice puddle — matches the reference: chunky cyan tiles rounded footprint.
+FX.floor_ice_puddle = (cat) => ({
+  render: (ctx, t) => {
+    const cx = cat.footX, cy = cat.footY;
+    const TILE = 4;
+    const w = 78 * cat.scale, h = 22 * cat.scale;
+    const halfW = w / 2, halfH = h / 2;
+    const phase = Math.floor(t / 1400);
+    for (let py = -halfH; py < halfH; py += TILE) {
+      for (let px = -halfW; px < halfW; px += TILE) {
+        const ex = px / halfW, ey = py / halfH;
+        const dist = Math.sqrt(ex * ex + ey * ey);
+        if (dist > 1) continue;
+        const seed = ((px * 374761393) ^ (py * 668265263) ^ (phase * 2147483647)) >>> 0;
+        const r = (seed % 100) / 100;
+        let r8, g8, b8;
+        if (r < 0.15) { r8 = 255; g8 = 255; b8 = 255; }
+        else if (r < 0.45) { r8 = 180; g8 = 240; b8 = 255; }
+        else { r8 = 100; g8 = 210; b8 = 255; }
+        const alpha = 0.7 + (1 - dist) * 0.25;
+        ctx.fillStyle = `rgba(${r8},${g8},${b8},${alpha})`;
+        ctx.fillRect(cx + px, cy + py, TILE, TILE);
+      }
+    }
+  },
+});
+// Lava puddle color variants — same 3-sin flow with different palettes.
+function mkLavaPuddle(palette) {
+  return (cat) => ({
+    render: (ctx, t) => {
+      const cx = cat.footX, cy = cat.footY;
+      const TILE = 4;
+      const w = 92 * cat.scale, h = 30 * cat.scale;
+      const halfW = w / 2, halfH = h / 2;
+      for (let py = -halfH; py < halfH; py += TILE) {
+        for (let px = -halfW; px < halfW; px += TILE) {
+          const ex = px / halfW, ey = py / halfH;
+          const dist = Math.sqrt(ex * ex + ey * ey);
+          if (dist > 1) continue;
+          const w1 = Math.sin(px * 0.10 + py * 0.06 + t / 900);
+          const w2 = Math.sin(px * 0.22 - py * 0.15 + t / 1400 + 1.7);
+          const w3 = Math.sin(px * 0.06 + py * 0.20 + t / 1800 + 0.4);
+          const jitter = (((px * 374761393) ^ (py * 668265263)) >>> 0) % 100 / 100 - 0.5;
+          const flow = (w1 + w2 + w3) / 3 + jitter * 0.2;
+          const heat = (flow + 1) / 2 + (1 - dist) * 0.18;
+          let color;
+          if (heat > 1.05) color = palette[3];
+          else if (heat > 0.78) color = palette[2];
+          else if (heat > 0.45) color = palette[1];
+          else color = palette[0];
+          const alpha = 0.85 + (1 - dist) * 0.15;
+          ctx.fillStyle = `rgba(${color[0]},${color[1]},${color[2]},${alpha})`;
+          ctx.fillRect(cx + px, cy + py, TILE, TILE);
+        }
+      }
+    },
+  });
+}
+// Blue lava (mystical), green (toxic), purple (void), cyan (ice-lava).
+FX.floor_lava_blue    = mkLavaPuddle([[30, 60, 160], [60, 110, 230], [140, 210, 255], [220, 250, 255]]);
+FX.floor_lava_green   = mkLavaPuddle([[25, 100, 40], [60, 180, 60], [180, 240, 80], [240, 255, 110]]);
+FX.floor_lava_purple  = mkLavaPuddle([[70, 20, 110], [150, 60, 200], [220, 140, 255], [255, 220, 250]]);
+FX.floor_lava_cyan    = mkLavaPuddle([[20, 100, 130], [50, 200, 200], [140, 240, 240], [220, 255, 255]]);
+// Teleport pad color variants.
+function mkTeleportPad(color) {
+  return (cat) => ({
+    render: (ctx, t) => {
+      const cx = cat.footX, cy = cat.footY;
+      for (let i = 0; i < 5; i++) {
+        const phase = ((t / 1400 + i / 5) % 1);
+        const r = 14 + phase * 100;
+        ctx.save(); ctx.translate(cx, cy); ctx.scale(1, 0.32);
+        ctx.strokeStyle = rgbStr(color, (1 - phase) * 0.7);
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.rect(-r, -r, r * 2, r * 2); ctx.stroke();
+        ctx.restore();
+      }
+    },
+  });
+}
+FX.floor_teleport_red    = mkTeleportPad(0xff3333);
+FX.floor_teleport_gold   = mkTeleportPad(0xffd34d);
+FX.floor_teleport_purple = mkTeleportPad(0xa64dff);
+FX.floor_teleport_green  = mkTeleportPad(0x33ff66);
+
+// --- Extras: color variants ------------------------------------------------
+function mkAuroraRibbon(hues) {
+  return (cat) => ({
+    render: (ctx, t) => {
+      const cy = cat.y + cat.h * 0.5;
+      ctx.lineWidth = 6;
+      for (let layer = 0; layer < 4; layer++) {
+        ctx.beginPath();
+        ctx.strokeStyle = `hsla(${(hues[layer % hues.length] + t / 28) % 360},90%,60%,0.85)`;
+        for (let x = 0; x <= W; x += 4) {
+          const y = cy + Math.sin(x / 22 + t / 500 + layer) * 14 - layer * 4;
+          if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+    },
+  });
+}
+FX.extra_aurora_pink = mkAuroraRibbon([320, 340, 300, 350]);
+FX.extra_aurora_gold = mkAuroraRibbon([45, 30, 60, 50]);
+FX.extra_aurora_red  = mkAuroraRibbon([0, 15, 350, 10]);
+function mkPixelRain(colorFn) {
+  const drops = Array.from({ length: 50 }, () => ({ x: Math.random() * W, y: Math.random() * H, c: Math.random() }));
+  return (cat) => ({
+    render: (ctx, t) => {
+      for (const d of drops) {
+        d.y += 3;
+        if (d.y > H) { d.y -= H; d.x = Math.random() * W; }
+        ctx.fillStyle = colorFn(d, t);
+        ctx.fillRect(Math.floor(d.x), Math.floor(d.y), 4, 4);
+      }
+    },
+  });
+}
+FX.extra_pixel_rain_gold = mkPixelRain(() => 'rgba(255,220,80,0.95)');
+FX.extra_pixel_rain_red  = mkPixelRain(() => 'rgba(255,80,80,0.95)');
+FX.extra_pixel_rain_neon = mkPixelRain((d) => `hsla(${(d.c * 360)},95%,62%,0.95)`);
+function mkDiscoLines(hueOffset) {
+  return (cat) => ({
+    render: (ctx, t) => {
+      const lines = 12;
+      for (let i = 0; i < lines; i++) {
+        const a = i / lines - 0.5;
+        const px = cat.footX + a * (W - 24);
+        const hue = ((t / 240 + i * 30 + hueOffset) % 360) | 0;
+        const flick = 0.7 + 0.3 * Math.sin(t / 180 + i * 1.3);
+        const grad = ctx.createLinearGradient(px, cat.footY, px, 0);
+        grad.addColorStop(0, `hsla(${hue},85%,60%,${0.95 * flick})`);
+        grad.addColorStop(1, `hsla(${hue},85%,60%,0)`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(px - 3, 0, 6, cat.footY);
+      }
+    },
+  });
+}
+FX.extra_disco_warm = mkDiscoLines(0);   // reds/oranges/yellows shift
+FX.extra_disco_cool = mkDiscoLines(180); // cyans/blues/purples shift
+function mkSoundBars(hueBase) {
+  return (cat) => ({
+    render: (ctx, t) => {
+      const cx = cat.footX, baseY = cat.footY;
+      const bars = 14;
+      const maxH = (cat.footY - (cat.y - 40));
+      for (let i = 0; i < bars; i++) {
+        const h = (Math.sin(t / 180 + i) * 0.5 + 0.6) * maxH;
+        const a = i / bars - 0.5;
+        const px = cx + a * 100;
+        const hue = hueBase + i * 8;
+        ctx.fillStyle = `hsla(${hue},85%,62%,0.9)`;
+        ctx.fillRect(px - 3, baseY - h, 5, h);
+      }
+    },
+  });
+}
+FX.extra_sound_bars_red  = mkSoundBars(0);
+FX.extra_sound_bars_gold = mkSoundBars(45);
+FX.extra_sound_bars_neon = mkSoundBars(320);
+function mkGlitch(hueRange) {
+  return (cat) => ({
+    render: (ctx, t) => {
+      for (let i = 0; i < 24; i++) {
+        const x = Math.floor(Math.random() * W);
+        const y = Math.floor(Math.random() * H);
+        const w = 6 + Math.random() * 50;
+        const h = 1 + Math.random() * 5;
+        const hue = hueRange[0] + Math.random() * (hueRange[1] - hueRange[0]);
+        ctx.fillStyle = `hsla(${hue},90%,60%,0.7)`;
+        ctx.fillRect(x, y, w, h);
+      }
+    },
+  });
+}
+FX.extra_glitch_red   = mkGlitch([340, 30]);   // red/pink
+FX.extra_glitch_green = mkGlitch([100, 160]);  // green/cyan
+
+// ============================================================================
+// ROUND-5 GENERATED BATCH — Tim's revised category prompts.
+// ============================================================================
+
+// Spatial stagelight split — flame segments side-by-side (LEFT | MID | RIGHT).
+function drawStagelightSplit(ctx, cat, colors, t) {
+  const baseW = 56 * cat.scale;
+  const tipW = 10 * cat.scale;
+  const flameH = 96 * cat.scale;
+  const sliceThick = 10 * cat.scale;
+  const slices = 40;
+  const flicker = 1 + 0.08 * Math.sin(t / 380);
+  const n = colors.length;
+  ctx.save();
+  ctx.translate(cat.footX, cat.footY);
+  ctx.scale(flicker, 1);
+  for (let i = 0; i < slices; i++) {
+    const tt = i / (slices - 1);
+    const y = -tt * flameH;
+    const w = baseW + (tipW - baseW) * tt;
+    const alpha = 0.55 * 0.24 * (1 - tt * 0.8);
+    const segW = w / n;
+    for (let k = 0; k < n; k++) {
+      const cx = -w / 2 + segW * k + segW / 2;
+      ctx.fillStyle = rgbStr(colors[k], alpha);
+      ctx.beginPath();
+      ctx.ellipse(cx, y, segW * 0.5, sliceThick * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+FX.stagelight_split_lr_rb    = (cat) => ({ render: (ctx, t) => drawStagelightSplit(ctx, cat, [0xff3333, 0x3399ff], t) });
+FX.stagelight_split_lr_gp    = (cat) => ({ render: (ctx, t) => drawStagelightSplit(ctx, cat, [0x33ff66, 0xa64dff], t) });
+FX.stagelight_split_lr_cm    = (cat) => ({ render: (ctx, t) => drawStagelightSplit(ctx, cat, [0x33ffe6, 0xff33cc], t) });
+FX.stagelight_split_lr_gs    = (cat) => ({ render: (ctx, t) => drawStagelightSplit(ctx, cat, [0xffd34d, 0xcccccc], t) });
+FX.stagelight_split_lr_fi    = (cat) => ({ render: (ctx, t) => drawStagelightSplit(ctx, cat, [0xff7a1a, 0x66ccff], t) });
+FX.stagelight_split_lr_yw    = (cat) => ({ render: (ctx, t) => drawStagelightSplit(ctx, cat, [0xffe44d, 0xffffff], t) });
+FX.stagelight_split_lr_bp    = (cat) => ({ render: (ctx, t) => drawStagelightSplit(ctx, cat, [0x3399ff, 0xff66cc], t) });
+FX.stagelight_tri_lrb        = (cat) => ({ render: (ctx, t) => drawStagelightSplit(ctx, cat, [0xff3333, 0x33ff66, 0x3399ff], t) });
+FX.stagelight_tri_flag       = (cat) => ({ render: (ctx, t) => drawStagelightSplit(ctx, cat, [0xff3333, 0xffffff, 0x3399ff], t) });
+FX.stagelight_tri_gcpk       = (cat) => ({ render: (ctx, t) => drawStagelightSplit(ctx, cat, [0xffd34d, 0x33ffe6, 0xff66cc], t) });
+FX.stagelight_tri_neonsp     = (cat) => ({ render: (ctx, t) => drawStagelightSplit(ctx, cat, [0xff33aa, 0x33ffe6, 0xffe44d], t) });
+
+// More Saturn / portal / segments / dots / double palettes.
+FX.halo_saturn_rainbow = (cat) => {
+  const a = mkHalo({ color: 0xff66cc, radius: 38, thickness: 3, pos: 'mid', shape: 'ellipse', glow: true, rotateMs: 4800, tiltOscMs: 2400 })(cat);
+  const b = mkHalo({ color: 0x33ffe6, radius: 28, thickness: 2, pos: 'mid', shape: 'ellipse', glow: true, rotateMs: 3600, tiltOscMs: 2000, reverse: true })(cat);
+  const c = mkHalo({ color: 0xffe44d, radius: 20, thickness: 2, pos: 'mid', shape: 'ellipse', glow: true, rotateMs: 3000, tiltOscMs: 1600 })(cat);
+  return { render: (ctx, t) => { a.render(ctx, t); b.render(ctx, t); c.render(ctx, t); } };
+};
+FX.halo_saturn_sunset  = mkSaturn(0xff5e3a, 0xffd66b);
+FX.halo_saturn_neon    = mkSaturn(0xff33aa, 0x33ffe6);
+FX.halo_saturn_gold    = mkSaturn(0xffd34d, 0xffe89b);
+FX.halo_segments_rainbow = mkHalo({ color: 0xff66cc, radius: 32, thickness: 3, pos: 'mid', shape: 'segments', segments: 12, rotateMs: 2400, tiltOscMs: 1600, beadColor: 0x33ffe6 });
+FX.halo_segments_cyan    = mkHalo({ color: 0x33ffe6, radius: 32, thickness: 3, pos: 'mid', shape: 'segments', segments: 12, rotateMs: 2400, tiltOscMs: 1600 });
+FX.halo_segments_pink    = mkHalo({ color: 0xff66cc, radius: 32, thickness: 3, pos: 'mid', shape: 'segments', segments: 12, rotateMs: 2400, tiltOscMs: 1600 });
+FX.halo_ground_pink      = mkGroundPortal(0xff66cc, 0xffb0dc, 0xcc4d99, 0xff88cc);
+FX.halo_ground_cyan      = mkGroundPortal(0x33ffe6, 0xb0fff5, 0x4dccb8, 0x88ffee);
+FX.halo_ground_rainbow   = mkGroundPortal(0xff33aa, 0xffe44d, 0x33ffe6, 0x88ff33);
+FX.halo_dots_gold        = mkRingOfDots(() => 'rgba(255,220,80,0.9)');
+FX.halo_dots_red         = mkRingOfDots(() => 'rgba(255,80,80,0.9)');
+FX.halo_dots_purple      = mkRingOfDots(() => 'rgba(180,80,255,0.9)');
+FX.halo_double_sunset = (cat) => {
+  const a = mkHalo({ color: 0xff9a3c, radius: 32, thickness: 2.5, pos: 'mid', shape: 'ellipse', glow: true, rotateMs: 2800, tiltOscMs: 1700 })(cat);
+  const b = mkHalo({ color: 0xffe44d, radius: 22, thickness: 2.5, pos: 'mid', shape: 'ellipse', glow: true, rotateMs: 2400, tiltOscMs: 1400, reverse: true })(cat);
+  return { render: (ctx, t) => { a.render(ctx, t); b.render(ctx, t); } };
+};
+FX.halo_double_aurora = (cat) => {
+  const a = mkHalo({ color: 0x33ff99, radius: 32, thickness: 2.5, pos: 'mid', shape: 'ellipse', glow: true, rotateMs: 2800, tiltOscMs: 1700 })(cat);
+  const b = mkHalo({ color: 0x6688ff, radius: 22, thickness: 2.5, pos: 'mid', shape: 'ellipse', glow: true, rotateMs: 2400, tiltOscMs: 1400, reverse: true })(cat);
+  return { render: (ctx, t) => { a.render(ctx, t); b.render(ctx, t); } };
+};
+
+// Lightning color variants (dark-mode + colored glow + colored core).
+function mkLightningColored(glowRgb, coreRgb) {
+  return (cat) => {
+    const strikes = [];
+    const buildBolt = () => {
+      const main = []; let x = cat.footX + (Math.random() - 0.5) * 60, y = 0;
+      main.push([x, y]);
+      while (y < cat.y) { x += (Math.random() - 0.5) * 36; y += 8 + Math.random() * 14; main.push([x, y]); }
+      const branches = [];
+      const nB = 1 + Math.floor(Math.random() * 3);
+      for (let b = 0; b < nB; b++) {
+        const si = 1 + Math.floor(Math.random() * (main.length - 2));
+        let [bx, by] = main[si]; const br = [[bx, by]];
+        const dir = Math.random() < 0.5 ? -1 : 1;
+        const len = 3 + Math.floor(Math.random() * 4);
+        for (let i = 0; i < len; i++) { bx += dir * (8 + Math.random() * 16); by += 4 + Math.random() * 10; br.push([bx, by]); }
+        branches.push(br);
+      }
+      return { main, branches };
+    };
+    return {
+      render: (ctx, t) => {
+        if (Math.random() < 0.09 && strikes.length < 4) strikes.push({ untilT: t + 150, ...buildBolt() });
+        const drawPath = (pts, gA, gW, cA) => {
+          ctx.strokeStyle = `rgba(${glowRgb},${gA})`; ctx.lineWidth = gW;
+          ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+          for (let j = 1; j < pts.length; j++) ctx.lineTo(pts[j][0], pts[j][1]);
+          ctx.stroke();
+          ctx.strokeStyle = `rgba(${coreRgb},${cA})`; ctx.lineWidth = gW * 0.3;
+          ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+          for (let j = 1; j < pts.length; j++) ctx.lineTo(pts[j][0], pts[j][1]);
+          ctx.stroke();
+        };
+        const hasLive = strikes.some(s => t <= s.untilT);
+        if (!hasLive) { ctx.fillStyle = 'rgba(0,0,0,0.85)'; ctx.fillRect(0, 0, W, H); }
+        for (let i = strikes.length - 1; i >= 0; i--) {
+          const s = strikes[i];
+          if (t > s.untilT) { strikes.splice(i, 1); continue; }
+          ctx.save();
+          drawPath(s.main, 0.6, 5, 0.95);
+          for (const br of s.branches) drawPath(br, 0.45, 3, 0.7);
+          ctx.restore();
+        }
+        if (hasLive) { ctx.fillStyle = `rgba(${coreRgb},0.26)`; ctx.fillRect(0, 0, W, H); }
+      },
+    };
+  };
+}
+FX.beam_lightning_blue   = mkLightningColored('102,180,255', '220,240,255');
+FX.beam_lightning_white  = mkLightningColored('220,220,255', '255,255,255');
+FX.beam_lightning_purple = mkLightningColored('180,120,255', '235,220,255');
+FX.beam_lightning_green  = mkLightningColored('120,255,150', '220,255,230');
+FX.beam_lightning_red    = mkLightningColored('255,100,100', '255,220,220');
+// More sun ray palettes.
+FX.beam_sun_rays_gold    = mkSunRays('rgba(255,255,220,1)', 'rgba(255,220,80,0.85)');
+FX.beam_sun_rays_rainbow = (cat) => ({
+  render: (ctx, t) => {
+    const cx = cat.footX, cy = cat.y + cat.h * 0.5;
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(t / 4000);
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2;
+      const len = 90 + 14 * Math.sin(t / 300 + i);
+      const hue = (i * 22 + t / 30) % 360;
+      const grad = ctx.createLinearGradient(0, 0, Math.cos(a) * len, Math.sin(a) * len);
+      grad.addColorStop(0, `hsla(${hue},95%,80%,1)`);
+      grad.addColorStop(0.35, `hsla(${hue},95%,60%,0.85)`);
+      grad.addColorStop(1, `hsla(${hue},95%,60%,0)`);
+      ctx.strokeStyle = grad; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(a) * len, Math.sin(a) * len);
+      ctx.stroke();
+    }
+    ctx.restore();
+  },
+});
+FX.beam_god_rays_gold   = mkGodRays('255,255,220', '255,220,80');
+FX.beam_god_rays_silver = mkGodRays('240,240,255', '200,210,230');
+FX.beam_god_rays_green  = mkGodRays('220,255,220', '110,230,120');
+FX.beam_pillars_rainbow = (cat) => ({
+  render: (ctx, t) => {
+    const burst = (Math.sin(t / 220) * 0.5 + 0.5);
+    for (let idx = 0; idx < 4; idx++) {
+      const xo = -54 + 36 * idx;
+      const x = cat.footX + xo;
+      const flicker = 1 + 0.22 * Math.sin(t / 60 + xo * 0.1);
+      const hue = ((idx * 90) + t / 15) % 360;
+      const grad = ctx.createLinearGradient(0, cat.y - 30, 0, cat.footY);
+      grad.addColorStop(0, `hsla(${hue},95%,60%,0)`);
+      grad.addColorStop(0.55, `hsla(${hue},95%,60%,${0.9 * flicker})`);
+      grad.addColorStop(1, `hsla(${hue},95%,60%,${1.0 * flicker})`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(x - 6, cat.y - 30, 12, cat.footY - (cat.y - 30));
+      ctx.fillStyle = rgbStr(0xffffff, 0.55 + 0.45 * burst);
+      ctx.fillRect(x - 2, cat.y - 30, 4, cat.footY - (cat.y - 30));
+    }
+  },
+});
+FX.beam_pillars_pink   = mkTwinPillars([0xff66cc, 0xff33aa, 0xff88cc, 0xcc3388]);
+FX.beam_pillars_purple = mkTwinPillars([0xa64dff, 0xcc88ff, 0x8833dd, 0xff66cc]);
+
+// Sonar Pro — Tim round 5: 4+ rings, outer rings STAY intense as they grow.
+function mkSonarPro(color) {
+  return (cat) => {
+    const pulses = [];
+    let lastSpawn = -1e9;
+    const intervalMs = 460;
+    return {
+      render: (ctx, t) => {
+        if (t - lastSpawn > intervalMs) { pulses.push({ start: t }); lastSpawn = t; }
+        for (let i = pulses.length - 1; i >= 0; i--) {
+          const p = pulses[i];
+          const age = (t - p.start) / 1800;
+          if (age >= 1) { pulses.splice(i, 1); continue; }
+          const r = 80 * cat.scale * age;
+          const alpha = age < 0.7 ? 0.9 : 0.9 * (1 - (age - 0.7) / 0.3);
+          ctx.save();
+          ctx.translate(cat.footX, cat.footY);
+          ctx.lineWidth = 2 + Math.min(2, age * 3);
+          ctx.strokeStyle = rgbStr(color, alpha);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, r, r * 0.32, 0, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+      },
+    };
+  };
+}
+FX.pulse_sonar_pro       = mkSonarPro(0x33ffd4);
+FX.pulse_sonar_pro_gold  = mkSonarPro(0xffd34d);
+FX.pulse_sonar_pro_pink  = mkSonarPro(0xff66cc);
+FX.pulse_sonar_pro_white = mkSonarPro(0xffffff);
+// Multi-color radio + more color variants.
+FX.pulse_radio_rainbow = (cat) => {
+  const pulses = [];
+  let lastSpawn = -1e9;
+  const palette = [0xff3333, 0xff9a3c, 0xffd34d, 0x33ff66, 0x3399ff, 0xa64dff];
+  let idx = 0;
+  return {
+    render: (ctx, t) => {
+      if (t - lastSpawn > 260) { pulses.push({ start: t, color: palette[idx % palette.length] }); idx++; lastSpawn = t; }
+      for (let i = pulses.length - 1; i >= 0; i--) {
+        const p = pulses[i];
+        const age = (t - p.start) / 1700;
+        if (age >= 1) { pulses.splice(i, 1); continue; }
+        const r = 60 * cat.scale * age;
+        const alpha = (1 - age) * 0.85;
+        ctx.save(); ctx.translate(cat.footX, cat.footY);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = rgbStr(p.color, alpha);
+        ctx.beginPath(); ctx.arc(0, 0, r, Math.PI, 0); ctx.stroke();
+        ctx.restore();
+      }
+    },
+  };
+};
+FX.pulse_radio_gold   = mkPulse({ color: 0xffd34d, maxR: 60, intervalMs: 300, lifeMs: 1700, shape: 'semicircle', flatness: 1 });
+FX.pulse_radio_green  = mkPulse({ color: 0x33ff66, maxR: 60, intervalMs: 300, lifeMs: 1700, shape: 'semicircle', flatness: 1 });
+FX.pulse_radio_red    = mkPulse({ color: 0xff3333, maxR: 60, intervalMs: 300, lifeMs: 1700, shape: 'semicircle', flatness: 1 });
+FX.pulse_heart_purple = mkPulse({ color: 0xa64dff, maxR: 72, intervalMs: 240, lifeMs: 1500, shape: 'heart', thickness: 7, pos: 'mid', alpha: 0.9 });
+FX.pulse_heart_green  = mkPulse({ color: 0x33ff66, maxR: 72, intervalMs: 240, lifeMs: 1500, shape: 'heart', thickness: 7, pos: 'mid', alpha: 0.9 });
+FX.pulse_heart_white  = mkPulse({ color: 0xffffff, maxR: 72, intervalMs: 240, lifeMs: 1500, shape: 'heart', thickness: 7, pos: 'mid', alpha: 0.9 });
+
+// More orbiter emojis.
+FX.orbit_clovers     = mkOrbiter({ glyph: '🍀', count: 5, radius: 32, pos: 'mid', size: 14, speedMs: 2000 });
+FX.orbit_flowers     = mkOrbiter({ glyph: '🌸', count: 5, radius: 32, pos: 'mid', size: 14, speedMs: 2000 });
+FX.orbit_butterflies = mkOrbiter({ glyph: '🦋', count: 4, radius: 34, pos: 'mid', size: 14, speedMs: 2400 });
+FX.orbit_fish        = mkOrbiter({ glyph: '🐟', count: 5, radius: 32, pos: 'mid', size: 14, speedMs: 1800 });
+FX.orbit_unicorns    = mkOrbiter({ glyph: '🦄', count: 4, radius: 32, pos: 'mid', size: 14, speedMs: 2400 });
+FX.orbit_soccer      = mkOrbiter({ glyph: '⚽', count: 5, radius: 32, pos: 'mid', size: 14, speedMs: 1600 });
+FX.orbit_coffee      = mkOrbiter({ glyph: '☕', count: 4, radius: 30, pos: 'mid', size: 14, speedMs: 2200 });
+FX.orbit_donuts      = mkOrbiter({ glyph: '🍩', count: 5, radius: 32, pos: 'mid', size: 14, speedMs: 2000 });
+FX.orbit_dice        = mkOrbiter({ glyph: '🎲', count: 4, radius: 32, pos: 'mid', size: 14, speedMs: 2400 });
+FX.orbit_cherries    = mkOrbiter({ glyph: '🍒', count: 5, radius: 32, pos: 'mid', size: 14, speedMs: 2000 });
+FX.orbit_darts       = mkOrbiter({ glyph: '🎯', count: 4, radius: 32, pos: 'mid', size: 14, speedMs: 2400 });
+FX.orbit_cakes       = mkOrbiter({ glyph: '🍰', count: 4, radius: 32, pos: 'mid', size: 14, speedMs: 2400 });
+
+// More floor variants.
+FX.floor_magic_blue    = mkMagicCircle(0x3399ff, 0xaaddff);
+FX.floor_magic_pink    = mkMagicCircle(0xff66cc, 0xffaadd);
+FX.floor_magic_orange  = mkMagicCircle(0xff8833, 0xffcc99);
+FX.floor_magic_white   = mkMagicCircle(0xffffff, 0xffffff);
+FX.floor_pentagram_blue   = mkPentagram(0x3399ff);
+FX.floor_pentagram_green  = mkPentagram(0x33ff66);
+FX.floor_pentagram_pink   = mkPentagram(0xff66cc);
+FX.floor_circle_heart_red   = mkCirclePattern('heart', 0xff3333);
+FX.floor_circle_heart_cyan  = mkCirclePattern('heart', 0x33ffe6);
+FX.floor_circle_star_red    = mkCirclePattern('star6', 0xff3333);
+FX.floor_circle_star_pink   = mkCirclePattern('star6', 0xff66cc);
+FX.floor_circle_star_purple = mkCirclePattern('star6', 0xa64dff);
+FX.floor_circle_hex_gold    = mkCirclePattern('hexagon', 0xffd34d);
+FX.floor_circle_hex_cyan    = mkCirclePattern('hexagon', 0x33ffe6);
+FX.floor_circle_tri_red     = mkCirclePattern('triangle', 0xff3333);
+FX.floor_teleport_cyan   = mkTeleportPad(0x33ffe6);
+FX.floor_teleport_pink   = mkTeleportPad(0xff66cc);
+FX.floor_teleport_orange = mkTeleportPad(0xff8833);
+// Ice puddle color variants.
+function mkIcePuddle(palette) {
+  return (cat) => ({
+    render: (ctx, t) => {
+      const cx = cat.footX, cy = cat.footY;
+      const TILE = 4;
+      const w = 78 * cat.scale, h = 22 * cat.scale;
+      const halfW = w / 2, halfH = h / 2;
+      const phase = Math.floor(t / 1400);
+      for (let py = -halfH; py < halfH; py += TILE) {
+        for (let px = -halfW; px < halfW; px += TILE) {
+          const ex = px / halfW, ey = py / halfH;
+          const dist = Math.sqrt(ex * ex + ey * ey);
+          if (dist > 1) continue;
+          const seed = ((px * 374761393) ^ (py * 668265263) ^ (phase * 2147483647)) >>> 0;
+          const r = (seed % 100) / 100;
+          const color = r < 0.15 ? palette[2] : r < 0.45 ? palette[1] : palette[0];
+          const alpha = 0.7 + (1 - dist) * 0.25;
+          ctx.fillStyle = `rgba(${color[0]},${color[1]},${color[2]},${alpha})`;
+          ctx.fillRect(cx + px, cy + py, TILE, TILE);
+        }
+      }
+    },
+  });
+}
+FX.floor_ice_puddle_purple = mkIcePuddle([[100, 60, 200], [180, 140, 240], [255, 255, 255]]);
+FX.floor_ice_puddle_pink   = mkIcePuddle([[200, 100, 180], [255, 180, 220], [255, 255, 255]]);
+FX.floor_ice_puddle_green  = mkIcePuddle([[100, 200, 120], [180, 240, 190], [255, 255, 255]]);
+FX.floor_lava_yellow = mkLavaPuddle([[200, 100, 30], [240, 180, 40], [255, 230, 90], [255, 255, 200]]);
+FX.floor_lava_pink   = mkLavaPuddle([[130, 30, 80], [200, 60, 140], [255, 140, 220], [255, 220, 250]]);
+
+// More extras palettes.
+FX.extra_aurora_teal   = mkAuroraRibbon([170, 190, 210, 180]);
+FX.extra_aurora_cyan   = mkAuroraRibbon([180, 195, 210, 200]);
+FX.extra_aurora_purple = mkAuroraRibbon([270, 290, 260, 280]);
+FX.extra_pixel_rain_cyan   = mkPixelRain(() => 'rgba(60,220,255,0.95)');
+FX.extra_pixel_rain_purple = mkPixelRain(() => 'rgba(180,80,255,0.95)');
+FX.extra_pixel_rain_green  = mkPixelRain(() => 'rgba(80,255,150,0.95)');
+FX.extra_disco_rainbow = mkDiscoLines(90);
+FX.extra_disco_pink    = mkDiscoLines(300);
+FX.extra_sound_bars_green  = mkSoundBars(120);
+FX.extra_sound_bars_cyan   = mkSoundBars(180);
+FX.extra_sound_bars_purple = mkSoundBars(280);
+FX.extra_glitch_purple = mkGlitch([250, 300]);
+FX.extra_glitch_cyan   = mkGlitch([170, 200]);
+FX.extra_glitch_blue   = mkGlitch([200, 240]);
 
 // ============================================================================
 // CATALOG — ordered list of all candidates with metadata.
@@ -1638,8 +2511,6 @@ const CANDIDATES = [
   { id: 'effect-rgb-glow',       name: 'RGB Stagelight',       category: 'Stagelights (live)', rarity: 'uncommon',  factory: 'stagelight_rgb' },
 
   // ----- Halos & rings -----
-  { id: 'effect-halo-golden',       name: 'Golden Halo',        category: 'Halos & Rings', rarity: 'rare',      factory: 'halo_golden' },
-  { id: 'effect-halo-holy',         name: 'Holy Halo',          category: 'Halos & Rings', rarity: 'rare',      factory: 'halo_white_holy' },
   { id: 'effect-halo-saturn',       name: 'Saturn Ring',        category: 'Halos & Rings', rarity: 'legendary', factory: 'halo_saturn_ring' },
   { id: 'effect-halo-ground',       name: 'Ground Ring',        category: 'Halos & Rings', rarity: 'common',    factory: 'halo_ground_ring' },
   { id: 'effect-halo-segments',     name: 'Segmented Halo',     category: 'Halos & Rings', rarity: 'uncommon',  factory: 'halo_segments' },
@@ -1659,7 +2530,6 @@ const CANDIDATES = [
   { id: 'effect-pulse-heart',         name: 'Heart Pulse',        category: 'Pulse Waves', rarity: 'rare',      factory: 'pulse_heart' },
   { id: 'effect-pulse-sonar',         name: 'Sonar Ping',         category: 'Pulse Waves', rarity: 'uncommon',  factory: 'pulse_sonar' },
   { id: 'effect-pulse-echo',          name: 'Echo Ripples',       category: 'Pulse Waves', rarity: 'common',    factory: 'pulse_echo' },
-  { id: 'effect-pulse-water-ripples', name: 'Water Ripples',      category: 'Pulse Waves', rarity: 'common',    factory: 'pulse_ripples_water' },
   { id: 'effect-pulse-radio',         name: 'Radio Wave',         category: 'Pulse Waves', rarity: 'uncommon',  factory: 'pulse_radio_wave' },
 
   // ----- Orbiters -----
@@ -1710,6 +2580,112 @@ const CANDIDATES = [
   { id: 'effect-extra-chromatic',     name: 'Chromatic Fringe',    category: 'Misc / Extras', rarity: 'rare',     factory: 'extra_chromatic' },
   { id: 'effect-extra-aurora-ribbon', name: 'Aurora Ribbon',       category: 'Misc / Extras', rarity: 'legendary',factory: 'extra_aurora_ribbon' },
   { id: 'effect-extra-starburst',     name: 'Starburst Lines',     category: 'Misc / Extras', rarity: 'rare',     factory: 'extra_starburst_lines' },
+
+  // ===== ROUND-4 GENERATED BATCH (Tim's category prompts) =====
+
+  // -- Stagelights: solo colors + splits --
+  { id: 'effect-stagelight-cyan',      name: 'Cyan Stagelight',     category: 'Stagelights (live)', rarity: 'common',    factory: 'stagelight_cyan' },
+  { id: 'effect-stagelight-magenta',   name: 'Magenta Stagelight',  category: 'Stagelights (live)', rarity: 'common',    factory: 'stagelight_magenta' },
+  { id: 'effect-stagelight-lime',      name: 'Lime Stagelight',     category: 'Stagelights (live)', rarity: 'common',    factory: 'stagelight_lime' },
+  { id: 'effect-stagelight-orange',    name: 'Orange Stagelight',   category: 'Stagelights (live)', rarity: 'common',    factory: 'stagelight_orange' },
+  { id: 'effect-stagelight-white',     name: 'White Stagelight',    category: 'Stagelights (live)', rarity: 'uncommon',  factory: 'stagelight_white' },
+  { id: 'effect-stagelight-split-rb',  name: 'Red+Blue Split',      category: 'Stagelights (live)', rarity: 'rare',      factory: 'stagelight_split_rb' },
+  { id: 'effect-stagelight-split-gp',  name: 'Green+Purple Split',  category: 'Stagelights (live)', rarity: 'rare',      factory: 'stagelight_split_gp' },
+  { id: 'effect-stagelight-split-cm',  name: 'Cyan+Magenta Split',  category: 'Stagelights (live)', rarity: 'rare',      factory: 'stagelight_split_cm' },
+  { id: 'effect-stagelight-tri-rgb',   name: 'RGB Tri-Split',       category: 'Stagelights (live)', rarity: 'legendary', factory: 'stagelight_tri_rgb' },
+  { id: 'effect-stagelight-tri-cmy',   name: 'CMY Tri-Split',       category: 'Stagelights (live)', rarity: 'legendary', factory: 'stagelight_tri_cmy' },
+  { id: 'effect-stagelight-tri-neon',  name: 'Neon Tri-Split',      category: 'Stagelights (live)', rarity: 'legendary', factory: 'stagelight_tri_neon' },
+
+  // -- Halos: color variants --
+  { id: 'effect-halo-segments-red',    name: 'Red Segmented Halo',  category: 'Halos & Rings', rarity: 'uncommon',  factory: 'halo_segments_red' },
+  { id: 'effect-halo-segments-purple', name: 'Purple Segmented',    category: 'Halos & Rings', rarity: 'uncommon',  factory: 'halo_segments_purple' },
+  { id: 'effect-halo-segments-gold',   name: 'Gold Segmented',      category: 'Halos & Rings', rarity: 'uncommon',  factory: 'halo_segments_gold' },
+  { id: 'effect-halo-saturn-silver',   name: 'Silver Saturn',       category: 'Halos & Rings', rarity: 'legendary', factory: 'halo_saturn_silver' },
+  { id: 'effect-halo-saturn-red',      name: 'Red Saturn',          category: 'Halos & Rings', rarity: 'legendary', factory: 'halo_saturn_red' },
+  { id: 'effect-halo-saturn-purple',   name: 'Purple Saturn',       category: 'Halos & Rings', rarity: 'legendary', factory: 'halo_saturn_purple' },
+  { id: 'effect-halo-saturn-green',    name: 'Green Saturn',        category: 'Halos & Rings', rarity: 'legendary', factory: 'halo_saturn_green' },
+  { id: 'effect-halo-ground-blue',     name: 'Blue Portal',         category: 'Halos & Rings', rarity: 'common',    factory: 'halo_ground_blue' },
+  { id: 'effect-halo-ground-red',      name: 'Red Portal',          category: 'Halos & Rings', rarity: 'common',    factory: 'halo_ground_red' },
+  { id: 'effect-halo-ground-green',    name: 'Green Portal',        category: 'Halos & Rings', rarity: 'common',    factory: 'halo_ground_green' },
+  { id: 'effect-halo-ground-gold',     name: 'Gold Portal',         category: 'Halos & Rings', rarity: 'uncommon',  factory: 'halo_ground_gold' },
+  { id: 'effect-halo-double-silver',   name: 'Silver Double Halo',  category: 'Halos & Rings', rarity: 'rare',      factory: 'halo_double_silver' },
+  { id: 'effect-halo-double-neon',     name: 'Neon Double Halo',    category: 'Halos & Rings', rarity: 'rare',      factory: 'halo_double_neon' },
+  { id: 'effect-halo-dots-blue',       name: 'Blue Ring of Dots',   category: 'Halos & Rings', rarity: 'rare',      factory: 'halo_dots_blue' },
+  { id: 'effect-halo-dots-pink',       name: 'Pink Ring of Dots',   category: 'Halos & Rings', rarity: 'rare',      factory: 'halo_dots_pink' },
+  { id: 'effect-halo-dots-green',      name: 'Green Ring of Dots',  category: 'Halos & Rings', rarity: 'rare',      factory: 'halo_dots_green' },
+  { id: 'effect-halo-dots-rainbow',    name: 'Rainbow Ring of Dots',category: 'Halos & Rings', rarity: 'legendary', factory: 'halo_dots_rainbow' },
+
+  // -- Beams: color variants --
+  { id: 'effect-beam-sun-rays-cyan',   name: 'Cyan Sun Rays',       category: 'Beams', rarity: 'rare',      factory: 'beam_sun_rays_cyan' },
+  { id: 'effect-beam-sun-rays-magenta',name: 'Magenta Sun Rays',    category: 'Beams', rarity: 'rare',      factory: 'beam_sun_rays_magenta' },
+  { id: 'effect-beam-sun-rays-white',  name: 'White Sun Rays',      category: 'Beams', rarity: 'legendary', factory: 'beam_sun_rays_white' },
+  { id: 'effect-beam-god-rays-pink',   name: 'Pink God Rays',       category: 'Beams', rarity: 'legendary', factory: 'beam_god_rays_pink' },
+  { id: 'effect-beam-god-rays-blue',   name: 'Blue God Rays',       category: 'Beams', rarity: 'legendary', factory: 'beam_god_rays_blue' },
+  { id: 'effect-beam-pillars-green',   name: 'Green Pillars',       category: 'Beams', rarity: 'uncommon',  factory: 'beam_pillars_green' },
+  { id: 'effect-beam-pillars-gold',    name: 'Gold Pillars',        category: 'Beams', rarity: 'uncommon',  factory: 'beam_pillars_gold' },
+  { id: 'effect-beam-pillars-neon',    name: 'Neon Pillars',        category: 'Beams', rarity: 'rare',      factory: 'beam_pillars_neon' },
+
+  // -- Pulses: color variants + alternating --
+  { id: 'effect-pulse-heart-gold',     name: 'Gold Heart Pulse',    category: 'Pulse Waves', rarity: 'rare',      factory: 'pulse_heart_gold' },
+  { id: 'effect-pulse-heart-cyan',     name: 'Cyan Heart Pulse',    category: 'Pulse Waves', rarity: 'rare',      factory: 'pulse_heart_cyan' },
+  { id: 'effect-pulse-heart-red',      name: 'Red Heart Pulse',     category: 'Pulse Waves', rarity: 'rare',      factory: 'pulse_heart_red' },
+  { id: 'effect-pulse-heart-alt',      name: 'Alternating Hearts',  category: 'Pulse Waves', rarity: 'legendary', factory: 'pulse_heart_alt' },
+  { id: 'effect-pulse-sonar-red',      name: 'Red Sonar',           category: 'Pulse Waves', rarity: 'uncommon',  factory: 'pulse_sonar_red' },
+  { id: 'effect-pulse-sonar-green',    name: 'Green Sonar',         category: 'Pulse Waves', rarity: 'uncommon',  factory: 'pulse_sonar_green' },
+  { id: 'effect-pulse-sonar-purple',   name: 'Purple Sonar',        category: 'Pulse Waves', rarity: 'uncommon',  factory: 'pulse_sonar_purple' },
+  { id: 'effect-pulse-radio-cyan',     name: 'Cyan Radio',          category: 'Pulse Waves', rarity: 'uncommon',  factory: 'pulse_radio_cyan' },
+  { id: 'effect-pulse-radio-purple',   name: 'Purple Radio',        category: 'Pulse Waves', rarity: 'uncommon',  factory: 'pulse_radio_purple' },
+
+  // -- Orbiters: emoji spinners --
+  { id: 'effect-orbit-money',          name: 'Money Bag Orbit',     category: 'Orbiters', rarity: 'rare',      factory: 'orbit_money' },
+  { id: 'effect-orbit-diamonds',       name: 'Diamond Orbit',       category: 'Orbiters', rarity: 'legendary', factory: 'orbit_diamonds' },
+  { id: 'effect-orbit-fire',           name: 'Fire Orbit',          category: 'Orbiters', rarity: 'rare',      factory: 'orbit_fire' },
+  { id: 'effect-orbit-pizza',          name: 'Pizza Orbit',         category: 'Orbiters', rarity: 'common',    factory: 'orbit_pizza' },
+  { id: 'effect-orbit-crowns',         name: 'Crown Orbit',         category: 'Orbiters', rarity: 'legendary', factory: 'orbit_crowns' },
+  { id: 'effect-orbit-gifts',          name: 'Gift Orbit',          category: 'Orbiters', rarity: 'uncommon',  factory: 'orbit_gifts' },
+  { id: 'effect-orbit-pumpkins',       name: 'Pumpkin Orbit',       category: 'Orbiters', rarity: 'uncommon',  factory: 'orbit_pumpkins' },
+  { id: 'effect-orbit-skulls',         name: 'Skull Orbit',         category: 'Orbiters', rarity: 'rare',      factory: 'orbit_skulls' },
+  { id: 'effect-orbit-music',          name: 'Music Note Orbit',    category: 'Orbiters', rarity: 'common',    factory: 'orbit_music' },
+  { id: 'effect-orbit-lightning',      name: 'Lightning Orbit',     category: 'Orbiters', rarity: 'rare',      factory: 'orbit_lightning' },
+
+  // -- Floor: color variants + inner patterns --
+  { id: 'effect-floor-magic-red',      name: 'Red Magic Circle',    category: 'Floor / Ground', rarity: 'rare',      factory: 'floor_magic_red' },
+  { id: 'effect-floor-magic-gold',     name: 'Gold Magic Circle',   category: 'Floor / Ground', rarity: 'rare',      factory: 'floor_magic_gold' },
+  { id: 'effect-floor-magic-green',    name: 'Green Magic Circle',  category: 'Floor / Ground', rarity: 'rare',      factory: 'floor_magic_green' },
+  { id: 'effect-floor-magic-cyan',     name: 'Cyan Magic Circle',   category: 'Floor / Ground', rarity: 'rare',      factory: 'floor_magic_cyan' },
+  { id: 'effect-floor-pentagram-gold',   name: 'Gold Pentagram',    category: 'Floor / Ground', rarity: 'rare',      factory: 'floor_pentagram_gold' },
+  { id: 'effect-floor-pentagram-purple', name: 'Purple Pentagram',  category: 'Floor / Ground', rarity: 'rare',      factory: 'floor_pentagram_purple' },
+  { id: 'effect-floor-pentagram-cyan',   name: 'Cyan Pentagram',    category: 'Floor / Ground', rarity: 'rare',      factory: 'floor_pentagram_cyan' },
+  { id: 'effect-floor-circle-heart-pink', name: 'Heart Circle (Pink)', category: 'Floor / Ground', rarity: 'rare',   factory: 'floor_circle_heart_pink' },
+  { id: 'effect-floor-circle-heart-gold', name: 'Heart Circle (Gold)', category: 'Floor / Ground', rarity: 'rare',   factory: 'floor_circle_heart_gold' },
+  { id: 'effect-floor-circle-star-gold',  name: 'Star Circle (Gold)',  category: 'Floor / Ground', rarity: 'rare',   factory: 'floor_circle_star_gold' },
+  { id: 'effect-floor-circle-star-cyan',  name: 'Star Circle (Cyan)',  category: 'Floor / Ground', rarity: 'rare',   factory: 'floor_circle_star_cyan' },
+  { id: 'effect-floor-circle-hex-green',  name: 'Hex Circle (Green)',  category: 'Floor / Ground', rarity: 'uncommon', factory: 'floor_circle_hex_green' },
+  { id: 'effect-floor-circle-tri-purple', name: 'Tri Circle (Purple)', category: 'Floor / Ground', rarity: 'uncommon', factory: 'floor_circle_tri_purple' },
+  { id: 'effect-floor-ice-puddle',     name: 'Ice Puddle',          category: 'Floor / Ground', rarity: 'rare',      factory: 'floor_ice_puddle' },
+  { id: 'effect-floor-lava-blue',      name: 'Mystic Blue Lava',    category: 'Floor / Ground', rarity: 'legendary', factory: 'floor_lava_blue' },
+  { id: 'effect-floor-lava-green',     name: 'Toxic Green Lava',    category: 'Floor / Ground', rarity: 'legendary', factory: 'floor_lava_green' },
+  { id: 'effect-floor-lava-purple',    name: 'Void Purple Lava',    category: 'Floor / Ground', rarity: 'legendary', factory: 'floor_lava_purple' },
+  { id: 'effect-floor-lava-cyan',      name: 'Ice-Lava',            category: 'Floor / Ground', rarity: 'legendary', factory: 'floor_lava_cyan' },
+  { id: 'effect-floor-teleport-red',    name: 'Red Teleport',       category: 'Floor / Ground', rarity: 'uncommon',  factory: 'floor_teleport_red' },
+  { id: 'effect-floor-teleport-gold',   name: 'Gold Teleport',      category: 'Floor / Ground', rarity: 'uncommon',  factory: 'floor_teleport_gold' },
+  { id: 'effect-floor-teleport-purple', name: 'Purple Teleport',    category: 'Floor / Ground', rarity: 'uncommon',  factory: 'floor_teleport_purple' },
+  { id: 'effect-floor-teleport-green',  name: 'Green Teleport',     category: 'Floor / Ground', rarity: 'uncommon',  factory: 'floor_teleport_green' },
+
+  // -- Extras: color variants --
+  { id: 'effect-extra-aurora-pink',    name: 'Pink Aurora',         category: 'Misc / Extras', rarity: 'legendary', factory: 'extra_aurora_pink' },
+  { id: 'effect-extra-aurora-gold',    name: 'Gold Aurora',         category: 'Misc / Extras', rarity: 'legendary', factory: 'extra_aurora_gold' },
+  { id: 'effect-extra-aurora-red',     name: 'Red Aurora',          category: 'Misc / Extras', rarity: 'legendary', factory: 'extra_aurora_red' },
+  { id: 'effect-extra-pixel-rain-gold',name: 'Gold Pixel Rain',     category: 'Misc / Extras', rarity: 'uncommon',  factory: 'extra_pixel_rain_gold' },
+  { id: 'effect-extra-pixel-rain-red', name: 'Red Pixel Rain',      category: 'Misc / Extras', rarity: 'uncommon',  factory: 'extra_pixel_rain_red' },
+  { id: 'effect-extra-pixel-rain-neon',name: 'Neon Pixel Rain',     category: 'Misc / Extras', rarity: 'uncommon',  factory: 'extra_pixel_rain_neon' },
+  { id: 'effect-extra-disco-warm',     name: 'Warm Disco',          category: 'Misc / Extras', rarity: 'rare',      factory: 'extra_disco_warm' },
+  { id: 'effect-extra-disco-cool',     name: 'Cool Disco',          category: 'Misc / Extras', rarity: 'rare',      factory: 'extra_disco_cool' },
+  { id: 'effect-extra-sound-bars-red', name: 'Red Sound Bars',      category: 'Misc / Extras', rarity: 'uncommon',  factory: 'extra_sound_bars_red' },
+  { id: 'effect-extra-sound-bars-gold',name: 'Gold Sound Bars',     category: 'Misc / Extras', rarity: 'uncommon',  factory: 'extra_sound_bars_gold' },
+  { id: 'effect-extra-sound-bars-neon',name: 'Neon Sound Bars',     category: 'Misc / Extras', rarity: 'uncommon',  factory: 'extra_sound_bars_neon' },
+  { id: 'effect-extra-glitch-red',     name: 'Red Glitch',          category: 'Misc / Extras', rarity: 'uncommon',  factory: 'extra_glitch_red' },
+  { id: 'effect-extra-glitch-green',   name: 'Green Glitch',        category: 'Misc / Extras', rarity: 'uncommon',  factory: 'extra_glitch_green' },
 ];
 
 // ============================================================================

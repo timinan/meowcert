@@ -564,16 +564,26 @@ export class Cat {
     });
   }
 
+  /** Per-slot depth bias — head ALWAYS draws on top of face, face on top
+   *  of neck (Tim 06-30 fix). Previously depth came from iteration order
+   *  which meant whichever equip ran last won, producing inconsistent
+   *  layering when equipping multiple slots. */
+  private static readonly SLOT_DEPTH: Record<string, number> = {
+    neck: 1,
+    face: 2,
+    head: 3,
+    effect: 0,  // effects sit behind everything (matches setDepth - 1 used elsewhere)
+  };
+
   private syncCosmeticPosition(): void {
-    let i = 1;
     for (const slot of Object.keys(this.cosmeticSprites)) {
       const sprite = this.cosmeticSprites[slot];
       if (!sprite) continue;
-      this.syncOneCosmetic(slot, sprite, i++);
+      this.syncOneCosmetic(slot, sprite, Cat.SLOT_DEPTH[slot] ?? 1);
     }
   }
 
-  private syncOneCosmetic(slot: string, sprite: GameObjects.Sprite, depthOffset = 1): void {
+  private syncOneCosmetic(slot: string, sprite: GameObjects.Sprite, depthOffset = Cat.SLOT_DEPTH[slot] ?? 1): void {
     sprite.setDepth(this.sprite.depth + depthOffset);
 
     const cosId = this.cosmeticIdForSlot(slot);
