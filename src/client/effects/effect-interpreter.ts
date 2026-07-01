@@ -475,6 +475,9 @@ function runTint(scene: Scene, target: EffectTarget, scale: number, p: TintParam
   const [mode, colors, cycleMs = 2400, alphaScale = 1] = p.args as [string, number[] | undefined, number | undefined, number | undefined];
   const asSprite = target as unknown as GameObjects.Sprite;
   const setTintFn = (asSprite.setTint as unknown) as (c: number) => void;
+  // Phaser 4 removed setTintFill(color); the fill look is
+  // setTint(color) + setTintMode(Phaser.TintModes.FILL).
+  const setTintModeFn = (asSprite.setTintMode as unknown) as ((m: number) => void) | undefined;
   const clearTintFn = (asSprite.clearTint as unknown) as () => void;
   if (!setTintFn) return runFallback(scene, target, scale);
 
@@ -488,8 +491,20 @@ function runTint(scene: Scene, target: EffectTarget, scale: number, p: TintParam
       const rgb = Phaser.Display.Color.HSVToRGB(hue / 360, 0.95, 0.9);
       setTintFn.call(asSprite, (rgb as any).color);
     } else if (mode === 'strobe') {
+      // Multiply-tint can't brighten, so white↔white was a no-op on an
+      // untinted cat. The smoketest strobes a 0.75-alpha wash OVER the cat
+      // (source-atop fill) — tint-fill on the ON beat is the Phaser
+      // equivalent. colors[0] carries the wash color for the red/blue/gold
+      // variants; plain strobe flashes white.
       const phase = Math.floor(t / 120) % 2;
-      setTintFn.call(asSprite, phase ? 0xffffff : originalTint);
+      if (phase && setTintModeFn) {
+        setTintFn.call(asSprite, colors?.[0] ?? 0xffffff);
+        setTintModeFn.call(asSprite, Phaser.TintModes.FILL);
+      } else {
+        setTintModeFn?.call(asSprite, Phaser.TintModes.MULTIPLY);
+        if (originalHasTint) setTintFn.call(asSprite, originalTint);
+        else clearTintFn.call(asSprite);
+      }
     } else if (mode === 'inverted-flash') {
       const phase = (t / 1200) % 1;
       if (phase < 0.18) setTintFn.call(asSprite, 0x333333);
@@ -506,6 +521,9 @@ function runTint(scene: Scene, target: EffectTarget, scale: number, p: TintParam
   return {
     destroy: () => {
       scene.events.off(Scenes.Events.POST_UPDATE, applyTint);
+      // Reset the tint MODE too — a strobe torn down mid-flash would
+      // otherwise leave the sprite stuck in FILL mode (solid silhouette).
+      setTintModeFn?.call(asSprite, Phaser.TintModes.MULTIPLY);
       clearTintFn.call(asSprite);
     },
   };
@@ -973,8 +991,9 @@ function runAuroraRibbon(scene: Scene, target: EffectTarget, scale: number, hues
 // ===========================================================================
 // PIXEL RAIN (50 falling colored pixels)
 // ===========================================================================
-type PixelRainMode = 'gold' | 'red' | 'neon';
-function runPixelRain(scene: Scene, target: EffectTarget, scale: number, mode: PixelRainMode = 'neon'): EffectHandle {
+// A fixed 0xRRGGBB drop color, or 'neon' for the per-drop hsla rainbow.
+type PixelRainColor = number | 'neon';
+function runPixelRain(scene: Scene, target: EffectTarget, scale: number, color: PixelRainColor = 'neon'): EffectHandle {
   const g = scene.add.graphics().setDepth(target.depth + 1);
   const N = 50;
   // Rain field spans roughly target width x2. Local coords centered on target.
@@ -995,8 +1014,7 @@ function runPixelRain(scene: Scene, target: EffectTarget, scale: number, mode: P
       d.y += 1.4;
       if (d.y > yRange) { d.y -= yRange; d.x = (Math.random() - 0.5) * spanX * 2; }
       let c: number;
-      if (mode === 'gold') c = 0xffdc50;
-      else if (mode === 'red') c = 0xff5050;
+      if (color !== 'neon') c = color;
       else {
         const rgb = Phaser.Display.Color.HSVToRGB(d.c, 0.95, 0.62);
         c = (rgb as unknown as { color: number }).color;
@@ -1561,16 +1579,19 @@ export function runKind(
       return runSunRays(scene, target, scale, args[0] as string, args[1] as string);
     }
     case 'god_rays': {
-      const args = (params.args as unknown[]) ?? ['255,255,235', '255,240,160'];
-      // The extractor sometimes splits comma-separated RGB triples into
-      // multiple positional args — recombine when we see 6 slots.
-      let glow: string, core: string;
-      if (args.length >= 6) {
-        glow = `${args[0]},${args[1]},${String(args[2]).replace(/'$/, '')}`;
-        core = `${args[3]},${args[4]},${String(args[5]).replace(/'$/, '')}`;
-      } else {
-        glow = args[0] as string; core = args[1] as string;
-      }
+      // Extractor dropped the first rgb channel (same mangling as
+      // lightning_colored) so the old 6-slot recombine produced ",220,240"
+      // → NaN → red channel zeroed on every variant. Colors restored
+      // verbatim from the smoketest's mkGodRays calls
+      // (tools/effects/index.html:1801-1802, 2335-2337).
+      const GOD_RAYS_RGB: Record<string, [string, string]> = {
+        'effect-beam-god-rays-pink':   ['255,220,240', '255,140,200'],
+        'effect-beam-god-rays-blue':   ['220,240,255', '120,180,255'],
+        'effect-beam-god-rays-gold':   ['255,255,220', '255,220,80'],
+        'effect-beam-god-rays-silver': ['240,240,255', '200,210,230'],
+        'effect-beam-god-rays-green':  ['220,255,220', '110,230,120'],
+      };
+      const [glow, core] = GOD_RAYS_RGB[meta.id] ?? ['255,255,235', '255,240,160'];
       return runGodRays(scene, target, scale, glow, core);
     }
     case 'sound_bars': {
@@ -1578,15 +1599,27 @@ export function runKind(
       return runSoundBars(scene, target, scale, hueBase);
     }
     case 'aurora_ribbon': {
-      const hues = (params.hues as number[]) ?? [120, 170, 220, 270];
+      // The catalog stores the hue list under `colors`; reading only `hues`
+      // made every aurora colorway render the same default palette.
+      const hues = (params.hues as number[]) ?? (params.colors as number[]) ?? [120, 170, 220, 270];
       return runAuroraRibbon(scene, target, scale, hues);
     }
     case 'pixel_rain': {
-      const cf = (params.colorFn as string) ?? 'neon';
-      return runPixelRain(
-        scene, target, scale,
-        cf.includes('gold') ? 'gold' : cf.includes('red') ? 'red' : 'neon',
-      );
+      // The extractor stored the colorFn's SOURCE STRING in params.args, so
+      // the old `params.colorFn` read was always undefined and every
+      // variant rained neon. Fixed drop colors restored from the
+      // smoketest's mkPixelRain calls (tools/effects/index.html:2122-2124,
+      // 2493-2495, 2821-2823); neon + multi keep the hsla rainbow.
+      const PIXEL_RAIN_COLOR: Record<string, number> = {
+        'effect-extra-pixel-rain-gold':   0xffdc50,
+        'effect-extra-pixel-rain-red':    0xff5050,
+        'effect-extra-pixel-rain-cyan':   0x3cdcff,
+        'effect-extra-pixel-rain-purple': 0xb450ff,
+        'effect-extra-pixel-rain-green':  0x50ff96,
+        'effect-extra-pixel-rain-sunset': 0xff9650,
+        'effect-extra-pixel-rain-ice':    0xb4f0ff,
+      };
+      return runPixelRain(scene, target, scale, PIXEL_RAIN_COLOR[meta.id] ?? 'neon');
     }
     case 'disco_lines': {
       const hueOffset = (params.hueOffset as number) ?? 0;
@@ -1787,7 +1820,10 @@ function runCustomArrow(
   // Tint FX
   if (id === 'effect-tint-strobe-blue' || id === 'effect-tint-strobe-gold' ||
       id === 'effect-tint-strobe-red') {
-    return runTint(scene, target, scale, { args: ['strobe', undefined, 240, 1] } as TintParams);
+    // Wash colors from the smoketest's colored strobes
+    // (tools/effects/index.html:2691-2712).
+    const c = id.endsWith('red') ? 0xff3232 : id.endsWith('blue') ? 0x50b4ff : 0xffdc50;
+    return runTint(scene, target, scale, { args: ['strobe', [c], 240, 1] } as TintParams);
   }
   if (id === 'effect-tint-strobe-rainbow') {
     return runTint(scene, target, scale, { args: ['rainbow', undefined, 1400, 1] } as TintParams);
