@@ -12,6 +12,7 @@ import { Welcome } from './scenes/Welcome';
 import { TutorialOrchestrator } from './scenes/TutorialOrchestrator';
 import { VisitShows } from './scenes/VisitShows';
 import { VisitPost } from './scenes/VisitPost';
+import { Rewards } from './scenes/Rewards';
 import { DESIGN_W, DESIGN_H } from './constants/scene-layout';
 
 // Crisp text on hi-DPI screens. Phaser's Text renders to an internal
@@ -56,7 +57,7 @@ const config: Phaser.Types.Core.GameConfig = {
     width: DESIGN_W,
     height: DESIGN_H,
   },
-  scene: [Boot, Preloader, MainMenu, Welcome, TutorialOrchestrator, MainGame, Purchase, Decorate, DressingRoom, ChartEditor, VisitShows, VisitPost],
+  scene: [Boot, Preloader, MainMenu, Welcome, TutorialOrchestrator, MainGame, Purchase, Decorate, DressingRoom, ChartEditor, VisitShows, VisitPost, Rewards],
 };
 
 const StartGame = (parent: string) => {

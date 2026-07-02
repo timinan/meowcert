@@ -11,6 +11,7 @@ export const SceneKeys = {
   ChartEditor: 'ChartEditor',
   VisitShows: 'VisitShows',
   VisitPost: 'VisitPost',
+  Rewards: 'Rewards',
 } as const;
 
 export type SceneKey = (typeof SceneKeys)[keyof typeof SceneKeys];

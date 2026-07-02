@@ -1,13 +1,11 @@
 import { Scene } from 'phaser';
-import { SceneKeys } from '@/constants/scenes';
+import { SceneKeys, type SceneKey } from '@/constants/scenes';
 import { SettingsModal } from '@/ui/settings-modal';
-import { RewardsModal } from '@/ui/rewards-modal';
 import type { DrawerItem } from '@/ui/top-hud';
 import type { PlayerState } from '@/../shared/state';
 
 interface MenuModalCache {
   settings?: SettingsModal;
-  rewards?: RewardsModal;
 }
 
 const modalCache = new WeakMap<Scene, MenuModalCache>();
@@ -28,12 +26,6 @@ function openSettings(scene: Scene): void {
   cache.settings.open();
 }
 
-function openRewards(scene: Scene, getPlayerState: () => PlayerState | null): void {
-  const cache = modalsFor(scene);
-  if (!cache.rewards) cache.rewards = new RewardsModal(scene);
-  cache.rewards.open({ getPlayerState });
-}
-
 /**
  * Single source of truth for the hamburger drawer menu items. Every
  * scene that mounts a TopHud uses this so the seven entries stay in
@@ -41,8 +33,8 @@ function openRewards(scene: Scene, getPlayerState: () => PlayerState | null): vo
  * page.
  *
  * The order is: SET STAGE · REHEARSE · PUT ON A SHOW · MERCH · CATCH A
- * SHOW · REWARDS · SETTINGS. REWARDS opens the collect-pot + rewards
- * drawer (RewardsModal).
+ * SHOW · REWARDS · SETTINGS. REWARDS starts the Rewards scene
+ * (collect pot + DAILY/WEEKLY/TROPHIES tabs).
  *
  * `getPlayerState` is a getter (not a value) so each navigation closure
  * picks up the freshest state at tap-time, matching the previous
@@ -86,10 +78,11 @@ export function buildMenuItems(scene: Scene, getPlayerState: () => PlayerState |
       onTap: () => scene.scene.start(SceneKeys.Purchase, { playerState: getPlayerState() }),
     },
     {
+      key: SceneKeys.Rewards,
       label: 'REWARDS',
-      description: 'Goodies on the way',
+      description: 'Quests · streak · trophies',
       icon: '🎁',
-      onTap: () => openRewards(scene, getPlayerState),
+      onTap: () => scene.scene.start(SceneKeys.Rewards, { playerState: getPlayerState(), fromScene: scene.scene.key as SceneKey }),
     },
     {
       label: 'SETTINGS',
