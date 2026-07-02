@@ -238,7 +238,7 @@
 
     <div class="card" style="margin-top:14px;">
       <h3 style="margin:0 0 8px; color:#ffd34d; font-size:14px;">What-if → persona simulator</h3>
-      <div class="desc" style="margin-bottom:8px;">Feeds a <code>quest set</code> term into the section 4 coins/day total. Amortized = the weekly/achievement lumps spread across days.</div>
+      <div class="desc" style="margin-bottom:8px;">Feeds a <code>quest set</code> term into the section 4 coins/day total. Amortized = the weekly/achievement lumps spread across days. <span class="muted">⚠ Zero the "Daily quests done" select in section 4 when using these sliders — both terms feed the same total.</span></div>
       <div class="grid c3">
         <div>
           <label>Daily quest coins / day: <b id="q-sl-daily-label"></b></label>
@@ -566,7 +566,7 @@ function renderStreak() {
 
 function renderWeekly() {
   $('q-weekly').innerHTML = ECONOMY.quests.weeklySet.map(q =>
-    `<tr><td>${q.label}</td><td class="num">${q.target}</td><td class="num">${q.coins}</td><td>${q.box}</td></tr>`).join('');
+    `<tr><td>${q.label}</td><td class="num">${q.target}</td><td class="num">${q.coins}</td><td>${q.box.charAt(0).toUpperCase() + q.box.slice(1)} box</td></tr>`).join('');
   $('q-weekly-bonus').textContent = ECONOMY.quests.weeklyBonus.coins;
 }
 
