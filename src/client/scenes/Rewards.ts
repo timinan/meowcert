@@ -15,6 +15,7 @@ import {
 import {
   ACHIEVEMENTS,
   ACHIEVEMENT_TIERS,
+  ACHIEVEMENT_TIER_REWARDS,
   tierThreshold,
   type AchievementDef,
   type AchievementId,
@@ -1020,19 +1021,17 @@ export class Rewards extends Scene {
     );
   }
 
-  /** Bronze claims coins directly; silver/gold open the box chooser first
-   *  (golden for silver, mythic for gold), matching ACHIEVEMENT_TIER_REWARDS. */
+  /** Derives claim flow from ACHIEVEMENT_TIER_REWARDS: coins → claim directly; boxTier → open chooser. */
   private startAchievementClaim(def: AchievementDef, tier: AchievementTier): void {
     if (this.busy || this.chooser) return;
-    if (tier === 'bronze') {
-      void this.onClaimAchievement(def.id, 'bronze');
-    } else if (tier === 'silver') {
-      this.openTierChooser('golden', 'PICK YOUR GOLDEN BOX', (boxId) =>
-        void this.onClaimAchievement(def.id, 'silver', boxId),
-      );
+    const reward = ACHIEVEMENT_TIER_REWARDS[tier];
+    if ('coins' in reward) {
+      void this.onClaimAchievement(def.id, tier);
     } else {
-      this.openTierChooser('mythic', 'PICK YOUR MYTHIC BOX', (boxId) =>
-        void this.onClaimAchievement(def.id, 'gold', boxId),
+      this.openTierChooser(
+        reward.boxTier,
+        `PICK YOUR ${reward.boxTier.toUpperCase()} BOX`,
+        (boxId) => void this.onClaimAchievement(def.id, tier, boxId),
       );
     }
   }
