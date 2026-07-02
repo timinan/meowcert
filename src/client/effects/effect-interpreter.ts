@@ -554,7 +554,6 @@ function runLightning(
   glowRgb = '255,228,77', coreRgb = '255,255,255',
 ): EffectHandle {
   const g = scene.add.graphics().setDepth(target.depth + 1);
-  const dark = scene.add.graphics().setDepth(target.depth - 1);
   type Strike = { untilT: number; main: [number, number][]; branches: [number, number][][] };
   const strikes: Strike[] = [];
 
@@ -595,23 +594,11 @@ function runLightning(
   const coreInt = (cr << 16) | (cg << 8) | cb;
 
   const draw = (): void => {
-    g.clear(); dark.clear();
+    g.clear();
     const t = scene.time.now;
     if (Math.random() < 0.09 && strikes.length < 4) {
       strikes.push(buildBolt(target.x, target.y));
     }
-    // Dark backdrop boxed to the cat's lane (was a full-scene 3000×3000
-    // rect that blacked out the whole stage) — soft edge via a wider,
-    // fainter outer rect.
-    const halfW = LANE_HALF_W * scale;
-    const foot = footPosition(target);
-    const colTop = target.y - 214;
-    const colH = foot.y + 6 - colTop;
-    dark.fillStyle(0x000000, 0.28);
-    dark.fillRect(target.x - halfW - 14, colTop, (halfW + 14) * 2, colH);
-    dark.fillStyle(0x000000, 0.55);
-    dark.fillRect(target.x - halfW, colTop, halfW * 2, colH);
-    const hasLive = strikes.some(s => t <= s.untilT);
     const drawPath = (pts: [number, number][], gAlpha: number, gW: number, cAlpha: number): void => {
       g.lineStyle(gW, glowInt, gAlpha);
       g.beginPath();
@@ -630,17 +617,15 @@ function runLightning(
       drawPath(s.main, 0.6, 5, 0.95);
       for (const br of s.branches) drawPath(br, 0.45, 3, 0.7);
     }
-    if (hasLive) {
-      g.fillStyle(coreInt, 0.22);
-      g.fillRect(target.x - halfW, colTop, halfW * 2, colH);
-    }
+    // Tim (effects review 2026-07-02): lightning is bolts ONLY — no dark
+    // backdrop, no strike-flash fill.
   };
   scene.events.on(Scenes.Events.POST_UPDATE, draw);
   draw();
   return {
     destroy: () => {
       scene.events.off(Scenes.Events.POST_UPDATE, draw);
-      g.destroy(); dark.destroy();
+      g.destroy();
     },
   };
 }
