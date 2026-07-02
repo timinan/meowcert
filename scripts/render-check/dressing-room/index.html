@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>dressing-room harness</title>
+    <style>
+      @font-face {
+        font-family: 'Pixeloid Sans';
+        src: url('/assets/fonts/PixeloidSans.otf') format('opentype');
+      }
+      @font-face {
+        font-family: 'Pixeloid Sans';
+        font-weight: bold;
+        src: url('/assets/fonts/PixeloidSans-Bold.otf') format('opentype');
+      }
+      body { margin: 0; background: #000; }
+    </style>
+  </head>
+  <body>
+    <!-- Force font load before Phaser text renders -->
+    <div style="font-family:'Pixeloid Sans';position:absolute;opacity:0">x</div>
+    <div style="font-family:'Pixeloid Sans';font-weight:bold;position:absolute;opacity:0">x</div>
+    <script type="module" src="./entry.ts"></script>
+  </body>
+</html>
