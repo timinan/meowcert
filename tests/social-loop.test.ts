@@ -1,13 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
   classifyScore,
-  rewardWithComment,
   buildCommentBody,
   formatGift,
   SCORE_TIER_THRESHOLDS,
   LEADERBOARD_MIN_ACCURACY,
   FAIL_BASE_REWARD,
-  COMMENT_REWARD_MULTIPLIER,
   GIFT_COIN_PRESETS,
   INBOX_MAX_EVENTS,
   LEADERBOARD_TOP_N,
@@ -21,19 +19,31 @@ describe('social-loop / classifyScore', () => {
     expect(res.baseReward).toBe(FAIL_BASE_REWARD);
   });
 
-  it('returns pass tier for runs at exactly 0.75', () => {
+  it('returns pass tier for runs at exactly 0.75 (great gate is now 0.85)', () => {
     const res = classifyScore(0.75, true);
-    expect(res.tier).toBe('great');
-    expect(res.baseReward).toBe(200);
+    expect(res.tier).toBe('pass');
+    expect(res.baseReward).toBe(100);
   });
 
-  it('returns great tier for 80%', () => {
+  it('returns pass tier for 80% (below the 0.85 great gate)', () => {
     const res = classifyScore(0.80, true);
+    expect(res.tier).toBe('pass');
+    expect(res.baseReward).toBe(100);
+  });
+
+  it('returns great tier at exactly 0.85 (new great gate)', () => {
+    const res = classifyScore(0.85, true);
     expect(res.tier).toBe('great');
     expect(res.baseReward).toBe(200);
   });
 
-  it('returns perfect tier for 95%', () => {
+  it('returns great tier for 90% (below the 0.95 perfect gate)', () => {
+    const res = classifyScore(0.90, true);
+    expect(res.tier).toBe('great');
+    expect(res.baseReward).toBe(200);
+  });
+
+  it('returns perfect tier at exactly 0.95 (new perfect gate)', () => {
     const res = classifyScore(0.95, true);
     expect(res.tier).toBe('perfect');
     expect(res.baseReward).toBe(300);
@@ -49,22 +59,6 @@ describe('social-loop / classifyScore', () => {
     const res = classifyScore(0.85, false);
     expect(res.tier).toBe('fail');
     expect(res.baseReward).toBe(FAIL_BASE_REWARD);
-  });
-});
-
-describe('social-loop / rewardWithComment', () => {
-  it('doubles the base reward when comment posted', () => {
-    expect(rewardWithComment(100, true)).toBe(200);
-    expect(rewardWithComment(300, true)).toBe(600);
-  });
-
-  it('returns base unchanged when comment skipped', () => {
-    expect(rewardWithComment(100, false)).toBe(100);
-    expect(rewardWithComment(400, false)).toBe(400);
-  });
-
-  it('uses the locked multiplier constant', () => {
-    expect(COMMENT_REWARD_MULTIPLIER).toBe(2);
   });
 });
 

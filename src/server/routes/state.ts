@@ -17,6 +17,7 @@ import {
   type PerSongStats,
 } from '../../shared/state';
 import type { TutorialStepId } from '../../shared/tutorial-types';
+import { ECONOMY } from '../../shared/economy';
 import { getUserOverride } from '../../shared/user-overrides.generated';
 
 // DEV ONLY — every GET /api/state wipes the player's record and hands
@@ -498,7 +499,7 @@ state.post('/inventory/sell', async (c) => {
 
   player.ownedCosmetics.splice(cosmeticIndex, 1);
 
-  const SELL_PRICE = 25;
+  const SELL_PRICE = ECONOMY.sellPrice;
   player.coins += SELL_PRICE;
   // Stats — sold cosmetics count toward lifetime earned like any other
   // coin gain. No matching "cosmeticsSold" counter yet; add one when

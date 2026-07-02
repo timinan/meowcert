@@ -1,12 +1,12 @@
 import { GameObjects, Scene } from 'phaser';
 import {
   buildCommentBody,
-  rewardWithComment,
   GIFT_COIN_PRESETS,
   GIFT_COIN_MAX,
   type PlaySummary,
   type GiftPayload,
 } from '@/../shared/social-loop';
+import { ECONOMY } from '@/../shared/economy';
 
 /**
  * Post-round comment composition modal — the social-loop hook screen.
@@ -426,8 +426,7 @@ export class CommentComposeModal {
           : undefined;
       const summaryWithGift: PlaySummary = giftBlob ? { ...summary, gift: giftBlob } : summary;
       previewText.setText(buildCommentBody(summaryWithGift, this.freeText));
-      const final = rewardWithComment(summary.baseReward, true);
-      bonusChip.setText(`Comment posted = +${summary.baseReward} bonus coins (${final} total)`);
+      bonusChip.setText(`Comment posted = +${ECONOMY.commentBonus} bonus coins`);
     };
     this.rerender();
 

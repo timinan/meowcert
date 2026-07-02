@@ -23,6 +23,7 @@ import {
   formatStatsComment,
   formatAutoStatsReply,
   formatPinnedSummary,
+  LEADERBOARD_MIN_ACCURACY,
   type PlaySummary,
   type InboxEvent,
 } from '../../shared/social-loop';
@@ -85,7 +86,7 @@ social.post('/play', async (c) => {
     accuracy: body.accuracy,
     isOwnerSelfPlay: visitor === body.owner,
   });
-  const { tier, baseReward } = classifyScore(body.accuracy, body.accuracy >= 0.75);
+  const { tier, baseReward } = classifyScore(body.accuracy, body.accuracy >= LEADERBOARD_MIN_ACCURACY);
   const passed = tier !== 'fail';
   const summary: PlaySummary = {
     visitor,

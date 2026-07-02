@@ -8,60 +8,51 @@
  *   2. Visitor plays the host's chart → end of round
  *   3. Reward screen shows the tier + base coins
  *   4. Comment composition (pre-filled stats + editable free-text)
- *      OPTIONAL: post comment → rewards DOUBLE
+ *      OPTIONAL: post comment → flat +ECONOMY.commentBonus, first comment per post
  *   5. Optional gift (coins + items) flows from visitor → host
  *   6. Owner's inbox accumulates the play event (always, pass or fail)
  *   7. Leaderboard shows top 10 passing runs (≥75% accuracy) per post
  */
 
 import type { LaneId } from './state';
+import { ECONOMY, classifyTier, type RewardTierId } from './economy';
 
 // -- Score tier classification ----------------------------------------
 
 export type ScoreTier = 'pass' | 'great' | 'perfect' | 'flawless';
 
-/** Locked thresholds — same shape as `passAccuracyPct` in Balance, but
- *  with finer-grained tiers for reward bucketing. Tim's rule:
- *  rewards are 100 / 200 / 300 / 400 — linear, no big leaps. */
-export const SCORE_TIER_THRESHOLDS: ReadonlyArray<{ tier: ScoreTier; minAccuracy: number; baseReward: number }> = [
-  { tier: 'flawless', minAccuracy: 0.99, baseReward: 400 },
-  { tier: 'perfect',  minAccuracy: 0.90, baseReward: 300 },
-  { tier: 'great',    minAccuracy: 0.75, baseReward: 200 },
-  { tier: 'pass',     minAccuracy: 0.0,  baseReward: 100 },
-];
+/** Tier thresholds, derived from the single source of truth in
+ *  `src/shared/economy.ts` (ECONOMY.tiers). Kept in the same shape older
+ *  consumers expect (0..1 minAccuracy fractions). */
+export const SCORE_TIER_THRESHOLDS: ReadonlyArray<{ tier: ScoreTier; minAccuracy: number; baseReward: number }> =
+  ECONOMY.tiers.map((t) => ({
+    tier: t.id as ScoreTier,
+    minAccuracy: t.minAccuracyPct / 100,
+    baseReward: t.base,
+  }));
 
 /** Minimum accuracy required to land on a leaderboard. Matches the
- *  rehearsal pass gate (Balance.passAccuracyPct / 100). */
-export const LEADERBOARD_MIN_ACCURACY = 0.75;
+ *  rehearsal pass gate (ECONOMY.passAccuracyPct / 100). */
+export const LEADERBOARD_MIN_ACCURACY = ECONOMY.passAccuracyPct / 100;
 
-/** Base reward (pre-comment-multiplier) for a fail run that ended early
- *  or hit < pass threshold. Always shown so the player doesn't feel
- *  punished for trying — small pity payout. */
-export const FAIL_BASE_REWARD = 25;
-
-/** Multiplier applied when the player posts the auto-stats comment. */
-export const COMMENT_REWARD_MULTIPLIER = 2;
+/** Base reward for a fail run that ended early or hit < pass threshold.
+ *  Always shown so the player doesn't feel punished for trying — small
+ *  pity payout. */
+export const FAIL_BASE_REWARD = ECONOMY.failBase;
 
 /** Classify a run's accuracy into a tier + base coin amount. accuracy
  *  is a 0..1 fraction (NOT percent). Returns 'pass' as the floor for
  *  any passing run; fails (below LEADERBOARD_MIN_ACCURACY) get the
- *  pity payout but no tier. */
+ *  pity payout but no tier. Delegates to the economy module's
+ *  classifyTier so tiers live in exactly one place. */
 export function classifyScore(accuracy: number, passed: boolean): {
   tier: ScoreTier | 'fail';
   baseReward: number;
 } {
   if (!passed) return { tier: 'fail', baseReward: FAIL_BASE_REWARD };
-  for (const entry of SCORE_TIER_THRESHOLDS) {
-    if (accuracy >= entry.minAccuracy) {
-      return { tier: entry.tier, baseReward: entry.baseReward };
-    }
-  }
-  return { tier: 'pass', baseReward: 100 };
-}
-
-/** Compute final reward given base + whether the comment was posted. */
-export function rewardWithComment(baseReward: number, commentPosted: boolean): number {
-  return commentPosted ? baseReward * COMMENT_REWARD_MULTIPLIER : baseReward;
+  const t: { id: RewardTierId; base: number } = classifyTier(accuracy * 100);
+  if (t.id === 'fail') return { tier: 'pass', baseReward: 100 };
+  return { tier: t.id, baseReward: t.base };
 }
 
 // -- Play summary (what each play produces) ---------------------------

@@ -43,7 +43,6 @@ import { submitPlay, submitComment } from '@/services/social-client';
 import { getBest, recordRun, type BestStats, type StatKey } from '@/services/rehearsal-best';
 import {
   classifyScore,
-  rewardWithComment,
   type PlaySummary,
   type GiftPayload,
 } from '@/../shared/social-loop';
@@ -2593,8 +2592,7 @@ export class Game extends Scene {
         ...(gift ? { gift } : {}),
       });
       if (result.ok) {
-        const final = rewardWithComment(result.baseReward, !!commentBody);
-        console.info(`[Game] play submitted — ${result.tier} (+${final} coins)`);
+        console.info(`[Game] play submitted — ${result.tier} (+${result.baseReward} coins)`);
       } else {
         console.warn('[Game] submitPlay failed:', result.reason);
       }
