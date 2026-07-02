@@ -1,0 +1,3474 @@
+{
+ "frames": 8,
+ "frameGapMs": 170,
+ "effects": [
+  {
+   "id": "effect-red-glow",
+   "name": "Red Stagelight",
+   "category": "Stagelights (live)",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-blue-glow",
+   "name": "Blue Stagelight",
+   "category": "Stagelights (live)",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-gold-glow",
+   "name": "Gold Stagelight",
+   "category": "Stagelights (live)",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-green-glow",
+   "name": "Green Stagelight",
+   "category": "Stagelights (live)",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-purple-glow",
+   "name": "Purple Stagelight",
+   "category": "Stagelights (live)",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-pink-glow",
+   "name": "Pink Stagelight",
+   "category": "Stagelights (live)",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-rainbow-glow",
+   "name": "Rainbow Stagelight",
+   "category": "Stagelights (live)",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-sunset-glow",
+   "name": "Sunset Stagelight",
+   "category": "Stagelights (live)",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-aurora-glow",
+   "name": "Aurora Stagelight",
+   "category": "Stagelights (live)",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-police-glow",
+   "name": "Police Stagelight",
+   "category": "Stagelights (live)",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-disco-glow",
+   "name": "Disco Stagelight",
+   "category": "Stagelights (live)",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-rgb-glow",
+   "name": "RGB Stagelight",
+   "category": "Stagelights (live)",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-ghost",
+   "name": "Ghost",
+   "category": "Misc / Extras",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-sparkle",
+   "name": "Sparkles",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-hearts",
+   "name": "Hearts",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-stars",
+   "name": "Stars",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-music",
+   "name": "Music",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-snow",
+   "name": "Snow",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-blossom",
+   "name": "Blossoms",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-fire",
+   "name": "Fire",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-bubbles",
+   "name": "Bubbles",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-butterfly",
+   "name": "Butterflies",
+   "category": "Orbiters",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-leaves",
+   "name": "Leaves",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-autumn",
+   "name": "Autumn Leaves",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-sunflower",
+   "name": "Sunflowers",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-clover",
+   "name": "Lucky Clovers",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-mushroom",
+   "name": "Mushrooms",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-lightning",
+   "name": "Lightning",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-clouds",
+   "name": "Clouds",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-sunbeam",
+   "name": "Sunbeams",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-moon",
+   "name": "Moonlight",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-rainbow",
+   "name": "Rainbows",
+   "category": "Orbiters",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-cherry",
+   "name": "Cherries",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-candy",
+   "name": "Candy",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-cupcake",
+   "name": "Cupcakes",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-donut",
+   "name": "Donuts",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-dizzy",
+   "name": "Dizzy Stars",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-glow-star",
+   "name": "Glow Stars",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-diamond",
+   "name": "Diamonds",
+   "category": "Orbiters",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-paws",
+   "name": "Paw Prints",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-fish",
+   "name": "Fish",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-bird",
+   "name": "Birds",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-balloon",
+   "name": "Balloons",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-crown",
+   "name": "Crowns",
+   "category": "Orbiters",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-poo",
+   "name": "Poo",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-robot",
+   "name": "Robot",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-clown",
+   "name": "Clown",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-pumpkin",
+   "name": "Jack-O-Lantern",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-devil",
+   "name": "Devil",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-ogre",
+   "name": "Ogre",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-cursing",
+   "name": "Cursing",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-cold",
+   "name": "Cold Face",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-heart-eyes",
+   "name": "Heart Eyes",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-smile",
+   "name": "Smile",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-cat-face",
+   "name": "Cat Face",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-dragon",
+   "name": "Dragon",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-daisy",
+   "name": "Daisy",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-new-moon-face",
+   "name": "New Moon Face",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-rock",
+   "name": "Rock",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-lotus",
+   "name": "Lotus",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-hibiscus",
+   "name": "Hibiscus",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-boom",
+   "name": "Boom",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-sweat",
+   "name": "Sweat",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-droplet",
+   "name": "Droplet",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-peach",
+   "name": "Peach",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-watermelon",
+   "name": "Watermelon",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-strawberry",
+   "name": "Strawberry",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-cheese",
+   "name": "Cheese",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-egg",
+   "name": "Egg",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-butter",
+   "name": "Butter",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-pizza",
+   "name": "Pizza",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-shrimp",
+   "name": "Shrimp",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-dumpling",
+   "name": "Dumpling",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-lollipop",
+   "name": "Lollipop",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-bubble-tea",
+   "name": "Bubble Tea",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-beer",
+   "name": "Beer",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-cocktail",
+   "name": "Cocktail",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-popcorn",
+   "name": "Popcorn",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-ice",
+   "name": "Ice Cube",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-soccer",
+   "name": "Soccer",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-basketball",
+   "name": "Basketball",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-baseball",
+   "name": "Baseball",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-football",
+   "name": "Football",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-volleyball",
+   "name": "Volleyball",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-softball",
+   "name": "Softball",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-tennis",
+   "name": "Tennis",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-rugby",
+   "name": "Rugby",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-eightball",
+   "name": "8 Ball",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-boxing",
+   "name": "Boxing",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-skateboard",
+   "name": "Skateboard",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-trophy",
+   "name": "Trophy",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-rosette",
+   "name": "Rosette",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-die",
+   "name": "Die",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-ambulance",
+   "name": "Ambulance",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-car",
+   "name": "Car",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-suv",
+   "name": "SUV",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-airplane",
+   "name": "Airplane",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-helicopter",
+   "name": "Helicopter",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-moai",
+   "name": "Moai",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-cd",
+   "name": "CD",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-phone",
+   "name": "Phone",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-lightbulb",
+   "name": "Lightbulb",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-cash-wings",
+   "name": "Flying Cash",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-dollar-bill",
+   "name": "Dollar Bill",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-yen-bill",
+   "name": "Yen Bill",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-euro-bill",
+   "name": "Euro Bill",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-pound-bill",
+   "name": "Pound Bill",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-money-bag",
+   "name": "Money Bag",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-coin",
+   "name": "Coin",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-bomb",
+   "name": "Bomb",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-pill",
+   "name": "Pill",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-blood",
+   "name": "Blood Drop",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-microbe",
+   "name": "Microbe",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-gift",
+   "name": "Gift",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-party-popper",
+   "name": "Party Popper",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-disco-ball",
+   "name": "Disco Ball",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-confetti",
+   "name": "Confetti",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-pinata",
+   "name": "Pinata",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-fan",
+   "name": "Hand Fan",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-carp-streamer",
+   "name": "Carp Streamer",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-pink-heart",
+   "name": "Pink Heart",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-burning-heart",
+   "name": "Burning Heart",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-black-heart",
+   "name": "Black Heart",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-beating-heart",
+   "name": "Beating Heart",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-mending-heart",
+   "name": "Mending Heart",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-sparkling-heart",
+   "name": "Sparkling Heart",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-heart-arrow",
+   "name": "Heart Arrow",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-cross",
+   "name": "Cross Mark",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-circle",
+   "name": "Circle Mark",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-no-smoking",
+   "name": "No Smoking",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-hundred",
+   "name": "100",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-bangbang",
+   "name": "!?",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-check",
+   "name": "Check",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-top",
+   "name": "Top",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-dollar-sign",
+   "name": "Dollar Sign",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-soon",
+   "name": "Soon",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-flag-ca",
+   "name": "Canada Flag",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-flag-tw",
+   "name": "Taiwan Flag",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-rainbow-glow",
+   "name": "Rainbow Stagelight",
+   "category": "Stagelights (live)",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-sunset-glow",
+   "name": "Sunset Stagelight",
+   "category": "Stagelights (live)",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-aurora-glow",
+   "name": "Aurora Stagelight",
+   "category": "Stagelights (live)",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-police-glow",
+   "name": "Police Stagelight",
+   "category": "Stagelights (live)",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-disco-glow",
+   "name": "Disco Stagelight",
+   "category": "Stagelights (live)",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-rgb-glow",
+   "name": "RGB Stagelight",
+   "category": "Stagelights (live)",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-halo-saturn",
+   "name": "Saturn Ring",
+   "category": "Halos & Rings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-halo-ground",
+   "name": "Ground Ring",
+   "category": "Halos & Rings",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-halo-segments",
+   "name": "Segmented Halo",
+   "category": "Halos & Rings",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-halo-double",
+   "name": "Double Halo",
+   "category": "Halos & Rings",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-halo-ring-of-dots",
+   "name": "Ring of Dots",
+   "category": "Halos & Rings",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-halo-ring-of-fire",
+   "name": "Ring of Fire",
+   "category": "Halos & Rings",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-beam-sun-rays",
+   "name": "Sun Rays",
+   "category": "Beams",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-beam-god-rays",
+   "name": "God Rays",
+   "category": "Beams",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-beam-lightning",
+   "name": "Lightning Strike",
+   "category": "Beams",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-beam-twin-pillars",
+   "name": "Twin Pillars",
+   "category": "Beams",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-pulse-heart",
+   "name": "Heart Pulse",
+   "category": "Pulse Waves",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-pulse-echo",
+   "name": "Echo Ripples",
+   "category": "Pulse Waves",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-pulse-radio",
+   "name": "Radio Wave",
+   "category": "Pulse Waves",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-star",
+   "name": "Orbit Star",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-hearts",
+   "name": "Heart Orbit",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-orbit-coins",
+   "name": "Coin Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-sparkles",
+   "name": "Sparkle Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-planets",
+   "name": "Planetary Orbit",
+   "category": "Orbiters",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-orbit-comet",
+   "name": "Comet Trail",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-tint-rainbow",
+   "name": "Rainbow Tint",
+   "category": "Tint FX",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-tint-strobe",
+   "name": "Strobe Flash",
+   "category": "Tint FX",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-tint-inverted",
+   "name": "Color Inverted",
+   "category": "Tint FX",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-tint-holographic",
+   "name": "Holographic Shimmer",
+   "category": "Tint FX",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-tint-neon",
+   "name": "Neon Flicker",
+   "category": "Tint FX",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-floor-magic-circle",
+   "name": "Magic Circle",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-pentagram",
+   "name": "Pentagram",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-ice-patch",
+   "name": "Ice Patch",
+   "category": "Floor / Ground",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-floor-lava-puddle",
+   "name": "Lava Puddle",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-teleport-pad",
+   "name": "Teleport Pad",
+   "category": "Floor / Ground",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-weather-snow-storm",
+   "name": "Snow Storm",
+   "category": "Weather",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-weather-rain",
+   "name": "Rain",
+   "category": "Weather",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-weather-wind",
+   "name": "Wind Streaks",
+   "category": "Weather",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-weather-dust",
+   "name": "Cosmic Dust",
+   "category": "Weather",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-weather-starfield",
+   "name": "Starfield",
+   "category": "Weather",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-decor-angel-wings",
+   "name": "Angel Wings",
+   "category": "Decorative",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-decor-devil-wings",
+   "name": "Devil Wings",
+   "category": "Decorative",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-decor-tail-flame",
+   "name": "Tail Flame",
+   "category": "Decorative",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-decor-ghost-double",
+   "name": "Ghost Double",
+   "category": "Decorative",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-extra-disco-floor",
+   "name": "Disco Floor",
+   "category": "Misc / Extras",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-extra-sound-bars",
+   "name": "Sound Bars",
+   "category": "Misc / Extras",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-extra-fairy-lights",
+   "name": "Fairy Lights",
+   "category": "Misc / Extras",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-extra-constellation",
+   "name": "Constellation",
+   "category": "Misc / Extras",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-extra-glitch-noise",
+   "name": "Glitch Noise",
+   "category": "Misc / Extras",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-extra-cosmic-swirl",
+   "name": "Cosmic Swirl",
+   "category": "Misc / Extras",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-extra-lens-flare",
+   "name": "Lens Flare",
+   "category": "Misc / Extras",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-extra-bubble-shield",
+   "name": "Bubble Shield",
+   "category": "Misc / Extras",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-extra-pixel-rain",
+   "name": "Pixel Rain",
+   "category": "Misc / Extras",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-extra-chromatic",
+   "name": "Chromatic Fringe",
+   "category": "Misc / Extras",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-extra-aurora-ribbon",
+   "name": "Aurora Ribbon",
+   "category": "Misc / Extras",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-extra-starburst",
+   "name": "Starburst Lines",
+   "category": "Misc / Extras",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-stagelight-cyan",
+   "name": "Cyan Stagelight",
+   "category": "Stagelights (live)",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-stagelight-magenta",
+   "name": "Magenta Stagelight",
+   "category": "Stagelights (live)",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-stagelight-lime",
+   "name": "Lime Stagelight",
+   "category": "Stagelights (live)",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-stagelight-orange",
+   "name": "Orange Stagelight",
+   "category": "Stagelights (live)",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-stagelight-white",
+   "name": "White Stagelight",
+   "category": "Stagelights (live)",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-stagelight-split-rb",
+   "name": "Red+Blue Split",
+   "category": "Stagelights (live)",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-stagelight-split-gp",
+   "name": "Green+Purple Split",
+   "category": "Stagelights (live)",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-stagelight-split-cm",
+   "name": "Cyan+Magenta Split",
+   "category": "Stagelights (live)",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-stagelight-tri-rgb",
+   "name": "RGB Tri-Split",
+   "category": "Stagelights (live)",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-stagelight-tri-cmy",
+   "name": "CMY Tri-Split",
+   "category": "Stagelights (live)",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-stagelight-tri-neon",
+   "name": "Neon Tri-Split",
+   "category": "Stagelights (live)",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-halo-segments-red",
+   "name": "Red Segmented Halo",
+   "category": "Halos & Rings",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-halo-segments-purple",
+   "name": "Purple Segmented",
+   "category": "Halos & Rings",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-halo-segments-gold",
+   "name": "Gold Segmented",
+   "category": "Halos & Rings",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-halo-saturn-silver",
+   "name": "Silver Saturn",
+   "category": "Halos & Rings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-halo-saturn-red",
+   "name": "Red Saturn",
+   "category": "Halos & Rings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-halo-saturn-purple",
+   "name": "Purple Saturn",
+   "category": "Halos & Rings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-halo-saturn-green",
+   "name": "Green Saturn",
+   "category": "Halos & Rings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-halo-ground-blue",
+   "name": "Blue Portal",
+   "category": "Halos & Rings",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-halo-ground-red",
+   "name": "Red Portal",
+   "category": "Halos & Rings",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-halo-ground-green",
+   "name": "Green Portal",
+   "category": "Halos & Rings",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-halo-ground-gold",
+   "name": "Gold Portal",
+   "category": "Halos & Rings",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-halo-double-silver",
+   "name": "Silver Double Halo",
+   "category": "Halos & Rings",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-halo-double-neon",
+   "name": "Neon Double Halo",
+   "category": "Halos & Rings",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-halo-dots-blue",
+   "name": "Blue Ring of Dots",
+   "category": "Halos & Rings",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-halo-dots-pink",
+   "name": "Pink Ring of Dots",
+   "category": "Halos & Rings",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-halo-dots-green",
+   "name": "Green Ring of Dots",
+   "category": "Halos & Rings",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-halo-dots-rainbow",
+   "name": "Rainbow Ring of Dots",
+   "category": "Halos & Rings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-beam-sun-rays-cyan",
+   "name": "Cyan Sun Rays",
+   "category": "Beams",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-beam-sun-rays-magenta",
+   "name": "Magenta Sun Rays",
+   "category": "Beams",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-beam-sun-rays-white",
+   "name": "White Sun Rays",
+   "category": "Beams",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-beam-god-rays-pink",
+   "name": "Pink God Rays",
+   "category": "Beams",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-beam-god-rays-blue",
+   "name": "Blue God Rays",
+   "category": "Beams",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-beam-pillars-green",
+   "name": "Green Pillars",
+   "category": "Beams",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-beam-pillars-gold",
+   "name": "Gold Pillars",
+   "category": "Beams",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-beam-pillars-neon",
+   "name": "Neon Pillars",
+   "category": "Beams",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-pulse-heart-gold",
+   "name": "Gold Heart Pulse",
+   "category": "Pulse Waves",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-pulse-heart-cyan",
+   "name": "Cyan Heart Pulse",
+   "category": "Pulse Waves",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-pulse-heart-red",
+   "name": "Red Heart Pulse",
+   "category": "Pulse Waves",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-pulse-heart-alt",
+   "name": "Alternating Hearts",
+   "category": "Pulse Waves",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-pulse-sonar-red",
+   "name": "Red Sonar",
+   "category": "Pulse Waves",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-pulse-sonar-green",
+   "name": "Green Sonar",
+   "category": "Pulse Waves",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-pulse-sonar-purple",
+   "name": "Purple Sonar",
+   "category": "Pulse Waves",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-pulse-radio-cyan",
+   "name": "Cyan Radio",
+   "category": "Pulse Waves",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-pulse-radio-purple",
+   "name": "Purple Radio",
+   "category": "Pulse Waves",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-money",
+   "name": "Money Bag Orbit",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-orbit-diamonds",
+   "name": "Diamond Orbit",
+   "category": "Orbiters",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-orbit-fire",
+   "name": "Fire Orbit",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-orbit-pizza",
+   "name": "Pizza Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-crowns",
+   "name": "Crown Orbit",
+   "category": "Orbiters",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-orbit-gifts",
+   "name": "Gift Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-pumpkins",
+   "name": "Pumpkin Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-skulls",
+   "name": "Skull Orbit",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-orbit-music",
+   "name": "Music Note Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-lightning",
+   "name": "Lightning Orbit",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-magic-red",
+   "name": "Red Magic Circle",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-magic-gold",
+   "name": "Gold Magic Circle",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-magic-green",
+   "name": "Green Magic Circle",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-magic-cyan",
+   "name": "Cyan Magic Circle",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-pentagram-gold",
+   "name": "Gold Pentagram",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-pentagram-purple",
+   "name": "Purple Pentagram",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-pentagram-cyan",
+   "name": "Cyan Pentagram",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-circle-heart-pink",
+   "name": "Heart Circle (Pink)",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-circle-heart-gold",
+   "name": "Heart Circle (Gold)",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-circle-star-gold",
+   "name": "Star Circle (Gold)",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-circle-star-cyan",
+   "name": "Star Circle (Cyan)",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-circle-hex-green",
+   "name": "Hex Circle (Green)",
+   "category": "Floor / Ground",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-floor-circle-tri-purple",
+   "name": "Tri Circle (Purple)",
+   "category": "Floor / Ground",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-floor-ice-puddle",
+   "name": "Ice Puddle",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-lava-blue",
+   "name": "Mystic Blue Lava",
+   "category": "Floor / Ground",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-floor-lava-green",
+   "name": "Toxic Green Lava",
+   "category": "Floor / Ground",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-floor-lava-purple",
+   "name": "Void Purple Lava",
+   "category": "Floor / Ground",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-floor-lava-cyan",
+   "name": "Ice-Lava",
+   "category": "Floor / Ground",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-floor-teleport-red",
+   "name": "Red Teleport",
+   "category": "Floor / Ground",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-floor-teleport-gold",
+   "name": "Gold Teleport",
+   "category": "Floor / Ground",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-floor-teleport-purple",
+   "name": "Purple Teleport",
+   "category": "Floor / Ground",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-floor-teleport-green",
+   "name": "Green Teleport",
+   "category": "Floor / Ground",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-extra-aurora-pink",
+   "name": "Pink Aurora",
+   "category": "Misc / Extras",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-extra-aurora-gold",
+   "name": "Gold Aurora",
+   "category": "Misc / Extras",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-extra-aurora-red",
+   "name": "Red Aurora",
+   "category": "Misc / Extras",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-extra-pixel-rain-gold",
+   "name": "Gold Pixel Rain",
+   "category": "Misc / Extras",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-extra-pixel-rain-red",
+   "name": "Red Pixel Rain",
+   "category": "Misc / Extras",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-extra-pixel-rain-neon",
+   "name": "Neon Pixel Rain",
+   "category": "Misc / Extras",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-extra-disco-warm",
+   "name": "Warm Disco",
+   "category": "Misc / Extras",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-extra-disco-cool",
+   "name": "Cool Disco",
+   "category": "Misc / Extras",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-extra-sound-bars-red",
+   "name": "Red Sound Bars",
+   "category": "Misc / Extras",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-extra-sound-bars-gold",
+   "name": "Gold Sound Bars",
+   "category": "Misc / Extras",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-extra-sound-bars-neon",
+   "name": "Neon Sound Bars",
+   "category": "Misc / Extras",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-extra-glitch-red",
+   "name": "Red Glitch",
+   "category": "Misc / Extras",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-extra-glitch-green",
+   "name": "Green Glitch",
+   "category": "Misc / Extras",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-stagelight-split-lr-rb",
+   "name": "Split L/R Red|Blue",
+   "category": "Stagelights (live)",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-stagelight-split-lr-gp",
+   "name": "Split L/R Green|Purple",
+   "category": "Stagelights (live)",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-stagelight-split-lr-cm",
+   "name": "Split L/R Cyan|Magenta",
+   "category": "Stagelights (live)",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-stagelight-split-lr-gs",
+   "name": "Split L/R Gold|Silver",
+   "category": "Stagelights (live)",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-stagelight-split-lr-fi",
+   "name": "Split L/R Fire|Ice",
+   "category": "Stagelights (live)",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-stagelight-split-lr-yw",
+   "name": "Split L/R Yellow|White",
+   "category": "Stagelights (live)",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-stagelight-split-lr-bp",
+   "name": "Split L/R Blue|Pink",
+   "category": "Stagelights (live)",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-stagelight-tri-lrb",
+   "name": "3-Way RGB",
+   "category": "Stagelights (live)",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-stagelight-tri-flag",
+   "name": "3-Way Flag (R/W/B)",
+   "category": "Stagelights (live)",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-stagelight-tri-gcpk",
+   "name": "3-Way Gold/Cyan/Pink",
+   "category": "Stagelights (live)",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-stagelight-tri-neonsp",
+   "name": "3-Way Neon Split",
+   "category": "Stagelights (live)",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-halo-saturn-rainbow",
+   "name": "Rainbow Saturn",
+   "category": "Halos & Rings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-halo-saturn-sunset",
+   "name": "Sunset Saturn",
+   "category": "Halos & Rings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-halo-saturn-neon",
+   "name": "Neon Saturn",
+   "category": "Halos & Rings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-halo-saturn-gold",
+   "name": "Gold Saturn",
+   "category": "Halos & Rings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-halo-segments-rainbow",
+   "name": "Rainbow Segmented",
+   "category": "Halos & Rings",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-halo-segments-cyan",
+   "name": "Cyan Segmented",
+   "category": "Halos & Rings",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-halo-segments-pink",
+   "name": "Pink Segmented",
+   "category": "Halos & Rings",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-halo-ground-pink",
+   "name": "Pink Portal",
+   "category": "Halos & Rings",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-halo-ground-cyan",
+   "name": "Cyan Portal",
+   "category": "Halos & Rings",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-halo-ground-rainbow",
+   "name": "Rainbow Portal",
+   "category": "Halos & Rings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-halo-dots-gold",
+   "name": "Gold Ring of Dots",
+   "category": "Halos & Rings",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-halo-dots-red",
+   "name": "Red Ring of Dots",
+   "category": "Halos & Rings",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-halo-dots-purple",
+   "name": "Purple Ring of Dots",
+   "category": "Halos & Rings",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-halo-double-sunset",
+   "name": "Sunset Double Halo",
+   "category": "Halos & Rings",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-halo-double-aurora",
+   "name": "Aurora Double Halo",
+   "category": "Halos & Rings",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-beam-lightning-blue",
+   "name": "Blue Lightning",
+   "category": "Beams",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-beam-lightning-white",
+   "name": "White Lightning",
+   "category": "Beams",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-beam-lightning-purple",
+   "name": "Purple Lightning",
+   "category": "Beams",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-beam-lightning-green",
+   "name": "Green Lightning",
+   "category": "Beams",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-beam-lightning-red",
+   "name": "Red Lightning",
+   "category": "Beams",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-beam-sun-rays-gold",
+   "name": "Gold Sun Rays",
+   "category": "Beams",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-beam-sun-rays-rainbow",
+   "name": "Rainbow Sun Rays",
+   "category": "Beams",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-beam-god-rays-gold",
+   "name": "Gold God Rays",
+   "category": "Beams",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-beam-god-rays-silver",
+   "name": "Silver God Rays",
+   "category": "Beams",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-beam-god-rays-green",
+   "name": "Green God Rays",
+   "category": "Beams",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-beam-pillars-rainbow",
+   "name": "Rainbow Pillars",
+   "category": "Beams",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-beam-pillars-pink",
+   "name": "Pink Pillars",
+   "category": "Beams",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-beam-pillars-purple",
+   "name": "Purple Pillars",
+   "category": "Beams",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-pulse-sonar-pro",
+   "name": "Sonar Pro",
+   "category": "Pulse Waves",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-pulse-sonar-pro-gold",
+   "name": "Gold Sonar Pro",
+   "category": "Pulse Waves",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-pulse-sonar-pro-pink",
+   "name": "Pink Sonar Pro",
+   "category": "Pulse Waves",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-pulse-sonar-pro-white",
+   "name": "White Sonar Pro",
+   "category": "Pulse Waves",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-pulse-radio-rainbow",
+   "name": "Rainbow Radio",
+   "category": "Pulse Waves",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-pulse-radio-gold",
+   "name": "Gold Radio",
+   "category": "Pulse Waves",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-pulse-radio-green",
+   "name": "Green Radio",
+   "category": "Pulse Waves",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-pulse-radio-red",
+   "name": "Red Radio",
+   "category": "Pulse Waves",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-pulse-heart-purple",
+   "name": "Purple Heart Pulse",
+   "category": "Pulse Waves",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-pulse-heart-green",
+   "name": "Green Heart Pulse",
+   "category": "Pulse Waves",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-pulse-heart-white",
+   "name": "White Heart Pulse",
+   "category": "Pulse Waves",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-orbit-clovers",
+   "name": "Clover Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-flowers",
+   "name": "Flower Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-butterflies",
+   "name": "Butterfly Orbit",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-orbit-fish",
+   "name": "Fish Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-unicorns",
+   "name": "Unicorn Orbit",
+   "category": "Orbiters",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-orbit-soccer",
+   "name": "Soccer Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-coffee",
+   "name": "Coffee Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-donuts",
+   "name": "Donut Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-dice",
+   "name": "Dice Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-cherries",
+   "name": "Cherry Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-darts",
+   "name": "Dart Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-cakes",
+   "name": "Cake Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-floor-magic-blue",
+   "name": "Blue Magic Circle",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-magic-pink",
+   "name": "Pink Magic Circle",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-magic-orange",
+   "name": "Orange Magic Circle",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-magic-white",
+   "name": "White Magic Circle",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-pentagram-blue",
+   "name": "Blue Pentagram",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-pentagram-green",
+   "name": "Green Pentagram",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-pentagram-pink",
+   "name": "Pink Pentagram",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-circle-heart-red",
+   "name": "Heart Circle (Red)",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-circle-heart-cyan",
+   "name": "Heart Circle (Cyan)",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-circle-star-red",
+   "name": "Star Circle (Red)",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-circle-star-pink",
+   "name": "Star Circle (Pink)",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-circle-star-purple",
+   "name": "Star Circle (Purple)",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-circle-hex-gold",
+   "name": "Hex Circle (Gold)",
+   "category": "Floor / Ground",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-floor-circle-hex-cyan",
+   "name": "Hex Circle (Cyan)",
+   "category": "Floor / Ground",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-floor-circle-tri-red",
+   "name": "Tri Circle (Red)",
+   "category": "Floor / Ground",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-floor-teleport-cyan",
+   "name": "Cyan Teleport",
+   "category": "Floor / Ground",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-floor-teleport-pink",
+   "name": "Pink Teleport",
+   "category": "Floor / Ground",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-floor-teleport-orange",
+   "name": "Orange Teleport",
+   "category": "Floor / Ground",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-floor-ice-puddle-purple",
+   "name": "Purple Ice Puddle",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-ice-puddle-pink",
+   "name": "Pink Ice Puddle",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-ice-puddle-green",
+   "name": "Green Ice Puddle",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-lava-yellow",
+   "name": "Yellow Lava",
+   "category": "Floor / Ground",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-floor-lava-pink",
+   "name": "Pink Lava",
+   "category": "Floor / Ground",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-extra-aurora-teal",
+   "name": "Teal Aurora",
+   "category": "Misc / Extras",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-extra-aurora-cyan",
+   "name": "Cyan Aurora",
+   "category": "Misc / Extras",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-extra-aurora-purple",
+   "name": "Purple Aurora",
+   "category": "Misc / Extras",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-extra-pixel-rain-cyan",
+   "name": "Cyan Pixel Rain",
+   "category": "Misc / Extras",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-extra-pixel-rain-purple",
+   "name": "Purple Pixel Rain",
+   "category": "Misc / Extras",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-extra-pixel-rain-green",
+   "name": "Green Pixel Rain",
+   "category": "Misc / Extras",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-extra-disco-rainbow",
+   "name": "Rainbow Disco",
+   "category": "Misc / Extras",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-extra-disco-pink",
+   "name": "Pink Disco",
+   "category": "Misc / Extras",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-extra-sound-bars-green",
+   "name": "Green Sound Bars",
+   "category": "Misc / Extras",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-extra-sound-bars-cyan",
+   "name": "Cyan Sound Bars",
+   "category": "Misc / Extras",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-extra-sound-bars-purple",
+   "name": "Purple Sound Bars",
+   "category": "Misc / Extras",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-extra-glitch-purple",
+   "name": "Purple Glitch",
+   "category": "Misc / Extras",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-extra-glitch-cyan",
+   "name": "Cyan Glitch",
+   "category": "Misc / Extras",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-extra-glitch-blue",
+   "name": "Blue Glitch",
+   "category": "Misc / Extras",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-stagelight-split-lr-ry",
+   "name": "Split L/R Red|Yellow",
+   "category": "Stagelights (live)",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-stagelight-split-lr-bc",
+   "name": "Split L/R Blue|Cyan",
+   "category": "Stagelights (live)",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-stagelight-split-lr-pw",
+   "name": "Split L/R Purple|White",
+   "category": "Stagelights (live)",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-stagelight-split-lr-gy",
+   "name": "Split L/R Green|Yellow",
+   "category": "Stagelights (live)",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-stagelight-split-lr-pkc",
+   "name": "Split L/R Pink|Cyan",
+   "category": "Stagelights (live)",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-stagelight-tri-prb",
+   "name": "3-Way Pink/Yellow/Cyan",
+   "category": "Stagelights (live)",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-stagelight-tri-neonall",
+   "name": "3-Way Neon (All)",
+   "category": "Stagelights (live)",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-stagelight-quad-all",
+   "name": "4-Way Rainbow Quads",
+   "category": "Stagelights (live)",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-stagelight-quad-neon",
+   "name": "4-Way Neon Quads",
+   "category": "Stagelights (live)",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-halo-dots-cyan",
+   "name": "Cyan Ring of Dots",
+   "category": "Halos & Rings",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-halo-dots-white",
+   "name": "White Ring of Dots",
+   "category": "Halos & Rings",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-halo-dots-neon",
+   "name": "Neon Ring of Dots",
+   "category": "Halos & Rings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-halo-segments-multi",
+   "name": "Multi Segmented",
+   "category": "Halos & Rings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-beam-pillars-rainbow-wide",
+   "name": "Rainbow Wide Pillars",
+   "category": "Beams",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-beam-sun-rays-bright-neon",
+   "name": "Bright Neon Sun Rays",
+   "category": "Beams",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-beam-god-rays-rainbow",
+   "name": "Rainbow God Rays",
+   "category": "Beams",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-pulse-sonar-pro-rainbow",
+   "name": "Rainbow Sonar Pro",
+   "category": "Pulse Waves",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-pulse-sonar-pro-cyan",
+   "name": "Cyan Sonar Pro",
+   "category": "Pulse Waves",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-pulse-sonar-pro-red",
+   "name": "Red Sonar Pro",
+   "category": "Pulse Waves",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-pulse-heart-rainbow",
+   "name": "Rainbow Heart Pulse",
+   "category": "Pulse Waves",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-orbit-stars-gold",
+   "name": "Gold Star Orbit",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-orbit-glowstar",
+   "name": "Glow Star Orbit",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-orbit-snowflake",
+   "name": "Snowflake Orbit",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-orbit-paw",
+   "name": "Paw Print Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-leaf",
+   "name": "Leaf Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-bubble",
+   "name": "Bubble Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-mushroom",
+   "name": "Mushroom Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-sunflower",
+   "name": "Sunflower Orbit",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-orbit-rainbow",
+   "name": "Rainbow Orbit",
+   "category": "Orbiters",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-orbit-moon",
+   "name": "Moon Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-sun",
+   "name": "Sun Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-ghost",
+   "name": "Ghost Orbit",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-orbit-devil",
+   "name": "Devil Orbit",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-orbit-clown",
+   "name": "Clown Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-bomb",
+   "name": "Bomb Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-watermelon",
+   "name": "Watermelon Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-peach",
+   "name": "Peach Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-strawberry",
+   "name": "Strawberry Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-pill",
+   "name": "Pill Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-blood",
+   "name": "Blood Drop Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-party",
+   "name": "Party Popper Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-confetti",
+   "name": "Confetti Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-discoball",
+   "name": "Disco Ball Orbit",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-orbit-car",
+   "name": "Car Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-tint-neon-red-yellow",
+   "name": "Red/Yellow Neon",
+   "category": "Tint FX",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-tint-neon-green-cyan",
+   "name": "Green/Cyan Neon",
+   "category": "Tint FX",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-tint-neon-gold-pink",
+   "name": "Gold/Pink Neon",
+   "category": "Tint FX",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-tint-strobe-red",
+   "name": "Red Strobe",
+   "category": "Tint FX",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-tint-strobe-blue",
+   "name": "Blue Strobe",
+   "category": "Tint FX",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-tint-strobe-gold",
+   "name": "Gold Strobe",
+   "category": "Tint FX",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-tint-strobe-rainbow",
+   "name": "Rainbow Strobe",
+   "category": "Tint FX",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-floor-magic-bright-gold",
+   "name": "Bright Gold Magic",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-magic-bright-cyan",
+   "name": "Bright Cyan Magic",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-magic-bright-pink",
+   "name": "Bright Pink Magic",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-circle-star-gold-bright",
+   "name": "Bright Gold Star",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-circle-star-white-bright",
+   "name": "Bright White Star",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-circle-heart-white-bright",
+   "name": "Bright White Heart",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-circle-heart-neon-bright",
+   "name": "Bright Neon Heart",
+   "category": "Floor / Ground",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-floor-teleport-bright-cyan",
+   "name": "Bright Cyan Teleport",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-teleport-bright-gold",
+   "name": "Bright Gold Teleport",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-teleport-bright-neon",
+   "name": "Bright Neon Teleport",
+   "category": "Floor / Ground",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-extra-aurora-multi-rainbow",
+   "name": "Multi Rainbow Aurora",
+   "category": "Misc / Extras",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-extra-aurora-multi-neon",
+   "name": "Multi Neon Aurora",
+   "category": "Misc / Extras",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-extra-pixel-rain-multi",
+   "name": "Multi Pixel Rain",
+   "category": "Misc / Extras",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-extra-pixel-rain-sunset",
+   "name": "Sunset Pixel Rain",
+   "category": "Misc / Extras",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-extra-pixel-rain-ice",
+   "name": "Ice Pixel Rain",
+   "category": "Misc / Extras",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-extra-glitch-multi",
+   "name": "Multi Glitch",
+   "category": "Misc / Extras",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-extra-glitch-neon",
+   "name": "Neon Glitch",
+   "category": "Misc / Extras",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-extra-glitch-gold",
+   "name": "Gold Glitch",
+   "category": "Misc / Extras",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-extra-constellation-gold",
+   "name": "Gold Constellation",
+   "category": "Misc / Extras",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-extra-constellation-pink",
+   "name": "Pink Constellation",
+   "category": "Misc / Extras",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-extra-constellation-cyan",
+   "name": "Cyan Constellation",
+   "category": "Misc / Extras",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-extra-constellation-green",
+   "name": "Green Constellation",
+   "category": "Misc / Extras",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-halo-portal-rainbow-a",
+   "name": "Rainbow Portal A",
+   "category": "Halos & Rings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-halo-portal-rainbow-b",
+   "name": "Rainbow Portal B",
+   "category": "Halos & Rings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-halo-portal-neon-pk-cy",
+   "name": "Neon Portal Pk/Cy",
+   "category": "Halos & Rings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-halo-portal-neon-gd-pk",
+   "name": "Neon Portal Gd/Pk",
+   "category": "Halos & Rings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-halo-portal-neon-cy-gr",
+   "name": "Neon Portal Cy/Gr",
+   "category": "Halos & Rings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-halo-portal-neon-pp-pk",
+   "name": "Neon Portal Pp/Pk",
+   "category": "Halos & Rings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-halo-portal-sunset-bright",
+   "name": "Bright Sunset Portal",
+   "category": "Halos & Rings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-halo-portal-ocean-bright",
+   "name": "Bright Ocean Portal",
+   "category": "Halos & Rings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-halo-portal-forest-bright",
+   "name": "Bright Forest Portal",
+   "category": "Halos & Rings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-halo-portal-galaxy",
+   "name": "Galaxy Portal",
+   "category": "Halos & Rings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-pulse-heart-2c-pk-gd",
+   "name": "2-Color Heart Pk/Gd",
+   "category": "Pulse Waves",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-pulse-heart-2c-rd-wh",
+   "name": "2-Color Heart Rd/Wh",
+   "category": "Pulse Waves",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-pulse-heart-2c-pp-cy",
+   "name": "2-Color Heart Pp/Cy",
+   "category": "Pulse Waves",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-pulse-heart-3c-neon",
+   "name": "3-Color Neon Heart",
+   "category": "Pulse Waves",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-pulse-heart-3c-rgb",
+   "name": "3-Color RGB Heart",
+   "category": "Pulse Waves",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-pulse-sonar-pro-2c-cy-pk",
+   "name": "2-Color Sonar Cy/Pk",
+   "category": "Pulse Waves",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-pulse-sonar-pro-2c-gd-gr",
+   "name": "2-Color Sonar Gd/Gr",
+   "category": "Pulse Waves",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-pulse-sonar-pro-2c-rd-bl",
+   "name": "2-Color Sonar Rd/Bl",
+   "category": "Pulse Waves",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-pulse-sonar-pro-3c-neon",
+   "name": "3-Color Neon Sonar",
+   "category": "Pulse Waves",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-pulse-sonar-pro-3c-rgb",
+   "name": "3-Color RGB Sonar",
+   "category": "Pulse Waves",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-pulse-radio-2c-rd-wh",
+   "name": "2-Color Radio Rd/Wh",
+   "category": "Pulse Waves",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-pulse-radio-2c-pk-cy",
+   "name": "2-Color Radio Pk/Cy",
+   "category": "Pulse Waves",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-pulse-radio-2c-gd-bl",
+   "name": "2-Color Radio Gd/Bl",
+   "category": "Pulse Waves",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-pulse-radio-3c-neon",
+   "name": "3-Color Neon Radio",
+   "category": "Pulse Waves",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-pulse-radio-3c-rgb",
+   "name": "3-Color RGB Radio",
+   "category": "Pulse Waves",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-orbit-poo",
+   "name": "Poo Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-robot",
+   "name": "Robot Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-pumpkin-face",
+   "name": "Pumpkin Face Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-ogre",
+   "name": "Ogre Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-cursing",
+   "name": "Cursing Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-cold",
+   "name": "Cold Face Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-hearteye",
+   "name": "Heart Eyes Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-smile",
+   "name": "Smile Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-cat-face",
+   "name": "Cat Face Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-dragon",
+   "name": "Dragon Orbit",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-orbit-daisy",
+   "name": "Daisy Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-newmoon",
+   "name": "New Moon Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-rock",
+   "name": "Rock Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-lotus",
+   "name": "Lotus Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-hibiscus",
+   "name": "Hibiscus Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-boom",
+   "name": "Boom Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-sweat",
+   "name": "Sweat Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-droplet",
+   "name": "Droplet Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-cheese",
+   "name": "Cheese Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-egg",
+   "name": "Egg Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-butter",
+   "name": "Butter Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-shrimp",
+   "name": "Shrimp Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-dumpling",
+   "name": "Dumpling Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-lollipop",
+   "name": "Lollipop Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-bubbletea",
+   "name": "Bubble Tea Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-beer",
+   "name": "Beer Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-cocktail",
+   "name": "Cocktail Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-popcorn",
+   "name": "Popcorn Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-ice",
+   "name": "Ice Cube Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-soccer2",
+   "name": "Soccer VS Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-basketball",
+   "name": "Basketball Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-baseball",
+   "name": "Baseball Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-football",
+   "name": "Football Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-volleyball",
+   "name": "Volleyball Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-tennis",
+   "name": "Tennis Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-rugby",
+   "name": "Rugby Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-pool",
+   "name": "8-Ball Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-trophy",
+   "name": "Trophy Orbit",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-orbit-rosette",
+   "name": "Rosette Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-ambulance",
+   "name": "Ambulance Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-suv",
+   "name": "SUV Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-airplane",
+   "name": "Airplane Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-helicopter",
+   "name": "Helicopter Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-moai",
+   "name": "Moai Orbit",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-orbit-cd",
+   "name": "CD Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-phone",
+   "name": "Phone Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-lightbulb",
+   "name": "Lightbulb Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-cashwings",
+   "name": "Flying Cash Orbit",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-orbit-dollarbill",
+   "name": "Dollar Bill Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-yenbill",
+   "name": "Yen Bill Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-eurobill",
+   "name": "Euro Bill Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-poundbill",
+   "name": "Pound Bill Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-microbe",
+   "name": "Microbe Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-gift",
+   "name": "Gift Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-pinata",
+   "name": "Pinata Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-handfan",
+   "name": "Hand Fan Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-carpstreamer",
+   "name": "Carp Streamer Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-pinkheart",
+   "name": "Pink Heart Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-blackheart",
+   "name": "Black Heart Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-beatingheart",
+   "name": "Beating Heart Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-sparkleheart",
+   "name": "Sparkle Heart Orbit",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-orbit-heartarrow",
+   "name": "Heart Arrow Orbit",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-orbit-burningheart",
+   "name": "Burning Heart Orbit",
+   "category": "Orbiters",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-orbit-mendingheart",
+   "name": "Mending Heart Orbit",
+   "category": "Orbiters",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-orbit-cross",
+   "name": "Cross Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-circle-mark",
+   "name": "Circle Mark Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-nosmoking",
+   "name": "No Smoking Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-hundred",
+   "name": "100 Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-bangbang",
+   "name": "Bang Bang Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-check",
+   "name": "Check Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-top",
+   "name": "Top Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-dollarsign",
+   "name": "Dollar Sign Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-soon",
+   "name": "Soon Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-orbit-flag-ca",
+   "name": "Canada Flag Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-flag-tw",
+   "name": "Taiwan Flag Orbit",
+   "category": "Orbiters",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-orbit-cloud",
+   "name": "Cloud Orbit",
+   "category": "Orbiters",
+   "rarity": "common"
+  },
+  {
+   "id": "effect-floor-magic-2c-gd-cy",
+   "name": "2-Color Magic Gd/Cy",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-magic-2c-pk-pp",
+   "name": "2-Color Magic Pk/Pp",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-magic-3c-rgb",
+   "name": "3-Color RGB Magic",
+   "category": "Floor / Ground",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-floor-magic-3c-neon",
+   "name": "3-Color Neon Magic",
+   "category": "Floor / Ground",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-floor-star-2c-gd-cy",
+   "name": "2-Color Star Gd/Cy",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-star-3c-neon",
+   "name": "3-Color Neon Star",
+   "category": "Floor / Ground",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-floor-star-3c-rgb",
+   "name": "3-Color RGB Star",
+   "category": "Floor / Ground",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-floor-teleport-2c-cy-gd",
+   "name": "2-Color Teleport Cy/Gd",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-teleport-2c-pk-pp",
+   "name": "2-Color Teleport Pk/Pp",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-teleport-3c-rgb",
+   "name": "3-Color RGB Teleport",
+   "category": "Floor / Ground",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-floor-teleport-3c-neon",
+   "name": "3-Color Neon Teleport",
+   "category": "Floor / Ground",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-floor-pentagram-2c-rd-gd",
+   "name": "2-Color Pentagram Rd/Gd",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-pentagram-2c-pk-cy",
+   "name": "2-Color Pentagram Pk/Cy",
+   "category": "Floor / Ground",
+   "rarity": "rare"
+  },
+  {
+   "id": "effect-floor-pentagram-3c-neon",
+   "name": "3-Color Neon Pentagram",
+   "category": "Floor / Ground",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-floor-pentagram-3c-rgb",
+   "name": "3-Color RGB Pentagram",
+   "category": "Floor / Ground",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-extra-glitch-slow",
+   "name": "Slow Glitch",
+   "category": "Misc / Extras",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "effect-extra-aurora-2c-pk-cy",
+   "name": "2-Color Aurora Pk/Cy",
+   "category": "Misc / Extras",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-extra-aurora-2c-gd-pk",
+   "name": "2-Color Aurora Gd/Pk",
+   "category": "Misc / Extras",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-extra-aurora-2c-bl-gr",
+   "name": "2-Color Aurora Bl/Gr",
+   "category": "Misc / Extras",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-extra-aurora-3c-rgb",
+   "name": "3-Color RGB Aurora",
+   "category": "Misc / Extras",
+   "rarity": "legendary"
+  },
+  {
+   "id": "effect-extra-aurora-3c-neon",
+   "name": "3-Color Neon Aurora",
+   "category": "Misc / Extras",
+   "rarity": "legendary"
+  }
+ ]
+}

@@ -1,0 +1,188 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Effects Smoke — in-game render</title>
+<style>
+  :root { --bg:#12081f; --panel:#1a0a2e; --line:#2c1856; --gold:#ffd34d; --mut:#c0a0e6; --red:#ff5050; }
+  body { margin:0; background:var(--bg); color:#fff; font-family:'Courier New',monospace; }
+  .wrap { max-width:1400px; margin:0 auto; padding:64px 18px 80px; }
+  h1 { color:var(--gold); font-size:20px; margin:6px 0 2px; }
+  .sub { color:var(--mut); font-size:12px; margin-bottom:14px; }
+  .summary { position:sticky; top:44px; z-index:50; background:var(--panel); border:1px solid var(--line);
+    border-radius:8px; padding:8px 14px; font-size:12px; color:var(--mut); display:flex; gap:18px; align-items:center; }
+  .summary b { color:var(--gold); }
+  .summary .del { color:var(--red); }
+  .savestate { margin-left:auto; font-size:11px; }
+  h2 { color:var(--gold); font-size:15px; border-bottom:1px solid var(--line); padding-bottom:4px; margin:30px 0 8px; }
+  h2 .count { color:var(--mut); font-weight:normal; font-size:12px; }
+  .catprompt { width:100%; box-sizing:border-box; background:#0b041a; color:#fff; border:1px solid var(--line);
+    border-radius:6px; padding:8px; font-family:inherit; font-size:12px; min-height:40px; margin-bottom:12px; }
+  .catprompt:focus { border-color:var(--gold); outline:none; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:8px; }
+  .card.deleted { opacity:.45; border-color:var(--red); }
+  .card img { width:100%; image-rendering:pixelated; border-radius:4px; background:#101018; display:block; }
+  .card .name { font-size:12px; color:#fff; font-weight:bold; margin:6px 0 0; }
+  .card .meta { font-size:10px; color:var(--mut); margin:1px 0 6px; }
+  .card .row { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--red); }
+  .card textarea { width:100%; box-sizing:border-box; background:#0b041a; color:#fff; border:1px solid var(--line);
+    border-radius:4px; padding:5px; font-family:inherit; font-size:11px; min-height:30px; margin-top:6px; }
+  .card textarea:focus { border-color:var(--gold); outline:none; }
+  .rar-common{color:#c0c0c0} .rar-uncommon{color:#33ff66} .rar-rare{color:#3399ff} .rar-legendary{color:var(--gold)}
+</style>
+</head>
+<body>
+<script src="/tools-nav.js"></script>
+<div class="wrap">
+  <h1>Effects Smoke — in-game render</h1>
+  <div class="sub">Every flipbook below is captured from the REAL game renderer (effect-interpreter on the real cat at stage scale, lane-boxed). Checkbox = delete this effect. Per-effect box = modification notes. Per-category box = overall changes for that category. Autosaves to <code>tools/effects-game/selections.json</code>.</div>
+  <div class="summary">
+    <span>total <b id="s-total">0</b></span>
+    <span class="del">deleted <b id="s-del">0</b></span>
+    <span>notes <b id="s-notes">0</b></span>
+    <span>category prompts <b id="s-cats">0</b></span>
+    <span class="savestate" id="savestate">loaded</span>
+  </div>
+  <div id="root"></div>
+</div>
+<script>
+const CATEGORY_ORDER = [
+  'Stagelights (live)', 'Halos & Rings', 'Beams', 'Pulse Waves', 'Orbiters',
+  'Tint FX', 'Floor / Ground', 'Weather', 'Decorative', 'Misc / Extras',
+];
+const state = { deleted: new Set(), notes: {}, categoryPrompts: {} };
+let catalog = null;
+let saveTimer = null;
+
+function scheduleSave() {
+  document.getElementById('savestate').textContent = 'unsaved…';
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    const payload = {
+      deleted: [...state.deleted].sort(),
+      notes: Object.fromEntries(Object.entries(state.notes).filter(([, v]) => v.trim())),
+      categoryPrompts: Object.fromEntries(Object.entries(state.categoryPrompts).filter(([, v]) => v.trim())),
+      totalAvailable: catalog.effects.length,
+      timestamp: new Date().toISOString(),
+    };
+    try {
+      const r = await fetch('/save/effects-game', { method: 'POST', body: JSON.stringify(payload, null, 1) });
+      document.getElementById('savestate').textContent = r.ok ? 'saved ✓' : 'SAVE FAILED';
+    } catch {
+      document.getElementById('savestate').textContent = 'SAVE FAILED (server down?)';
+    }
+    refreshSummary();
+  }, 700);
+}
+
+function refreshSummary() {
+  document.getElementById('s-total').textContent = catalog.effects.length;
+  document.getElementById('s-del').textContent = state.deleted.size;
+  document.getElementById('s-notes').textContent = Object.values(state.notes).filter((v) => v.trim()).length;
+  document.getElementById('s-cats').textContent = Object.values(state.categoryPrompts).filter((v) => v.trim()).length;
+}
+
+// One global ticker drives all visible flipbooks; offscreen cards are
+// frozen via IntersectionObserver so 440 animations stay cheap.
+const visible = new Set();
+const io = new IntersectionObserver((entries) => {
+  for (const e of entries) {
+    if (e.isIntersecting) visible.add(e.target); else visible.delete(e.target);
+  }
+}, { rootMargin: '200px' });
+let tick = 0;
+setInterval(() => {
+  tick++;
+  for (const img of visible) {
+    const id = img.dataset.fx;
+    const offset = Number(img.dataset.off);
+    img.src = `frames/${id}_${(tick + offset) % catalog.frames}.jpg`;
+  }
+}, 170);
+
+async function boot() {
+  catalog = await (await fetch('catalog.json')).json();
+  try {
+    const saved = await (await fetch('selections.json?t=' + Date.now())).json();
+    for (const id of saved.deleted ?? []) state.deleted.add(id);
+    Object.assign(state.notes, saved.notes ?? {});
+    Object.assign(state.categoryPrompts, saved.categoryPrompts ?? {});
+  } catch { /* fresh start */ }
+
+  const byCat = {};
+  for (const fx of catalog.effects) (byCat[fx.category] ??= []).push(fx);
+  const root = document.getElementById('root');
+
+  for (const cat of CATEGORY_ORDER) {
+    const list = byCat[cat];
+    if (!list) continue;
+    const h = document.createElement('h2');
+    h.innerHTML = `${cat} <span class="count">${list.length}</span>`;
+    root.appendChild(h);
+
+    const prompt = document.createElement('textarea');
+    prompt.className = 'catprompt';
+    prompt.placeholder = `Overall changes for ${cat}…`;
+    prompt.value = state.categoryPrompts[cat] ?? '';
+    prompt.addEventListener('input', () => {
+      state.categoryPrompts[cat] = prompt.value;
+      scheduleSave();
+    });
+    root.appendChild(prompt);
+
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+    list.forEach((fx, i) => {
+      const card = document.createElement('div');
+      card.className = 'card' + (state.deleted.has(fx.id) ? ' deleted' : '');
+      const img = document.createElement('img');
+      img.loading = 'lazy';
+      img.dataset.fx = fx.id;
+      img.dataset.off = i % catalog.frames;
+      img.src = `frames/${fx.id}_0.jpg`;
+      io.observe(img);
+      card.appendChild(img);
+
+      const name = document.createElement('div');
+      name.className = 'name';
+      name.textContent = fx.name;
+      card.appendChild(name);
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.innerHTML = `${fx.id} · <span class="rar-${fx.rarity}">${fx.rarity}</span>`;
+      card.appendChild(meta);
+
+      const row = document.createElement('label');
+      row.className = 'row';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = state.deleted.has(fx.id);
+      cb.addEventListener('change', () => {
+        if (cb.checked) state.deleted.add(fx.id); else state.deleted.delete(fx.id);
+        card.classList.toggle('deleted', cb.checked);
+        scheduleSave();
+      });
+      row.appendChild(cb);
+      row.appendChild(document.createTextNode(' delete'));
+      card.appendChild(row);
+
+      const notes = document.createElement('textarea');
+      notes.placeholder = 'Modifications…';
+      notes.value = state.notes[fx.id] ?? '';
+      notes.addEventListener('input', () => {
+        state.notes[fx.id] = notes.value;
+        scheduleSave();
+      });
+      card.appendChild(notes);
+
+      grid.appendChild(card);
+    });
+    root.appendChild(grid);
+  }
+  refreshSummary();
+}
+boot();
+</script>
+</body>
+</html>

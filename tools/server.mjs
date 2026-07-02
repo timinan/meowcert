@@ -160,6 +160,17 @@ const TOOLS = {
     savePath: path.join(TOOL_DIR, 'effects', 'selections.json'),
     description: 'Candidate effects beyond floating-emoji particles. Tick the ones to ship; selections persist to tools/effects/selections.json. Cards lazy-render via IntersectionObserver so the grid scrolls smoothly.',
   },
+  'effects-game': {
+    label: 'Effects (in-game)',
+    href: '/tools/effects-game/index.html',
+    // Flipbook review of every SHIPPED effect captured from the REAL game
+    // renderer (effect-interpreter on the real cat at stage scale) — unlike
+    // the vanilla-canvas Effects Smoke above, this is pixel-identical to
+    // in-game. Checkbox = delete, per-effect notes, per-category prompts.
+    // Regenerate frames: scripts/render-check/fx-scan/capture-flipbooks.mjs
+    savePath: path.join(TOOL_DIR, 'effects-game', 'selections.json'),
+    description: 'Every shipped effect rendered by the actual game engine on the real cat. Tick to delete, note per-effect modifications, and leave per-category prompts. Saves to tools/effects-game/selections.json.',
+  },
   'user-management': {
     label: 'User Management',
     href: '/tools/user-management/index.html',

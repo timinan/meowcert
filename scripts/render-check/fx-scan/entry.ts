@@ -6,8 +6,7 @@
  * Diagnostic tool only. Never shipped in the game bundle.
  */
 import Phaser from 'phaser';
-import { NEW_EFFECT_CATALOG } from '@/shared/effect-catalog-gen';
-import { makeCatEffectFromMeta } from '@/effects/effect-interpreter';
+import { getEffectById, getEffectGridEntries } from '@/effects/cat-effects';
 import type { EffectHandle } from '@/effects/cat-effects';
 
 // Deliberately NO `window.Phaser` polyfill — the real game bundle has no
@@ -36,13 +35,24 @@ class ScanScene extends Phaser.Scene {
   target!: Phaser.GameObjects.Sprite;
   handle: EffectHandle | null = null;
 
+  preload(): void {
+    // Real cat when the server exposes the game atlas (capture-flipbooks
+    // + scan servers serve it); harmless 404 → gray-box fallback.
+    this.load.atlas('cats-atlas', 'assets/atlas/cats.png', 'assets/atlas/cats.json');
+    this.load.on('loaderror', () => { /* fall back to dummy */ });
+  }
+
   create(): void {
     const g = this.add.graphics();
     g.fillStyle(0x888888, 1);
     g.fillRect(0, 0, 64, 64);
     g.generateTexture('dummy-cat', 64, 64);
     g.destroy();
-    this.target = this.add.sprite(240, 320, 'dummy-cat').setScale(1.4);
+    const useCat = this.textures.exists('cats-atlas') &&
+      this.textures.get('cats-atlas').has('cat2_idle_00');
+    this.target = useCat
+      ? this.add.sprite(240, 320, 'cats-atlas', 'cat2_idle_00').setScale(1.4)
+      : this.add.sprite(240, 320, 'dummy-cat').setScale(1.4);
 
     let base: Uint8ClampedArray | null = null;
     // WebGL-safe: blit the game canvas into an offscreen 2d canvas
@@ -57,7 +67,9 @@ class ScanScene extends Phaser.Scene {
     };
 
     const api: ScanApi = {
-      ids: () => NEW_EFFECT_CATALOG.map((m) => m.id),
+      // Full merged catalog (hand-authored + generated), deduped the same
+      // way the game dedupes (getEffectById prefers hand-authored).
+      ids: () => getEffectGridEntries().map((e) => e.id),
       baseline: () => { base = grab(); },
       pixelDelta: () => {
         if (!base) return -1;
@@ -98,10 +110,12 @@ class ScanScene extends Phaser.Scene {
       },
       start: (id: string) => {
         errors.length = 0;
-        const meta = NEW_EFFECT_CATALOG.find((m) => m.id === id);
-        if (!meta) return `no meta for ${id}`;
+        // Resolve exactly like the game does — hand-authored registry
+        // first, generated interpreter second.
+        const effect = getEffectById(id);
+        if (!effect) return `no effect for ${id}`;
         try {
-          this.handle = makeCatEffectFromMeta(meta).apply(this, this.target, 1.4);
+          this.handle = effect.apply(this, this.target, 1.4);
         } catch (err) {
           return `APPLY THROW: ${String(err)}`;
         }
@@ -121,6 +135,12 @@ class ScanScene extends Phaser.Scene {
     };
     (window as unknown as { __scan: ScanApi }).__scan = api;
     (window as unknown as { __scene: Phaser.Scene }).__scene = this;
+    // Catalog metadata for the capture pipeline / review page — full
+    // merged set with the game's own name/rarity resolution.
+    (window as unknown as { __catalog: unknown }).__catalog = getEffectGridEntries().map((e) => {
+      const fx = getEffectById(e.id);
+      return { id: e.id, name: fx?.name ?? e.id, category: e.category, rarity: fx?.rarity ?? 'common' };
+    });
     (window as unknown as { __ready: boolean }).__ready = true;
   }
 
