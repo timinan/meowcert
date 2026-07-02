@@ -67,6 +67,50 @@ export async function collectRewards(): Promise<{ collected: number; state: Play
   return (await r.json()) as { ok: true; collected: number; state: PlayerState };
 }
 
+export type ClaimQuestResult =
+  | { ok: true; claimed: number; state: PlayerState }
+  | { ok: false; reason: string };
+
+/** Claim a single daily quest's coin reward. Server validates progress
+ *  and claim state; on success returns the fresh state (await-and-adopt).
+ *  A 400 (incomplete / already claimed / not active) resolves to
+ *  { ok: false, reason } rather than throwing. */
+export async function claimQuest(questId: string): Promise<ClaimQuestResult> {
+  const r = await fetch('/api/quests/claim', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ questId }),
+  });
+  return (await r.json()) as ClaimQuestResult;
+}
+
+export type ClaimBonusResult =
+  | { ok: true; pull: PullResult; state: PlayerState }
+  | { ok: false; reason: string };
+
+/** Claim the all-3-quests bonus: a free box pull of the chosen standard
+ *  box (cat / cosmetic / background / effects). Server validates that
+ *  all three of today's quests are claimed and the bonus is unclaimed. */
+export async function claimQuestBonus(boxId: BoxId): Promise<ClaimBonusResult> {
+  const r = await fetch('/api/quests/bonus', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ boxId }),
+  });
+  return (await r.json()) as ClaimBonusResult;
+}
+
+export type ClaimStreakResult =
+  | { ok: true; claimed: number; goldenBoxDue?: boolean; state: PlayerState }
+  | { ok: false; reason: string };
+
+/** Claim today's login-streak reward. goldenBoxDue is true on day 7
+ *  (Golden box grant lands with Task 11). */
+export async function claimStreak(): Promise<ClaimStreakResult> {
+  const r = await fetch('/api/streak/claim', { method: 'POST' });
+  return (await r.json()) as ClaimStreakResult;
+}
+
 /**
  * Equip a cosmetic instance on a cat instance.
  * Pass cosmeticInstanceId=null to clear the slot (cosmetic returns to inventory).

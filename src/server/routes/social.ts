@@ -32,6 +32,7 @@ import { loadOrInit, save } from '../core/player-state';
 import { ECONOMY, computePlayReward, type Difficulty, type PlayRewardBreakdown, type PlayRewardInput } from '../../shared/economy';
 import { applyPlayReward } from '../../shared/economy-apply';
 import { milestonesEarned } from '../../shared/post-milestones';
+import { recordQuestEvent } from '../../shared/quests';
 
 /**
  * Server routes for the social loop:
@@ -377,6 +378,16 @@ social.post('/play', async (c) => {
         }
       }
 
+      // Daily-quest hook — every completed play advances play3 (and
+      // combo20 / hardplay1 when the run qualifies). Fires for own-show
+      // plays too (playing is playing); recordQuestEvent no-ops quests
+      // that aren't active today or already claimed.
+      recordQuestEvent(
+        v,
+        { kind: 'play', maxCombo: body.maxCombo, difficulty: body.difficulty ?? 'easy' },
+        isoToday,
+      );
+
       // Save owner first, then visitor
       if (!isOwner) await save(redis, h);
       await save(redis, v);
@@ -447,11 +458,13 @@ social.post('/comment', async (c) => {
       const claims = await r.incrBy(`meowcert:commented:${body.postId}:${visitor}`, 1);
       if (claims === 1) {
         const isoToday = new Date().toISOString().slice(0, 10);
-        const player = await loadOrInit(visitor);
+        const player = await loadOrInit(redis, visitor);
         rolloverEconomy(player, isoToday);
         player.coins += ECONOMY.commentBonus;
         player.stats.coinsEarnedLifetime += ECONOMY.commentBonus;
-        await save(visitor, player);
+        // Daily-quest hook — a first-comment advances the 'comment1' quest.
+        recordQuestEvent(player, { kind: 'comment' }, isoToday);
+        await save(redis, player);
         commentBonus = ECONOMY.commentBonus;
       }
     } catch (err) {

@@ -2,7 +2,9 @@
  * rewards-modal harness — boots a bare Phaser scene, opens the real
  * RewardsModal (src/client/ui/rewards-modal.ts) against a fake
  * getPlayerState, and exposes window hooks so shoot.mjs can screenshot
- * three states: pot=240, pot=0, and post-collect.
+ * the collect-pot states AND the Task 10 daily-quest / login-streak
+ * states (mid-progress, claimable, all-claimed + bonus, streak day 3,
+ * streak day 7, bonus box chooser).
  */
 import Phaser from 'phaser';
 import { RewardsModal } from '@/ui/rewards-modal';
@@ -28,7 +30,87 @@ Phaser.GameObjects.GameObjectFactory.prototype.text = function patched(
 };
 
 function fakeState(pendingCollect: number, coins = 1000): PlayerState {
-  return { coins, economy: { pendingCollect } } as unknown as PlayerState;
+  return {
+    coins,
+    economy: {
+      pendingCollect,
+      daily: {
+        day: '',
+        playIncome: 0,
+        chartPlays: {},
+        hostPotAccrued: 0,
+        questProgress: {},
+        questClaimed: {},
+        questBonusClaimed: false,
+      },
+      streak: { lastDay: '', count: 0, lastClaimedDay: '' },
+    },
+  } as unknown as PlayerState;
+}
+
+type QuestScene = {
+  isoToday: string;
+  questProgress: Record<string, number>;
+  questClaimed: Record<string, boolean>;
+  questBonusClaimed: boolean;
+  streak: { lastDay: string; count: number; lastClaimedDay: string };
+};
+
+// '2026-07-02' resolves to quests [play3(t3), hardplay1(t1), comment1(t1)]
+// — play3's target of 3 is what makes the "1/3" mid-progress case visible.
+const DAY = '2026-07-02';
+
+const SCENES: Record<string, QuestScene> = {
+  'quests-mid': {
+    isoToday: DAY,
+    questProgress: { play3: 1 },
+    questClaimed: {},
+    questBonusClaimed: false,
+    streak: { lastDay: DAY, count: 1, lastClaimedDay: DAY },
+  },
+  'quest-claimable': {
+    isoToday: DAY,
+    questProgress: { play3: 3, hardplay1: 1 },
+    questClaimed: {},
+    questBonusClaimed: false,
+    streak: { lastDay: DAY, count: 1, lastClaimedDay: DAY },
+  },
+  'all-claimed': {
+    isoToday: DAY,
+    questProgress: { play3: 3, hardplay1: 1, comment1: 1 },
+    questClaimed: { play3: true, hardplay1: true, comment1: true },
+    questBonusClaimed: false,
+    streak: { lastDay: DAY, count: 2, lastClaimedDay: DAY },
+  },
+  'streak-3': {
+    isoToday: DAY,
+    questProgress: {},
+    questClaimed: {},
+    questBonusClaimed: false,
+    streak: { lastDay: DAY, count: 3, lastClaimedDay: '' },
+  },
+  'streak-7': {
+    isoToday: DAY,
+    questProgress: {},
+    questClaimed: {},
+    questBonusClaimed: false,
+    streak: { lastDay: DAY, count: 7, lastClaimedDay: '' },
+  },
+};
+
+function sceneState(name: string): PlayerState {
+  const s = SCENES[name]!;
+  const st = fakeState(0) as unknown as {
+    economy: {
+      daily: Record<string, unknown>;
+      streak: unknown;
+    };
+  };
+  st.economy.daily.questProgress = s.questProgress;
+  st.economy.daily.questClaimed = s.questClaimed;
+  st.economy.daily.questBonusClaimed = s.questBonusClaimed;
+  st.economy.streak = s.streak;
+  return st as unknown as PlayerState;
 }
 
 class HarnessScene extends Phaser.Scene {
@@ -40,6 +122,8 @@ class HarnessScene extends Phaser.Scene {
 
     const w = window as unknown as {
       __open: (n: number) => void;
+      __scene: (name: string) => void;
+      __openChooser: () => void;
       __collectNow: () => Promise<void>;
       __ready: boolean;
     };
@@ -49,6 +133,17 @@ class HarnessScene extends Phaser.Scene {
       modal?.destroy();
       modal = new RewardsModal(this);
       modal.open({ getPlayerState: () => state });
+    };
+
+    w.__scene = (name: string) => {
+      state = sceneState(name);
+      modal?.destroy();
+      modal = new RewardsModal(this);
+      modal.open({ getPlayerState: () => state, isoToday: SCENES[name]!.isoToday });
+    };
+
+    w.__openChooser = () => {
+      (modal as unknown as { openBoxChooser: () => void }).openBoxChooser();
     };
 
     w.__collectNow = async () => {

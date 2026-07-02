@@ -59,6 +59,22 @@ await new Promise((r) => setTimeout(r, 300));
 await canvas.screenshot({ path: path.join(outDir, 'post-collect.png') });
 console.log('shot post-collect.png');
 
+// Task 10 daily-quest + login-streak scenes.
+for (const name of ['quests-mid', 'quest-claimable', 'all-claimed', 'streak-3', 'streak-7']) {
+  await page.evaluate((n) => window.__scene(n), name);
+  await new Promise((r) => setTimeout(r, 220));
+  await canvas.screenshot({ path: path.join(outDir, `${name}.png`) });
+  console.log(`shot ${name}.png`);
+}
+
+// bonus box chooser overlay (open all-claimed, then trigger the chooser).
+await page.evaluate(() => window.__scene('all-claimed'));
+await new Promise((r) => setTimeout(r, 150));
+await page.evaluate(() => window.__openChooser());
+await new Promise((r) => setTimeout(r, 250));
+await canvas.screenshot({ path: path.join(outDir, 'bonus-chooser.png') });
+console.log('shot bonus-chooser.png');
+
 await browser.close();
 server.close();
 console.log('done');

@@ -15,6 +15,7 @@ import {
 } from '../core/social';
 import { classifyScore, formatPinnedSummary } from '../../shared/social-loop';
 import { BACKING_CATALOG } from '../../shared/state';
+import { recordQuestEvent } from '../../shared/quests';
 
 /**
  * Publish flow — turn an authored chart into a live Reddit post that
@@ -123,6 +124,9 @@ publish.post('/chart', async (c) => {
     try {
       const author = await loadOrInit(redis, username);
       author.stats.showsPosted += 1;
+      // Daily-quest hook — publishing a show advances the 'post1' quest
+      // (quest progress clamps, so re-posting the same day fires once).
+      recordQuestEvent(author, { kind: 'post' }, new Date().toISOString().slice(0, 10));
       await save(redis, author);
     } catch (err) {
       console.error('[publish] author stats bump failed (continuing)', err);

@@ -18,6 +18,13 @@ import {
 } from '../../shared/state';
 import type { TutorialStepId } from '../../shared/tutorial-types';
 import { ECONOMY } from '../../shared/economy';
+import {
+  dailyQuestsFor,
+  recordQuestEvent,
+  touchLoginStreak,
+  STREAK_TRACK,
+  type DailyQuestId,
+} from '../../shared/quests';
 import { getUserOverride } from '../../shared/user-overrides.generated';
 
 // DEV ONLY — every GET /api/state wipes the player's record and hands
@@ -50,6 +57,17 @@ state.get('/state', async (c) => {
   const player = DEV_RESET_ON_LOAD && !skipReset
     ? await resetState(redis, username, DEV_STARTER_COINS)
     : await loadOrInit(redis, username);
+  // Login-streak touch — advances/resets the streak on the player's
+  // first load of the UTC day. Persist ONLY when it actually changed
+  // (streak.lastDay flips) so a same-day reload doesn't re-save. The
+  // resetState path hands back a fresh player (streak.lastDay ''), so
+  // the touch stamps today's streak on it too.
+  const isoToday = new Date().toISOString().slice(0, 10);
+  const streakDayBefore = player.economy.streak.lastDay;
+  touchLoginStreak(player, isoToday);
+  if (player.economy.streak.lastDay !== streakDayBefore) {
+    await save(redis, player);
+  }
   return c.json({ state: player });
 });
 
@@ -74,6 +92,8 @@ state.post('/box/open', async (c) => {
   // the refund as "earned" here — that path fires later.
   player.stats.coinsSpentLifetime += box.price;
   player.stats.boxesOpened[boxId] = (player.stats.boxesOpened[boxId] ?? 0) + 1;
+  // Daily-quest hook — opening any box advances the 'openbox1' quest.
+  recordQuestEvent(player, { kind: 'openbox' }, new Date().toISOString().slice(0, 10));
   await save(redis, player);
   return c.json({ ok: true, pull, state: player });
 });
@@ -121,6 +141,100 @@ state.post('/rewards/collect', async (c) => {
     await save(redis, player);
   }
   return c.json({ ok: true, collected: amount, state: player });
+});
+
+/** POST /api/quests/claim — body: { questId }. Credits the quest's
+ *  coin reward when the quest is one of today's three active quests,
+ *  its progress has reached target, and it hasn't already been claimed.
+ *  Mirrors the /rewards/collect await-and-adopt shape: returns the fresh
+ *  state so the client replaces its snapshot wholesale. 400 with a
+ *  reason on any validation miss. */
+state.post('/quests/claim', async (c) => {
+  const { questId } = (await c.req.json()) as { questId: DailyQuestId };
+  const username = await currentUsername();
+  const player = await loadOrInit(redis, username);
+  const isoToday = new Date().toISOString().slice(0, 10);
+  const quest = dailyQuestsFor(isoToday).find((q) => q.id === questId);
+  if (!quest) {
+    return c.json({ ok: false, reason: 'quest_not_active' }, 400);
+  }
+  const progress = player.economy.daily.questProgress[questId] ?? 0;
+  if (progress < quest.target) {
+    return c.json({ ok: false, reason: 'incomplete' }, 400);
+  }
+  if (player.economy.daily.questClaimed[questId]) {
+    return c.json({ ok: false, reason: 'already_claimed' }, 400);
+  }
+  player.coins += quest.coins;
+  player.stats.coinsEarnedLifetime += quest.coins;
+  player.economy.daily.questClaimed[questId] = true;
+  await save(redis, player);
+  return c.json({ ok: true, claimed: quest.coins, state: player });
+});
+
+/** POST /api/quests/bonus — body: { boxId }. Grants a FREE box pull
+ *  (no price deduction, no coinsSpentLifetime bump) when all three of
+ *  today's quests are claimed and the all-3 bonus hasn't been taken yet.
+ *  boxId must be one of the current standard boxes (BOX_CATALOG). Bumps
+ *  stats.boxesOpened so the free pull still counts toward box stats. */
+state.post('/quests/bonus', async (c) => {
+  const { boxId } = (await c.req.json()) as { boxId: BoxId };
+  const box = BOX_CATALOG[boxId];
+  if (!box) {
+    return c.json({ ok: false, reason: 'unknown_box' }, 400);
+  }
+  const username = await currentUsername();
+  const player = await loadOrInit(redis, username);
+  const isoToday = new Date().toISOString().slice(0, 10);
+  const allClaimed = dailyQuestsFor(isoToday).every(
+    (q) => player.economy.daily.questClaimed[q.id],
+  );
+  if (!allClaimed) {
+    return c.json({ ok: false, reason: 'quests_incomplete' }, 400);
+  }
+  if (player.economy.daily.questBonusClaimed) {
+    return c.json({ ok: false, reason: 'already_claimed' }, 400);
+  }
+  const pull = pullBox(boxId, player);
+  applyPullToState(player, pull);
+  // Free box still counts toward box stats — but NOT coinsSpentLifetime
+  // (nothing was spent).
+  player.stats.boxesOpened[boxId] = (player.stats.boxesOpened[boxId] ?? 0) + 1;
+  player.economy.daily.questBonusClaimed = true;
+  await save(redis, player);
+  return c.json({ ok: true, pull, state: player });
+});
+
+/** POST /api/streak/claim — credits the login-streak reward for the
+ *  current day when the streak was touched today (streak.lastDay ===
+ *  today, set by GET /api/state) and today's reward hasn't been claimed
+ *  yet. Day 7 also flags goldenBoxDue so the client can route into a
+ *  Golden-tier box chooser once Task 11's SKUs land — coins only for now. */
+state.post('/streak/claim', async (c) => {
+  const username = await currentUsername();
+  const player = await loadOrInit(redis, username);
+  const isoToday = new Date().toISOString().slice(0, 10);
+  const streak = player.economy.streak;
+  if (streak.lastDay !== isoToday) {
+    return c.json({ ok: false, reason: 'not_active_today' }, 400);
+  }
+  if (streak.lastClaimedDay === isoToday) {
+    return c.json({ ok: false, reason: 'already_claimed' }, 400);
+  }
+  const reward = STREAK_TRACK[streak.count - 1] ?? 25;
+  player.coins += reward;
+  player.stats.coinsEarnedLifetime += reward;
+  streak.lastClaimedDay = isoToday;
+  // TODO(golden): grant Golden box when Task 11 SKUs land — day 7 pays
+  // coins only for now; the client shows the goldenBoxDue flag.
+  const goldenBoxDue = streak.count === 7;
+  await save(redis, player);
+  return c.json({
+    ok: true,
+    claimed: reward,
+    ...(goldenBoxDue ? { goldenBoxDue: true } : {}),
+    state: player,
+  });
 });
 
 /**
