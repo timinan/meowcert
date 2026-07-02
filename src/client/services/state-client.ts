@@ -8,6 +8,7 @@ import type {
   ThemeId,
 } from '../../shared/state';
 import type { TutorialStepId } from '../../shared/tutorial-types';
+import type { AchievementTier } from '../../shared/achievements';
 
 export interface PullResult {
   kind: 'cat' | 'cosmetic' | 'background';
@@ -144,6 +145,27 @@ export async function claimStreak(boxId?: BoxId): Promise<ClaimStreakResult> {
     body: JSON.stringify(boxId ? { boxId } : {}),
   });
   return (await r.json()) as ClaimStreakResult;
+}
+
+export type ClaimAchievementResult =
+  | { ok: true; coins: number; pull?: PullResult; state: PlayerState }
+  | { ok: false; reason: string };
+
+/** Claim a single achievement tier's reward (bronze coins, silver golden
+ *  box pull, gold mythic box pull). Server validates progress and claim
+ *  state; 400 resolves to { ok: false, reason } rather than throwing.
+ *  For silver/gold pass the chosen boxId matching the required tier. */
+export async function claimAchievement(
+  achievementId: string,
+  tier: AchievementTier,
+  boxId?: BoxId,
+): Promise<ClaimAchievementResult> {
+  const r = await fetch('/api/achievements/claim', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ achievementId, tier, ...(boxId ? { boxId } : {}) }),
+  });
+  return (await r.json()) as ClaimAchievementResult;
 }
 
 /**

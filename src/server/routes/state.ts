@@ -29,6 +29,11 @@ import {
   weeklyBonusError,
   type DailyQuestId,
 } from '../../shared/quests';
+import {
+  achievementClaimError,
+  ACHIEVEMENT_TIER_REWARDS,
+  type AchievementTier,
+} from '../../shared/achievements';
 import { getUserOverride } from '../../shared/user-overrides.generated';
 
 // DEV ONLY — every GET /api/state wipes the player's record and hands
@@ -255,6 +260,37 @@ state.post('/weekly/bonus', async (c) => {
   player.economy.weekly.bonusClaimed = true;
   await save(redis, player);
   return c.json({ ok: true, claimed: WEEKLY_BONUS_COINS, pull, state: player });
+});
+
+/** POST /api/achievements/claim — body: { achievementId, tier, boxId? }.
+ *  Credits a bronze coin reward or a free silver/gold box pull when the
+ *  achievement's tier threshold has been reached and the tier hasn't
+ *  been claimed yet. Validator runs BEFORE any mutation. Returns the
+ *  fresh state on success; 400 + reason on any validation miss. */
+state.post('/achievements/claim', async (c) => {
+  const body = await c.req.json<{ achievementId?: string; tier?: string; boxId?: BoxId }>().catch(() => null);
+  const box = body?.boxId ? BOX_CATALOG[body.boxId] : undefined;
+  const username = await currentUsername();
+  const player = await loadOrInit(redis, username);
+  const err = achievementClaimError(player, body?.achievementId ?? '', body?.tier ?? '', box?.tier);
+  if (err) return c.json({ ok: false, reason: err }, 400);
+  const tier = body!.tier as AchievementTier;
+  const reward = ACHIEVEMENT_TIER_REWARDS[tier];
+  let coins = 0;
+  let pull: PullResult | undefined;
+  if ('coins' in reward) {
+    coins = reward.coins;
+    player.coins += coins;
+    player.stats.coinsEarnedLifetime += coins;
+  } else {
+    pull = pullBox(body!.boxId!, player);
+    applyPullToState(player, pull);
+    player.stats.boxesOpened[body!.boxId!] = (player.stats.boxesOpened[body!.boxId!] ?? 0) + 1;
+  }
+  const list = player.economy.achievementsClaimed[body!.achievementId!] ?? [];
+  player.economy.achievementsClaimed[body!.achievementId!] = [...list, tier];
+  await save(redis, player);
+  return c.json({ ok: true, coins, pull, state: player });
 });
 
 /** POST /api/streak/claim — credits the login-streak reward for the
