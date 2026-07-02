@@ -201,6 +201,62 @@
   </section>
 
   <section>
+    <h2>6b · Quests &amp; Trophies</h2>
+    <div class="desc">
+      The daily / weekly / achievement faucets. Rotation, streak, weekly set and achievement tables mirror
+      <code>src/shared/{quests,achievements}.ts</code> verbatim — this tab documents them, the game owns them.
+    </div>
+    <div class="grid c2">
+      <div class="card">
+        <h3 style="margin:0 0 8px; color:#ffd34d; font-size:14px;">Today's daily rotation <span class="muted">— 3 of 6, deterministic per UTC day</span></h3>
+        <label>UTC day</label>
+        <input type="date" id="q-date" onchange="renderDailyRotation()"/>
+        <table style="margin-top:10px;"><thead><tr><th>Quest</th><th class="num">Target</th><th class="num">Coins</th></tr></thead>
+          <tbody id="q-rotation"></tbody></table>
+        <div class="muted" style="margin-top:8px;">All 3 → Standard box of your choice.</div>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 8px; color:#ffd34d; font-size:14px;">Login streak <span class="muted">— 7-day track, resets on a missed day</span></h3>
+        <div id="q-streak" class="flow"></div>
+        <div class="muted" style="margin-top:4px;">Day 7 also grants a Golden box.</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <h3 style="margin:0 0 8px; color:#ffd34d; font-size:14px;">Weekly set <span class="muted">— resets Monday 00:00 UTC · <span id="q-weekly-reset">—</span></span></h3>
+      <table><thead><tr><th>Quest</th><th class="num">Target</th><th class="num">Coins</th><th>Claim box</th></tr></thead>
+        <tbody id="q-weekly"></tbody></table>
+      <div class="muted" style="margin-top:8px;">All 3 → <b style="color:#ffd34d">+<span id="q-weekly-bonus"></span> coins + Golden box</b> (never Mythic).</div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <h3 style="margin:0 0 8px; color:#ffd34d; font-size:14px;">Achievements <span class="muted">— lifetime · bronze / silver / gold</span></h3>
+      <table><thead><tr><th>Achievement</th><th class="num">Bronze</th><th class="num">Silver</th><th class="num">Gold</th></tr></thead>
+        <tbody id="q-achievements"></tbody></table>
+      <div class="muted" style="margin-top:8px;">Tier rewards: bronze <b>100c</b> · silver <b>Golden box</b> · gold <b>Mythic box</b> (the only earned Mythic faucet).</div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <h3 style="margin:0 0 8px; color:#ffd34d; font-size:14px;">What-if → persona simulator</h3>
+      <div class="desc" style="margin-bottom:8px;">Feeds a <code>quest set</code> term into the section 4 coins/day total. Amortized = the weekly/achievement lumps spread across days.</div>
+      <div class="grid c3">
+        <div>
+          <label>Daily quest coins / day: <b id="q-sl-daily-label"></b></label>
+          <input type="range" id="q-sl-daily" min="0" max="500" value="175" oninput="sim()"/>
+        </div>
+        <div>
+          <label>Weekly coins amortized / day: <b id="q-sl-weekly-label"></b></label>
+          <input type="range" id="q-sl-weekly" min="0" max="300" value="129" oninput="sim()"/>
+        </div>
+        <div>
+          <label>Achievements amortized / day: <b id="q-sl-ach-label"></b></label>
+          <input type="range" id="q-sl-ach" min="0" max="300" value="0" oninput="sim()"/>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
     <h2>7 · Host rewards</h2>
     <div class="grid c3" id="host-cards"></div>
   </section>
@@ -273,6 +329,37 @@ const ECONOMY = {
       pool: ['songsFinished 10/100/1000', 'perfects 100/1k/10k', 'own 25/50/100 cats', '30-day streak', '100 plays received'] },
     community: { reward: 'flexible — coins / Golden boxes / exclusive item for contributors', example: 'community hits 25k plays this week' },
     events: { reward: 'pure-FOMO exclusives that NEVER enter boxes', cadence: 'seasonal' },
+    // ── section 6b: verbatim from src/shared/{quests,achievements}.ts ──
+    dailyPool: [ // DAILY_QUEST_POOL
+      { id: 'play3',     label: 'Play 3 shows',                 target: 3, coins: 75  },
+      { id: 'post1',     label: 'Post a show',                  target: 1, coins: 50  },
+      { id: 'combo20',   label: 'Hit a 20-combo',               target: 1, coins: 50  },
+      { id: 'comment1',  label: 'Comment on a show',            target: 1, coins: 50  },
+      { id: 'hardplay1', label: 'Play a hard or insane chart',  target: 1, coins: 100 },
+      { id: 'openbox1',  label: 'Open a box',                   target: 1, coins: 50  },
+    ],
+    streakTrack: [25, 40, 55, 70, 85, 100, 100], // STREAK_TRACK, day 7 also grants Golden box
+    weeklySet: [ // WEEKLY_QUEST_POOL
+      { id: 'wplays15',     label: 'Play 15 shows',                target: 15, coins: 100, box: 'golden' },
+      { id: 'whardpass5',   label: 'Pass 5 hard or insane charts', target: 5,  coins: 150, box: 'golden' },
+      { id: 'whostplays25', label: 'Your shows hosted 25 plays',   target: 25, coins: 150, box: 'golden' },
+    ],
+    weeklyBonus: { coins: 500, box: 'golden' }, // WEEKLY_BONUS_COINS
+  },
+  trophies: { // ACHIEVEMENTS + ACHIEVEMENT_TIER_REWARDS
+    tierRewards: { bronze: '100c', silver: 'Golden box', gold: 'Mythic box' },
+    defs: [
+      { id: 'songs',    name: 'Song Finisher',  thresholds: [10, 100, 1000] },
+      { id: 'perfects', name: 'Perfectionist',  thresholds: [100, 1000, 10000] },
+      { id: 'cats',     name: 'Cat Collector',  thresholds: [25, 50, 100] },
+      { id: 'streak',   name: 'Streaker',       thresholds: [3, 7, 30] },
+      { id: 'crowd',    name: 'Crowd Favorite', thresholds: [10, 100, 1000] },
+      { id: 'hopper',   name: 'Show Hopper',    thresholds: [10, 100, 1000] },
+      { id: 'combo',    name: 'Combo Machine',  thresholds: [50, 150, 500] },
+      { id: 'pockets',  name: 'Deep Pockets',   thresholds: [1000, 10000, 100000] },
+      { id: 'boxes',    name: 'Box Addict',     thresholds: [5, 25, 100] },
+      { id: 'holds',    name: 'Hold Steady',    thresholds: [50, 500, 5000] },
+    ],
   },
   hostMilestones: [ ['first play', 50], ['first pass', 100], ['10 plays', 100], ['50 plays', 250], ['100 plays', 500] ],
   starterCoins: 600,
@@ -351,6 +438,15 @@ function sim() {
   $('sim-plays-label').textContent = plays;
   $('sim-hostplays-label').textContent = hostPlays;
 
+  // section 6b what-if sliders → a quest-set faucet term (amortized/day)
+  const qDaily = +$('q-sl-daily').value;
+  const qWeekly = +$('q-sl-weekly').value;
+  const qAch = +$('q-sl-ach').value;
+  $('q-sl-daily-label').textContent = qDaily;
+  $('q-sl-weekly-label').textContent = qWeekly;
+  $('q-sl-ach-label').textContent = qAch;
+  const questIncome = qDaily + qWeekly + qAch;
+
   const perPlay = (tierBase + bonus) * mult;
   let raw = perPlay * plays;
   const playIncome = raw <= ECONOMY.dailyPlayBudget ? raw
@@ -359,7 +455,7 @@ function sim() {
   const questBox = quests >= 3 ? 1 : 0;
   const loginCoins = 60; // avg of the 7-day track
   const hostPot = Math.min(hostPlays * perPlay * ECONOMY.hostRoyalty, ECONOMY.hostDailyCap);
-  const total = playIncome + questCoins + loginCoins + hostPot;
+  const total = playIncome + questCoins + loginCoins + hostPot + questIncome;
   const boxes = total / ECONOMY.avgStandardBoxPrice + questBox;
   const months = ECONOMY.totalItems / (boxes * 30.4);
 
@@ -369,6 +465,7 @@ function sim() {
     `quests     ${fmt(questCoins)}${questBox ? ' + Standard box' : ''}`,
     `login      ${fmt(loginCoins)}`,
     `host pot   ${fmt(hostPot)}${hostPot >= ECONOMY.hostDailyCap ? '  (capped)' : ''}`,
+    `quest set  ${fmt(questIncome)}  (daily ${qDaily} + weekly ${qWeekly}/day amort + ach ${qAch})`,
   ].join('\n');
   $('sim-collect').textContent =
     `≈ ${boxes.toFixed(1)} Standard boxes/day (blended ${ECONOMY.avgStandardBoxPrice}) → full ~${ECONOMY.totalItems}-item collection in ~${months.toFixed(0)} months`;
@@ -442,11 +539,64 @@ function renderQuests() {
   ].join('');
 }
 
+// ── quests & trophies (section 6b) ─────────────────────────────────
+// Port of dailyQuestsFor from src/shared/quests.ts — seed 7, (a<<5)-a+charCode,
+// pick 3 of 6 via Math.abs(h + i*31) % pool.length, splicing a copy of the pool.
+function dailyQuestsFor(isoDay) {
+  const h = [...isoDay].reduce((a, c) => ((a << 5) - a + c.charCodeAt(0)) | 0, 7);
+  const pool = [...ECONOMY.quests.dailyPool];
+  const selected = [];
+  for (let i = 0; i < 3; i++) {
+    const idx = Math.abs(h + i * 31) % pool.length;
+    selected.push(...pool.splice(idx, 1));
+  }
+  return selected;
+}
+
+function renderDailyRotation() {
+  const iso = $('q-date').value || new Date().toISOString().slice(0, 10);
+  $('q-rotation').innerHTML = dailyQuestsFor(iso).map(q =>
+    `<tr><td>${q.label}</td><td class="num">${q.target}</td><td class="num">${q.coins}</td></tr>`).join('');
+}
+
+function renderStreak() {
+  $('q-streak').innerHTML = ECONOMY.quests.streakTrack.map((c, i) =>
+    `<div class="node${i === 6 ? ' gold' : ''}">Day ${i + 1}<span class="tag">${c} coins${i === 6 ? ' + Golden box' : ''}</span></div>`).join('');
+}
+
+function renderWeekly() {
+  $('q-weekly').innerHTML = ECONOMY.quests.weeklySet.map(q =>
+    `<tr><td>${q.label}</td><td class="num">${q.target}</td><td class="num">${q.coins}</td><td>${q.box}</td></tr>`).join('');
+  $('q-weekly-bonus').textContent = ECONOMY.quests.weeklyBonus.coins;
+}
+
+function renderAchievements() {
+  $('q-achievements').innerHTML = ECONOMY.trophies.defs.map(d =>
+    `<tr><td>${d.name}</td>${d.thresholds.map(t => `<td class="num">${fmt(t)}</td>`).join('')}</tr>`).join('');
+}
+
+// live countdown to the next Monday 00:00 UTC (mirrors the weekly reset)
+function nextMondayUTC(now) {
+  const d = new Date(now);
+  const daysUntilMon = ((8 - d.getUTCDay()) % 7) || 7; // Mon=1; always in the future
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + daysUntilMon);
+}
+function updateWeeklyReset() {
+  const ms = nextMondayUTC(Date.now()) - Date.now();
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  const s = Math.floor((ms % 60000) / 1000);
+  $('q-weekly-reset').textContent = `resets in ${h}h ${m}m ${s}s`;
+}
+
 // ── init ───────────────────────────────────────────────────────────
 for (const sel of ['calc-diff', 'sim-diff']) {
   $(sel).innerHTML = Object.entries(ECONOMY.difficulty)
     .map(([d, m]) => `<option value="${d}" ${d === 'medium' ? 'selected' : ''}>${d} ×${m}</option>`).join('');
 }
+$('q-date').value = new Date().toISOString().slice(0, 10);
+renderDailyRotation(); renderStreak(); renderWeekly(); renderAchievements();
+updateWeeklyReset(); setInterval(updateWeeklyReset, 1000);
 calc(); renderBoxes(); sim(); renderRarity(); renderQuests();
 </script>
 <script src="/tools-nav.js"></script>
