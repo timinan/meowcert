@@ -35,6 +35,7 @@ export function buildCatMenu(args: CatMenuArgs): MenuRow[] {
     args.isSeated
       ? { icon: '👔', label: 'Dress up', action: 'dressup', primary: true }
       : { icon: '📍', label: 'Put on stage', action: 'seat', primary: true },
+    { icon: '✨', label: 'Add effect', action: 'addeffect' },
     args.isSeated
       ? { icon: '📤', label: 'Take off stage', action: 'unseat' }
       : { icon: '👔', label: 'Dress up', action: 'dressup' },

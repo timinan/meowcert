@@ -355,11 +355,14 @@ export class Decorate extends Scene {
     catInstance: OwnedCat,
     seatId: SeatId | undefined,
   ): void {
-    if (action === 'dressup') {
+    if (action === 'dressup' || action === 'addeffect') {
       if (this.scene.isActive(SceneKeys.DressingRoom)) return;
       this.scene.launch(SceneKeys.DressingRoom, {
         catInstanceId: catInstance.id,
         playerState: this.playerState,
+        // 'Add effect' opens the same modal locked to effects, with the
+        // slot tabs replaced by effect-category tabs.
+        effectsOnly: action === 'addeffect',
       });
       return;
     }

@@ -7,9 +7,9 @@ import { Cat, parentIdFor } from '@/entities/cat';
 import { CAT_EFFECT_BY_ID, getEffectById, getEffectGridEntries, type EffectHandle } from '@/effects/cat-effects';
 import type { PlayerState, OwnedCosmetic } from '@/../shared/state';
 
-// Effect-tab category filter — matches EffectCategory from the generated
+// Effect-category filter — matches EffectCategory from the generated
 // catalog + the legacy categories from cat-effects.ts. Order drives the
-// dropdown popup rows.
+// category tab chips in effects-only mode.
 const EFFECT_CATEGORY_ORDER = [
   'Stagelights (live)',
   'Halos & Rings',
@@ -23,7 +23,7 @@ const EFFECT_CATEGORY_ORDER = [
   'Misc / Extras',
 ] as const;
 
-/** Short label used inside the dropdown button + popup rows. */
+/** Short label used on the category tab chips. */
 const CATEGORY_SHORT_LABEL: Record<string, string> = {
   'all': 'ALL',
   'Stagelights (live)': 'STAGELIGHTS',
@@ -43,37 +43,65 @@ const CATEGORY_SHORT_LABEL: Record<string, string> = {
 // between the original 48 px grid and the briefly-tried 104 px grid —
 // big enough to read the asset + name clearly, small enough to keep
 // the page count low and let the modal envelope grow only modestly.
-const COSMETICS_PER_PAGE = 8;
+// Grid geometry — 3 columns of 76px cells with an 8px gap, drag-scrolled
+// vertically behind a GeometryMask (pagination retired 2026-07-01; a 512-
+// cosmetic catalog at 8/page was ~56 pages of arrow taps).
+const GRID_CELL = 76;
+const GRID_GAP = 8;
+const GRID_COLS = 3;
+const GRID_ROW_H = GRID_CELL + GRID_GAP;
+// Effects moved out of the Dress Up tabs on 2026-07-01 — they get their own
+// entry point ('Add effect' on the cat context menu) which opens this modal
+// in effects-only mode with category tabs. The 'effect' SLOT key stays alive
+// in the equip model; only the tab is gone.
 const SLOT_TABS: { key: string; label: string }[] = [
   { key: 'head', label: 'HEAD' },
   { key: 'face', label: 'FACE' },
   { key: 'neck', label: 'NECK' },
-  { key: 'effect', label: 'EFFECT' },
 ];
 
 export class DressingRoom extends Scene {
   /** The cat INSTANCE id (not breed). */
   private catInstanceId!: string;
   private playerState!: PlayerState;
-  private page = 0;
   /** Which slot the player is currently browsing in the cosmetics tray. */
   private activeSlot: string = 'head';
-  private gridContainer!: GameObjects.Container;
+  /** Live scene-level cell objects for the visible scroll window. */
+  private gridCells: GameObjects.GameObject[] = [];
+  /** Scroll offset currently baked into gridCells' positions. */
+  private appliedScroll = 0;
   private heroSprite!: GameObjects.Image;
   /** One layered sprite per equipped slot — keyed by slot name. */
   private heroCosmetics: Record<string, GameObjects.Sprite> = {};
   /** Active EFFECT handles on the hero preview, keyed by slot ('effect'). */
   private heroEffects: Record<string, EffectHandle> = {};
   private wearingLabel!: GameObjects.Text;
-  private pageLabel!: GameObjects.Text;
-  private prevBtn!: GameObjects.Container;
-  private nextBtn!: GameObjects.Container;
   private slotTabsContainer!: GameObjects.Container;
-  /** Category filter for the EFFECT tab (matches song-picker's dropdown
-   *  pattern per Tim 2026-06-30). 'all' shows every category. */
+  // --- drag-scroll grid state ---
+  private scrollY = 0;
+  private gridTopY = 0;
+  private gridViewH = 244;
+  private gridZoneX = 0;
+  private gridZoneW = 0;
+  /** Virtual item list for the active tab; index 0 (null) is the NONE tile
+   *  so "clear slot" is always at the top instead of buried under 100+
+   *  items at the bottom of the scroll. */
+  private gridItems: (OwnedCosmetic | null)[] = [];
+  private gridEquippedInstanceId: string | undefined;
+  private visibleFirstRow = -1;
+  private visibleLastRow = -1;
+  private scrollbar!: GameObjects.Rectangle;
+  private dragActive = false;
+  private dragLastY = 0;
+  private dragMoved = 0;
+  private dragVelocity = 0;
+  private dragLastT = 0;
+  private momentumTween: Phaser.Tweens.Tween | null = null;
+  /** True when launched via 'Add effect' — the modal locks to the effect
+   *  slot and the slot tabs become effect-category tabs. */
+  private effectsOnly = false;
+  /** Category filter driving the effects grid. 'all' shows everything. */
   private effectCategoryFilter: string = 'all';
-  private effectFilterContainer!: GameObjects.Container;
-  private categoryPopupChildren: GameObjects.GameObject[] = [];
   /** Cached id → category map so the grid filter doesn't re-scan the
    *  catalog on every render. Populated on scene create. */
   private effectCategoryById: Record<string, string> = {};
@@ -82,7 +110,7 @@ export class DressingRoom extends Scene {
     super(SceneKeys.DressingRoom);
   }
 
-  init(data: { catInstanceId: string; playerState: PlayerState }): void {
+  init(data: { catInstanceId: string; playerState: PlayerState; effectsOnly?: boolean }): void {
     // Defensive teardown — if the previous DressingRoom launch's
     // SHUTDOWN handler didn't fire cleanly (Phaser launch/stop edge
     // cases), the prior effect's particle timer keeps spawning text
@@ -99,8 +127,12 @@ export class DressingRoom extends Scene {
     }
     this.catInstanceId = data.catInstanceId;
     this.playerState = data.playerState;
-    this.page = 0;
-    this.activeSlot = 'head';
+    this.scrollY = 0;
+    this.visibleFirstRow = -1;
+    this.visibleLastRow = -1;
+    this.effectsOnly = data.effectsOnly ?? false;
+    this.activeSlot = this.effectsOnly ? 'effect' : 'head';
+    this.effectCategoryFilter = 'all';
     this.heroCosmetics = {};
     this.heroEffects = {};
   }
@@ -114,7 +146,10 @@ export class DressingRoom extends Scene {
     // positions used downstream (hero / tabs / grid / pagination). Any
     // change to those numbers needs to be reflected here too.
     const HERO_OFFSET_Y = 110;
-    const GRID_OFFSET_FROM_HERO = 130;
+    // Effects-only mode stacks THREE rows of category chips (11 labels on
+    // a 275px-wide modal) where the single slot-tab row sits in dress-up
+    // mode, so the grid starts lower there.
+    const GRID_OFFSET_FROM_HERO = this.effectsOnly ? 178 : 130;
     // 3 rows × 76 + 2 × 8 = 244. Slightly taller than the original
     // 4×48 grid (216) — the modal grows by ~30 px to accommodate the
     // bigger, more readable cells without going off-screen.
@@ -164,18 +199,22 @@ export class DressingRoom extends Scene {
     // Title uses the custom name set by the player.
     const heroName = catInstance?.name ?? catEntry?.name ?? this.catInstanceId;
     this.add
-      .text(cx, modalY + 22, `DRESSING ${heroName.toUpperCase()}`, {
+      .text(cx, modalY + 22, this.effectsOnly
+        ? `${heroName.toUpperCase()} — EFFECTS`
+        : `DRESSING ${heroName.toUpperCase()}`, {
         fontFamily: 'Pixeloid Sans, sans-serif',
         fontStyle: 'bold',
         fontSize: '12px',
         color: '#ffd34d',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(10);
 
     // ✕ close button
     const closeBg = this.add
       .circle(modalX + modalW - 18, modalY + 18, 12, 0xff5050, 1)
       .setStrokeStyle(2, 0x0b041a, 1)
+      .setDepth(10)
       .setInteractive({ useHandCursor: true });
     closeBg.on(
       'pointerdown',
@@ -196,7 +235,8 @@ export class DressingRoom extends Scene {
         fontSize: '12px',
         color: '#ffffff',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(10);
 
     // Hero sprite — use the breed for the atlas frame.
     const breed = catInstance?.breed ?? this.catInstanceId;
@@ -226,73 +266,118 @@ export class DressingRoom extends Scene {
         fontSize: '10px',
         color: '#c0a0e6',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(10);
     this.updateWearingLabel();
 
-    // Slot tabs (HEAD / FACE / NECK / EFFECT)
-    this.slotTabsContainer = this.add.container(0, this.heroSprite.y + 92);
+    // Tab row — slot tabs (HEAD / FACE / NECK) in dress-up mode, two rows
+    // of effect-category chips in effects-only mode.
+    this.slotTabsContainer = this.add.container(0, this.heroSprite.y + 92).setDepth(10);
+    this.buildEffectCategoryIndex();
     this.renderSlotTabs();
 
-    // Effect-tab category filter — visible only when EFFECT is active.
-    // Popup opens as an overlay (setDepth 500) so it stacks on top of the
-    // grid without pushing anything down. Same pattern as SongPickerModal.
-    // Y offset is (slot-tabs top +92) + (tabs height 26) + 20 clearance =
-    // heroY+138, so the 28-tall dropdown centered here spans heroY+124
-    // to heroY+152 without touching the tabs (bottom heroY+118). Tim
-    // flagged the previous +124 anchor overlapped the tabs by 8 px.
-    this.effectFilterContainer = this.add.container(0, this.heroSprite.y + 138);
-    this.buildEffectCategoryIndex();
-    this.renderEffectCategoryFilter();
+    // Grid — filtered by activeSlot, drag-scrolled behind a GeometryMask.
+    const gridTop = this.heroSprite.y + GRID_OFFSET_FROM_HERO;
+    this.gridTopY = gridTop;
+    this.gridViewH = Math.max(GRID_ROW_H * 2, modalY + modalH - 20 - gridTop);
+    this.gridZoneX = modalX;
+    this.gridZoneW = modalW;
+    // Viewport clipping via opaque cover panels instead of a mask —
+    // Phaser 4 removed setMask() under WebGL (masks became per-object
+    // DynamicTexture filters, far too heavy for 15+ scrolling cells).
+    // Cells render at depth 0 and slide UNDER these modal-bg covers;
+    // the header UI (title / hero / tabs / labels) sits above them at
+    // depth 10 (hero is already at 200).
+    const COVER_DEPTH = 5;
+    this.add
+      .rectangle(modalX + 2, modalY + 2, modalW - 4, gridTop - GRID_GAP - (modalY + 2), 0x1a0a2e, 1)
+      .setOrigin(0, 0)
+      .setDepth(COVER_DEPTH);
+    this.add
+      .rectangle(modalX + 2, gridTop + this.gridViewH + 2, modalW - 4,
+                 Math.max(0, modalY + modalH - 2 - (gridTop + this.gridViewH + 2)), 0x1a0a2e, 1)
+      .setOrigin(0, 0)
+      .setDepth(COVER_DEPTH);
 
-    // Grid container — filtered by activeSlot, showing AVAILABLE cosmetics only.
-    // Nudge grid down by 30 px so the filter row has breathing room without
-    // squishing anything when it's visible; when it's not visible, the
-    // extra headroom just reads as padding.
-    const gridTop = this.heroSprite.y + 160;
-    this.gridContainer = this.add.container(0, gridTop);
+    // Thin position indicator on the modal's right edge; hidden when the
+    // whole list fits in the viewport.
+    this.scrollbar = this.add
+      .rectangle(modalX + modalW - 7, gridTop, 3, 40, 0xc0a0e6, 0.45)
+      .setOrigin(0.5, 0)
+      .setDepth(10);
+
     this.renderGrid();
-
-    // Pagination anchored below the grid (not the modal) so the strip
-    // never overlaps the bottom row of cosmetics. Must match the actual
-    // GRID_CONTENT_H above — 3 rows × 76 + 2 × 8 gap = 244 — plus
-    // breathing room. (Previously this lagged behind the renderGrid
-    // resize and clipped the bottom row of cells.)
-    const gridContentH = 3 * 76 + 2 * 8;
-    const paginationY = Math.min(gridTop + gridContentH + 22, modalY + modalH - 18);
-    this.pageLabel = this.add
-      .text(cx, paginationY, '', {
-        fontFamily: 'Pixeloid Sans, sans-serif',
-        fontSize: '10px',
-        color: '#c0a0e6',
-      })
-      .setOrigin(0.5);
-    this.prevBtn = this.makeArrow(modalX + 28, paginationY, '◀', () => this.changePage(-1));
-    this.nextBtn = this.makeArrow(modalX + modalW - 28, paginationY, '▶', () => this.changePage(1));
-    this.updatePagination();
+    this.setupGridScrollInput();
   }
 
-  private makeArrow(
-    x: number,
-    y: number,
-    label: string,
-    onTap: () => void,
-  ): GameObjects.Container {
-    const c = this.add.container(x, y);
-    const bg = this.add
-      .rectangle(0, 0, 36, 28, 0x2c1856, 1)
-      .setStrokeStyle(1, 0xc0a0e6, 0.5)
-      .setInteractive({ useHandCursor: true });
-    const text = this.add
-      .text(0, 0, label, {
-        fontFamily: 'Pixeloid Sans, sans-serif',
-        fontStyle: 'bold',
-        fontSize: '14px',
-        color: '#ffd34d',
-      })
-      .setOrigin(0.5);
-    c.add([bg, text]);
-    bg.on('pointerdown', onTap);
-    return c;
+  /** Drag / momentum / wheel scrolling for the grid viewport. Listeners
+   *  are scene-level so drags that start on a cell still scroll; cells
+   *  distinguish tap from drag via `dragMoved`. */
+  private setupGridScrollInput(): void {
+    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      if (
+        p.x < this.gridZoneX || p.x > this.gridZoneX + this.gridZoneW ||
+        p.y < this.gridTopY - GRID_GAP || p.y > this.gridTopY + this.gridViewH
+      ) return;
+      this.momentumTween?.stop();
+      this.momentumTween = null;
+      this.dragActive = true;
+      this.dragLastY = p.y;
+      this.dragMoved = 0;
+      this.dragVelocity = 0;
+      this.dragLastT = this.time.now;
+    });
+    this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
+      if (!this.dragActive) return;
+      const dy = p.y - this.dragLastY;
+      if (dy === 0) return;
+      const now = this.time.now;
+      const dt = Math.max(1, now - this.dragLastT);
+      this.dragVelocity = dy / dt;
+      this.dragLastY = p.y;
+      this.dragLastT = now;
+      this.dragMoved += Math.abs(dy);
+      this.setScroll(this.scrollY - dy);
+    });
+    this.input.on('pointerup', () => {
+      if (!this.dragActive) return;
+      this.dragActive = false;
+      const v = this.dragVelocity;
+      if (Math.abs(v) > 0.25 && this.maxScroll() > 0) {
+        const proxy = { v: this.scrollY };
+        this.momentumTween = this.tweens.add({
+          targets: proxy,
+          v: this.scrollY - v * 260,
+          duration: 480,
+          ease: 'Quad.easeOut',
+          onUpdate: () => this.setScroll(proxy.v),
+        });
+      }
+    });
+    this.input.on('wheel', (_p: unknown, _objs: unknown, _dx: number, dy: number) => {
+      if (this.maxScroll() > 0) this.setScroll(this.scrollY + dy * 0.6);
+    });
+  }
+
+  private maxScroll(): number {
+    const totalRows = Math.ceil(this.gridItems.length / GRID_COLS);
+    return Math.max(0, totalRows * GRID_ROW_H - GRID_GAP - this.gridViewH);
+  }
+
+  private setScroll(v: number): void {
+    this.scrollY = Math.max(0, Math.min(this.maxScroll(), v));
+    this.renderVisibleCells();
+    this.updateScrollbar();
+  }
+
+  private updateScrollbar(): void {
+    const max = this.maxScroll();
+    this.scrollbar.setVisible(max > 0);
+    if (max <= 0) return;
+    const frac = this.gridViewH / (max + this.gridViewH);
+    const barH = Math.max(24, this.gridViewH * frac);
+    this.scrollbar.setSize(3, barH);
+    this.scrollbar.y = this.gridTopY + (this.gridViewH - barH) * (this.scrollY / max);
   }
 
   /** Re-render all hero cosmetic layers from equippedCosmetics. */
@@ -396,8 +481,13 @@ export class DressingRoom extends Scene {
     );
   }
 
-  /** Render the HEAD / FACE / NECK tab row. */
+  /** Render the tab row — slot tabs in dress-up mode, effect-category
+   *  chips in effects-only mode. */
   private renderSlotTabs(): void {
+    if (this.effectsOnly) {
+      this.renderCategoryChips();
+      return;
+    }
     this.slotTabsContainer.removeAll(true);
     const { width } = this.scale;
     // Tabs must fit inside the modal panel. The modal is up to 86% of the
@@ -452,17 +542,81 @@ export class DressingRoom extends Scene {
       }
       bg.on('pointerdown', () => {
         this.activeSlot = tab.key;
-        this.page = 0;
-        // Reset the category filter whenever we switch slots so the
-        // effect-tab picker doesn't remember a filter from a prior open.
-        if (tab.key === 'effect') this.effectCategoryFilter = 'all';
-        this.closeCategoryPopup();
+        this.scrollY = 0;
         this.renderSlotTabs();
-        this.renderEffectCategoryFilter();
         this.renderGrid();
         this.updateWearingLabel();
-        this.updatePagination();
       });
+    });
+  }
+
+  /** Effects-only mode: two rows of category chips (ALL + the 10 effect
+   *  categories) driving `effectCategoryFilter`. Flow layout — chip width
+   *  follows its label so STAGELIGHTS and DECOR both stay readable at the
+   *  same font size (menu-text rule: text always inside its button). */
+  private renderCategoryChips(): void {
+    this.slotTabsContainer.removeAll(true);
+    const { width } = this.scale;
+    const modalW = Math.min(width * 0.86, 420);
+    const inset = 14;
+    const available = modalW - inset * 2;
+    const startX = (width - available) / 2;
+    const chipH = 22;
+    const rowGap = 4;
+    const chipGap = 5;
+    const padX = 7;
+
+    const options: string[] = ['all', ...EFFECT_CATEGORY_ORDER];
+    // Measure → flow into rows.
+    type Chip = { key: string; label: string; w: number };
+    const chips: Chip[] = options.map((key) => {
+      const label = CATEGORY_SHORT_LABEL[key] ?? key.toUpperCase();
+      // 9px Pixeloid bold ≈ 6.5px per char + padding both sides.
+      const w = Math.ceil(label.length * 6.5) + padX * 2;
+      return { key, label, w };
+    });
+    const rows: Chip[][] = [[]];
+    let rowW = 0;
+    for (const chip of chips) {
+      const cur = rows[rows.length - 1];
+      const next = rowW + (cur.length ? chipGap : 0) + chip.w;
+      if (cur.length && next > available) {
+        rows.push([chip]);
+        rowW = chip.w;
+      } else {
+        cur.push(chip);
+        rowW = next;
+      }
+    }
+
+    rows.forEach((row, r) => {
+      const totalW = row.reduce((s, c) => s + c.w, 0) + chipGap * (row.length - 1);
+      let x = startX + (available - totalW) / 2;
+      const y = r * (chipH + rowGap);
+      for (const chip of row) {
+        const isActive = this.effectCategoryFilter === chip.key;
+        const bg = this.add
+          .rectangle(x, y, chip.w, chipH, isActive ? 0x4d2d8c : 0x0b041a, isActive ? 1 : 0.55)
+          .setOrigin(0, 0)
+          .setStrokeStyle(isActive ? 2 : 1, isActive ? 0xffd34d : 0xc0a0e6, isActive ? 1 : 0.25)
+          .setInteractive({ useHandCursor: true });
+        const text = this.add
+          .text(x + chip.w / 2, y + chipH / 2, chip.label, {
+            fontFamily: 'Pixeloid Sans, sans-serif',
+            fontStyle: 'bold',
+            fontSize: '9px',
+            color: isActive ? '#ffd34d' : '#c0a0e6',
+          })
+          .setOrigin(0.5);
+        this.slotTabsContainer.add([bg, text]);
+        bg.on('pointerdown', () => {
+          this.effectCategoryFilter = chip.key;
+          this.scrollY = 0;
+          this.renderCategoryChips();
+          this.renderGrid();
+        });
+        x += chip.w + chipGap;
+      }
     });
   }
 
@@ -473,120 +627,7 @@ export class DressingRoom extends Scene {
     for (const e of entries) this.effectCategoryById[e.id] = e.category;
   }
 
-  /** Render the `CATEGORY: X ▼` dropdown button below the slot tabs.
-   *  Only visible when the EFFECT slot is active; hidden otherwise so
-   *  head/face/neck grids stay uncluttered. */
-  private renderEffectCategoryFilter(): void {
-    this.effectFilterContainer.removeAll(true);
-    if (this.activeSlot !== 'effect') return;
-    const cx = this.scale.width / 2;
-    const w = 240, h = 28;
-    const current = this.effectCategoryFilter;
-    const isFiltered = current !== 'all';
-    const label = CATEGORY_SHORT_LABEL[current] ?? 'ALL';
-    const bg = this.add
-      .rectangle(cx, 0, w, h, 0x2c1856, 1)
-      .setStrokeStyle(1, isFiltered ? 0xffd34d : 0xc0a0e6, isFiltered ? 1 : 0.5)
-      .setInteractive({ useHandCursor: true });
-    const txt = this.add
-      .text(cx, 0, `CATEGORY: ${label} ▼`, {
-        fontFamily: 'Pixeloid Sans, sans-serif',
-        fontStyle: 'bold',
-        fontSize: '10px',
-        color: isFiltered ? '#ffd34d' : '#ffffff',
-      })
-      .setOrigin(0.5);
-    bg.on('pointerdown', () => this.openCategoryPopup(cx, h / 2 + 4, w));
-    this.effectFilterContainer.add([bg, txt]);
-  }
-
-  /** Open the category dropdown as an OVERLAY (setDepth 500) — doesn't
-   *  push the grid down. Backdrop rectangle catches taps-outside so the
-   *  popup dismisses cleanly. */
-  private openCategoryPopup(anchorX: number, topY: number, width: number): void {
-    this.closeCategoryPopup();
-    const options: string[] = ['all', ...EFFECT_CATEGORY_ORDER];
-    const rowH = 24;
-    const popupH = options.length * rowH + 6;
-    // Convert local topY (relative to effectFilterContainer origin) to
-    // absolute scene coords so the popup sits directly under the button
-    // even though the container Y varies per session.
-    const absTopY = this.effectFilterContainer.y + topY;
-    // Full-screen backdrop catches taps outside the popup for dismissal.
-    const scrim = this.add
-      .rectangle(this.scale.width / 2, this.scale.height / 2,
-                 this.scale.width, this.scale.height, 0x000000, 0.001)
-      .setInteractive();
-    scrim.setDepth(499);
-    scrim.on('pointerdown', () => this.closeCategoryPopup());
-    this.categoryPopupChildren.push(scrim);
-
-    const popupBg = this.add
-      .rectangle(anchorX, absTopY + popupH / 2, width, popupH, 0x1a0a2e, 1)
-      .setStrokeStyle(2, 0xffd34d, 1)
-      .setInteractive();
-    popupBg.on('pointerdown', (_p: unknown, _x: unknown, _y: unknown, e: Phaser.Types.Input.EventData) =>
-      e.stopPropagation(),
-    );
-    popupBg.setDepth(500);
-    this.categoryPopupChildren.push(popupBg);
-
-    // Count how many of each category the player owns so the popup shows
-    // "STAGELIGHTS  37" — same UX as the mockup.
-    const countByCat: Record<string, number> = { all: 0 };
-    for (const cos of this.playerState.ownedCosmetics) {
-      const cat = this.effectCategoryById[cos.type];
-      if (!cat) continue;
-      countByCat[cat] = (countByCat[cat] ?? 0) + 1;
-      countByCat.all += 1;
-    }
-
-    options.forEach((opt, i) => {
-      const y = absTopY + 3 + i * rowH + rowH / 2;
-      const isCurrent = opt === this.effectCategoryFilter;
-      const rowBg = this.add
-        .rectangle(anchorX, y, width - 4, rowH - 2,
-                   isCurrent ? 0x4d2d8c : 0x2c1856, 1)
-        .setInteractive({ useHandCursor: true });
-      rowBg.setDepth(501);
-      const label = CATEGORY_SHORT_LABEL[opt] ?? opt.toUpperCase();
-      const lbl = this.add
-        .text(anchorX - width / 2 + 12, y, label, {
-          fontFamily: 'Pixeloid Sans, sans-serif',
-          fontStyle: 'bold',
-          fontSize: '10px',
-          color: isCurrent ? '#ffd34d' : '#c0a0e6',
-        })
-        .setOrigin(0, 0.5);
-      lbl.setDepth(502);
-      const countText = this.add
-        .text(anchorX + width / 2 - 12, y, String(countByCat[opt] ?? 0), {
-          fontFamily: 'Pixeloid Sans, sans-serif',
-          fontSize: '9px',
-          color: '#8f7cb8',
-        })
-        .setOrigin(1, 0.5);
-      countText.setDepth(502);
-      rowBg.on('pointerdown', () => {
-        this.effectCategoryFilter = opt;
-        this.page = 0;
-        this.closeCategoryPopup();
-        this.renderEffectCategoryFilter();
-        this.renderGrid();
-        this.updatePagination();
-      });
-      this.categoryPopupChildren.push(rowBg, lbl, countText);
-    });
-  }
-
-  private closeCategoryPopup(): void {
-    for (const child of this.categoryPopupChildren) child.destroy();
-    this.categoryPopupChildren.length = 0;
-  }
-
   private renderGrid(): void {
-    this.gridContainer.removeAll(true);
-
     // The grid shows cosmetics currently IN ownedCosmetics (not equipped anywhere).
     // Equipped cosmetics are removed from ownedCosmetics, so they don't appear here.
     const ownedInSlot: OwnedCosmetic[] = this.playerState.ownedCosmetics.filter((cosItem) => {
@@ -626,19 +667,54 @@ export class DressingRoom extends Scene {
       : [...ownedInSlot];
     merged.sort((a, b) => a.id.localeCompare(b.id));
 
-    const start = this.page * COSMETICS_PER_PAGE;
-    const slice = merged.slice(start, start + COSMETICS_PER_PAGE);
+    // NONE (clear slot) leads the list so it's always one flick away.
+    this.gridItems = [null, ...merged];
+    this.gridEquippedInstanceId = equippedInstanceId;
+    this.scrollY = Math.max(0, Math.min(this.maxScroll(), this.scrollY));
+    this.visibleFirstRow = -1;
+    this.visibleLastRow = -1;
+    this.renderVisibleCells();
+    this.updateScrollbar();
+  }
 
-    // Middle-ground sizing — 3×3 cells of 76 px each; 8 px gap. Bigger
-    // than the original 5×4×48 but smaller than the briefly-tried
-    // 2×2×104. The image takes the upper portion of the cell, the label
-    // sits below in a 9 px font. Labels wrap to whatever the wordWrap
-    // width allows (no maxLines — Tim wanted no trailing "..." dot).
-    const cellSize = 76;
-    const gap = 8;
-    const cols = 3;
-    const visibleRows = 3;
-    const gridStartX = (this.scale.width - (cellSize * cols + gap * (cols - 1))) / 2;
+  /** Rebuild only the cells whose rows intersect the scroll viewport
+   *  (± one buffer row). Cheap enough to rebuild on window change —
+   *  ~15 live cells regardless of whether the tab holds 8 items or 130.
+   *  Cells are scene-level objects at depth 0; the viewport illusion
+   *  comes from the modal-bg cover panels above/below (see create). */
+  private renderVisibleCells(): void {
+    const totalRows = Math.ceil(this.gridItems.length / GRID_COLS);
+    const first = Math.max(0, Math.floor(this.scrollY / GRID_ROW_H) - 1);
+    const last = Math.min(totalRows - 1, Math.floor((this.scrollY + this.gridViewH) / GRID_ROW_H) + 1);
+    if (first !== this.visibleFirstRow || last !== this.visibleLastRow) {
+      this.visibleFirstRow = first;
+      this.visibleLastRow = last;
+      for (const obj of this.gridCells) obj.destroy();
+      this.gridCells.length = 0;
+      this.appliedScroll = this.scrollY;
+      const lastIdx = Math.min(this.gridItems.length - 1, last * GRID_COLS + GRID_COLS - 1);
+      for (let idx = first * GRID_COLS; idx <= lastIdx; idx++) this.buildCell(idx);
+      return;
+    }
+    // Same window — just shift the live cells by the scroll delta.
+    const d = this.scrollY - this.appliedScroll;
+    if (d !== 0) {
+      for (const obj of this.gridCells) {
+        (obj as unknown as { y: number }).y -= d;
+      }
+      this.appliedScroll = this.scrollY;
+    }
+  }
+
+  /** Build one grid cell (cosmetic, effect, or the NONE tile) at its
+   *  on-screen position for the current scroll. */
+  private buildCell(idx: number): void {
+    const cosItem = this.gridItems[idx];
+    const col = idx % GRID_COLS;
+    const row = Math.floor(idx / GRID_COLS);
+    const gridStartX = (this.scale.width - (GRID_CELL * GRID_COLS + GRID_GAP * (GRID_COLS - 1))) / 2;
+    const x = gridStartX + col * (GRID_CELL + GRID_GAP) + GRID_CELL / 2;
+    const y = this.gridTopY + row * GRID_ROW_H + GRID_CELL / 2 - this.scrollY;
     // Head atlas frames are authored with the hat at the very top of
     // the canvas (where the cat's head would be), so the default
     // -14 offset positions them way too high in the cell. Push head
@@ -646,103 +722,14 @@ export class DressingRoom extends Scene {
     const imageYOffset = this.activeSlot === 'head' ? 0 : -14;
     const labelYOffset = this.activeSlot === 'head' ? 28 : 22;
     const labelFontSize = 9;
-    const labelWrapWidth = cellSize - 10;
+    const labelWrapWidth = GRID_CELL - 10;
+    const equippedInstanceId = this.gridEquippedInstanceId;
 
-    slice.forEach((cosItem, i) => {
-      const cos = COSMETIC_CATALOG.find((c) => c.id === cosItem.type);
-      if (!cos) return;
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const x = gridStartX + col * (cellSize + gap) + cellSize / 2;
-      const y = row * (cellSize + gap) + cellSize / 2;
-      const isEquipped = equippedInstanceId === cosItem.id;
-      // Tim's call: non-selected cells looked too "lit" — purple-alpha-0.3
-      // strokes still read as bright on the dark bg. Drop non-selected
-      // to a much thinner barely-there stroke; bump selected to 3 px
-      // for a clear pop.
-      const bg = this.add
-        .rectangle(x, y, cellSize, cellSize, 0x0b041a, 0.6)
-        .setStrokeStyle(
-          isEquipped ? 3 : 1,
-          isEquipped ? 0xffd34d : 0xc0a0e6,
-          isEquipped ? 1 : 0.15,
-        )
-        .setInteractive({ useHandCursor: true });
-      this.gridContainer.add(bg);
-
-      // Effect cosmetics don't have atlas frames — render an emoji thumb.
-      const effect = getEffectById(cosItem.type);
-      if (effect) {
-        const icon = this.add
-          .text(x, y + imageYOffset, effect.iconEmoji, { fontSize: '32px' })
-          .setOrigin(0.5);
-        const label = this.add
-          .text(x, y + labelYOffset, effect.name, {
-            fontFamily: '"Courier New", monospace',
-            fontStyle: 'bold',
-            fontSize: `${labelFontSize}px`,
-            color: '#ffffff',
-            align: 'center',
-            wordWrap: { width: labelWrapWidth },
-          })
-          .setOrigin(0.5);
-        this.gridContainer.add([icon, label]);
-      } else {
-        const renderId = parentIdFor(cos) ?? cos.id;
-        const frame = `cosmetic_${renderId}_idle_00`;
-        const sprite = this.add
-          .sprite(x, y + imageYOffset, AssetKeys.Atlas.Cosmetics, frame)
-          .setScale(1.05);
-        if (cos.tint) {
-          sprite.setTint(parseInt(cos.tint.replace('#', ''), 16));
-        }
-        const label = this.add
-          .text(x, y + labelYOffset, cos.name.toUpperCase(), {
-            fontFamily: '"Courier New", monospace',
-            fontStyle: 'bold',
-            fontSize: `${labelFontSize}px`,
-            color: '#ffffff',
-            align: 'center',
-            wordWrap: { width: labelWrapWidth },
-          })
-          .setOrigin(0.5);
-        this.gridContainer.add([sprite, label]);
-      }
-
-      // Tap behavior:
-      //  - Tapping an unequipped cosmetic → equip it
-      //  - Tapping the currently-equipped cosmetic → unequip it (toggle)
-      // This matches Tim's request for a "click again to unselect"
-      // pattern that mirrors the song picker's select/deselect.
-      //
-      // Instant feedback — flip the stroke to yellow BEFORE equipInSlot
-      // does its state mutation + optimistic re-render. Even though the
-      // re-render will replace this rectangle with a fresh one moments
-      // later, the pre-flash gives the tap an immediate "you selected
-      // it" cue so the interaction never feels like a dropped click
-      // while the interpreter spins up the effect handle.
-      bg.on('pointerdown', () => {
-        bg.setStrokeStyle(3, 0xffd34d, 1);
-        if (isEquipped) this.equipInSlot(null);
-        else this.equipInSlot(cosItem);
-      });
-    });
-
-    // "Clear slot" tile — same neutral cell shell as the cosmetics
-    // (dark fill, soft purple stroke) so the grid reads as one unified
-    // surface. Active "currently none equipped" state lights up with
-    // the yellow stroke just like a selected cosmetic. A subtle slashed
-    // circle inside replaces the previous big-red ✕ block (Tim: 'X on
-    // NONE looks clunky').
-    const noneIdx = slice.length;
-    const col = noneIdx % cols;
-    const row = Math.floor(noneIdx / cols);
-    if (row < visibleRows) {
-      const x = gridStartX + col * (cellSize + gap) + cellSize / 2;
-      const y = row * (cellSize + gap) + cellSize / 2;
+    // NONE (clear slot) tile — lights up yellow when nothing is equipped.
+    if (cosItem === null) {
       const isNone = !equippedInstanceId;
       const bg = this.add
-        .rectangle(x, y, cellSize, cellSize, 0x0b041a, 0.6)
+        .rectangle(x, y, GRID_CELL, GRID_CELL, 0x0b041a, 0.6)
         .setStrokeStyle(2, isNone ? 0xffd34d : 0xc0a0e6, isNone ? 1 : 0.3)
         .setInteractive({ useHandCursor: true });
       const glyph = this.add
@@ -761,9 +748,87 @@ export class DressingRoom extends Scene {
           color: isNone ? '#ffd34d' : '#ffffff',
         })
         .setOrigin(0.5);
-      this.gridContainer.add([bg, glyph, label]);
-      bg.on('pointerdown', () => this.equipInSlot(null));
+      this.gridCells.push(bg, glyph, label);
+      bg.on('pointerup', () => {
+        if (this.dragMoved < 8) this.equipInSlot(null);
+      });
+      return;
     }
+
+    const cos = COSMETIC_CATALOG.find((c) => c.id === cosItem.type);
+    if (!cos) return;
+    const isEquipped = equippedInstanceId === cosItem.id;
+    // Tim's call: non-selected cells looked too "lit" — purple-alpha-0.3
+    // strokes still read as bright on the dark bg. Drop non-selected
+    // to a much thinner barely-there stroke; bump selected to 3 px
+    // for a clear pop.
+    const bg = this.add
+      .rectangle(x, y, GRID_CELL, GRID_CELL, 0x0b041a, 0.6)
+      .setStrokeStyle(
+        isEquipped ? 3 : 1,
+        isEquipped ? 0xffd34d : 0xc0a0e6,
+        isEquipped ? 1 : 0.15,
+      )
+      .setInteractive({ useHandCursor: true });
+    this.gridCells.push(bg);
+
+    // Effect cosmetics don't have atlas frames — render an emoji thumb.
+    const effect = getEffectById(cosItem.type);
+    if (effect) {
+      const icon = this.add
+        .text(x, y + imageYOffset, effect.iconEmoji, { fontSize: '32px' })
+        .setOrigin(0.5);
+      const label = this.add
+        .text(x, y + labelYOffset, effect.name, {
+          fontFamily: '"Courier New", monospace',
+          fontStyle: 'bold',
+          fontSize: `${labelFontSize}px`,
+          color: '#ffffff',
+          align: 'center',
+          wordWrap: { width: labelWrapWidth },
+        })
+        .setOrigin(0.5);
+      this.gridCells.push(icon, label);
+    } else {
+      const renderId = parentIdFor(cos) ?? cos.id;
+      const frame = `cosmetic_${renderId}_idle_00`;
+      const sprite = this.add
+        .sprite(x, y + imageYOffset, AssetKeys.Atlas.Cosmetics, frame)
+        .setScale(1.05);
+      if (cos.tint) {
+        sprite.setTint(parseInt(cos.tint.replace('#', ''), 16));
+      }
+      const label = this.add
+        .text(x, y + labelYOffset, cos.name.toUpperCase(), {
+          fontFamily: '"Courier New", monospace',
+          fontStyle: 'bold',
+          fontSize: `${labelFontSize}px`,
+          color: '#ffffff',
+          align: 'center',
+          wordWrap: { width: labelWrapWidth },
+        })
+        .setOrigin(0.5);
+      this.gridCells.push(sprite, label);
+    }
+
+    // Tap behavior:
+    //  - Tapping an unequipped cosmetic → equip it
+    //  - Tapping the currently-equipped cosmetic → unequip it (toggle)
+    // Equip fires on pointerUP gated by drag distance so a flick-scroll
+    // that starts on a cell never equips it. The pointerdown pre-flash
+    // keeps the instant "you selected it" cue on real taps.
+    bg.on('pointerdown', () => {
+      bg.setStrokeStyle(3, 0xffd34d, 1);
+    });
+    bg.on('pointerup', () => {
+      if (this.dragMoved >= 8) {
+        // Was a scroll, not a tap — restore the resting stroke.
+        bg.setStrokeStyle(isEquipped ? 3 : 1, isEquipped ? 0xffd34d : 0xc0a0e6, isEquipped ? 1 : 0.15);
+        return;
+      }
+      if (isEquipped) this.equipInSlot(null);
+      else this.equipInSlot(cosItem);
+    });
   }
 
   /**
@@ -879,46 +944,6 @@ export class DressingRoom extends Scene {
     }
   }
 
-  private countOwnedInSlot(): number {
-    let count = this.playerState.ownedCosmetics.filter((cosItem) => {
-      const cos = COSMETIC_CATALOG.find((c) => c.id === cosItem.type);
-      const slot = cos?.slot ?? 'head';
-      return slot === this.activeSlot;
-    }).length;
-    // The equipped cosmetic for this slot lives outside ownedCosmetics
-    // but is shown in the grid (stable order), so include it here so
-    // pagination math matches what renderGrid actually displays.
-    const equippedInstanceId = this.playerState.equippedCosmetics[this.catInstanceId]?.[this.activeSlot];
-    if (equippedInstanceId) {
-      const type = this.playerState.equippedCosmeticTypes?.[equippedInstanceId];
-      if (type) {
-        const eqCos = COSMETIC_CATALOG.find((c) => c.id === type);
-        if (eqCos?.slot === this.activeSlot) count += 1;
-      }
-    }
-    return count;
-  }
-
-  private changePage(delta: number): void {
-    const total = Math.max(
-      1,
-      Math.ceil(this.countOwnedInSlot() / COSMETICS_PER_PAGE),
-    );
-    this.page = Math.max(0, Math.min(total - 1, this.page + delta));
-    this.renderGrid();
-    this.updatePagination();
-  }
-
-  private updatePagination(): void {
-    const total = Math.max(
-      1,
-      Math.ceil(this.countOwnedInSlot() / COSMETICS_PER_PAGE),
-    );
-    this.pageLabel.setText(`page ${this.page + 1} / ${total}`);
-    this.prevBtn.setAlpha(this.page === 0 ? 0.35 : 1);
-    this.nextBtn.setAlpha(this.page === total - 1 ? 0.35 : 1);
-  }
-
   private exit(): void {
     const decorate = this.scene.get(SceneKeys.Decorate);
     if (decorate) decorate.events.emit('dressingroom:closed');
@@ -939,7 +964,8 @@ export class DressingRoom extends Scene {
       this.heroEffects[slot]?.destroy();
     }
     this.heroEffects = {};
-    this.gridContainer?.destroy(true);
+    for (const obj of this.gridCells) obj.destroy();
+    this.gridCells.length = 0;
     this.slotTabsContainer?.destroy(true);
   }
 }
