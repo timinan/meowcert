@@ -1253,7 +1253,7 @@ export class Game extends Scene {
           summary,
           commentBody: body,
         }).then((res) => {
-          if (res.ok && res.commentBonus && res.commentBonus > 0 && this.summaryPage3BonusText) {
+          if (res.ok && (res.commentBonus ?? 0) > 0 && this.summaryPage3BonusText) {
             this.summaryPage3BonusText.setText('+50 COINS!');
             this.summaryPage3BonusText.setVisible(true);
           }
@@ -3001,7 +3001,7 @@ export class Game extends Scene {
 
   /** Seat Butters' sprite in the lane-0 (top-left) band-member slot
    *  during tutorial mode. Mirrors seatCats's coordinate math + scale so
-   *  Butters reads as a real seated band-member. Plays cat12_idle so he
+   *  Butters reads as a real seated band-member. Plays cat13_idle so he
    *  bobs with the same idle loop as the player's seated starter cat. */
   private seatTutorialButters(): void {
     if (this.tutorialPhase === null) return;
@@ -3012,10 +3012,10 @@ export class Game extends Scene {
     const cx = L.laneCenterX(0, width);
 
     const butters = this.add
-      .sprite(cx, catY, AssetKeys.Atlas.Cats, 'cat12_idle_00')
+      .sprite(cx, catY, AssetKeys.Atlas.Cats, 'cat13_idle_00')
       .setOrigin(0.5, 1)
       .setScale(CAT_SCALE);
-    butters.play('cat12_idle', true);
+    butters.play('cat13_idle', true);
     this.tutorialButtersGfx.push(butters);
 
     // Grey glasses — narrator Butters' signature cosmetic (see

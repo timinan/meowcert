@@ -416,10 +416,8 @@ social.post('/comment', async (c) => {
   let commentBonus = 0;
   if (visitor !== body.owner) {
     try {
-      const key = `meowcert:commented:${body.postId}:${visitor}`;
-      const existing = await redis.get(key);
-      if (!existing) {
-        await redis.set(key, '1');
+      const claims = await r.incrBy(`meowcert:commented:${body.postId}:${visitor}`, 1);
+      if (claims === 1) {
         const isoToday = new Date().toISOString().slice(0, 10);
         const player = await loadOrInit(visitor);
         rolloverEconomy(player, isoToday);
