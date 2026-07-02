@@ -157,7 +157,6 @@ window.fetch = ((input: RequestInfo | URL) => {
 // -- boot the real scene + expose hooks --------------------------------
 
 type SceneReach = {
-  isoToday: string;
   activeTab: 'daily' | 'weekly' | 'trophies';
   buildChrome(): void;
   renderTabBody(): void;
@@ -185,9 +184,7 @@ function reach(): SceneReach {
 
 function start(state: PlayerState, iso: string): void {
   current = state;
-  const s = reach();
-  s.isoToday = iso; // instance field persists across restart (init doesn't touch it)
-  game.scene.start(SceneKeys.Rewards, { playerState: state, fromScene: SceneKeys.Game });
+  game.scene.start(SceneKeys.Rewards, { playerState: state, fromScene: SceneKeys.Game, isoToday: iso });
 }
 
 const w = window as unknown as {

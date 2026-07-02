@@ -2,6 +2,7 @@ import { GameObjects, Scene, Scenes, Tweens } from 'phaser';
 import { SceneKeys, type SceneKey } from '@/constants/scenes';
 import { TopHud } from '@/ui/top-hud';
 import { buildMenuItems } from '@/ui/menu-items';
+import { playLanternMusic } from '@/systems/home-music';
 import {
   collectRewards,
   claimQuest,
@@ -58,9 +59,10 @@ export class Rewards extends Scene {
     super(SceneKeys.Rewards);
   }
 
-  init(data?: { playerState?: PlayerState | null; fromScene?: SceneKey }): void {
+  init(data?: { playerState?: PlayerState | null; fromScene?: SceneKey; isoToday?: string }): void {
     this.playerState = data?.playerState ?? null;
     this.fromScene = data?.fromScene ?? SceneKeys.Game;
+    this.isoToday = data?.isoToday ?? new Date().toISOString().slice(0, 10);
     this.busy = false;
     // Reset transient refs — the same scene instance is reused across
     // restarts, so stale handles (a lingering `chooser` especially) would
@@ -77,6 +79,7 @@ export class Rewards extends Scene {
   }
 
   create(): void {
+    playLanternMusic(this);
     const { width, height } = this.scale;
 
     this.add.rectangle(0, 0, width, height, 0x0b041a, 1).setOrigin(0, 0);
