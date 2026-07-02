@@ -228,9 +228,42 @@ state.post('/streak/claim', async (c) => {
   if (streak.lastDay !== isoToday) {
     return c.json({ ok: false, reason: 'not_active_today' }, 400);
   }
+
+  // Widen locally to carry `goldenGrantedDay` without adding it to the shared
+  // EconomyStreak type. Redis serialises the extra key transparently.
+  const streakEx = streak as typeof streak & { goldenGrantedDay?: string };
+
+  // Day-7 follow-up golden-box pick: coins were already granted in a prior
+  // request (no boxId supplied then) — the client now sends the chosen box.
+  // Let this through so the golden box is never permanently lost.
+  if (streakEx.lastClaimedDay === isoToday && streak.count === 7 && body?.boxId) {
+    if (streakEx.goldenGrantedDay === isoToday) {
+      return c.json({ ok: false, reason: 'already_claimed' }, 400);
+    }
+    const goldenBox = BOX_CATALOG[body.boxId];
+    if (!goldenBox || goldenBox.tier !== 'golden') {
+      return c.json({ ok: false, reason: 'not_golden_box' }, 400);
+    }
+    const goldenPull = pullBox(body.boxId, player);
+    applyPullToState(player, goldenPull);
+    player.stats.boxesOpened[body.boxId] = (player.stats.boxesOpened[body.boxId] ?? 0) + 1;
+    streakEx.goldenGrantedDay = isoToday;
+    await save(redis, player);
+    return c.json({ ok: true, claimed: 0, goldenPull, state: player });
+  }
+
   if (streak.lastClaimedDay === isoToday) {
     return c.json({ ok: false, reason: 'already_claimed' }, 400);
   }
+
+  // Day-7 golden-box guard: validate boxId tier BEFORE any coin mutation so a
+  // bad pick can't burn the reward and lock the player out of the golden box.
+  if (streak.count === 7 && body?.boxId) {
+    if (BOX_CATALOG[body.boxId]?.tier !== 'golden') {
+      return c.json({ ok: false, reason: 'not_golden_box' }, 400);
+    }
+  }
+
   const reward = STREAK_TRACK[streak.count - 1] ?? 25;
   player.coins += reward;
   player.stats.coinsEarnedLifetime += reward;
@@ -240,13 +273,12 @@ state.post('/streak/claim', async (c) => {
   let goldenPull: PullResult | undefined;
 
   if (streak.count === 7 && body?.boxId) {
-    const goldenBox = BOX_CATALOG[body.boxId];
-    if (goldenBox && goldenBox.tier === 'golden') {
-      goldenPull = pullBox(body.boxId, player);
-      applyPullToState(player, goldenPull);
-      player.stats.boxesOpened[body.boxId] = (player.stats.boxesOpened[body.boxId] ?? 0) + 1;
-      goldenBoxDue = false;
-    }
+    // Already validated above — boxId is a valid golden tier.
+    goldenPull = pullBox(body.boxId, player);
+    applyPullToState(player, goldenPull);
+    player.stats.boxesOpened[body.boxId] = (player.stats.boxesOpened[body.boxId] ?? 0) + 1;
+    streakEx.goldenGrantedDay = isoToday;
+    goldenBoxDue = false;
   }
 
   await save(redis, player);

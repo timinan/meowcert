@@ -2714,6 +2714,11 @@ export class Game extends Scene {
         // the coin line hidden. showSummary already painted the rest of
         // the panel, so we only need to refresh the coin line here.
         this.lastRewardBreakdown = result.breakdown ?? null;
+        // Fold earned coins into the session wallet so the HUD stays current.
+        if (result.breakdown && !result.alreadyCredited && this.playerState) {
+          this.playerState.coins += result.breakdown.final;
+          this.hud?.setCoins(this.playerState.coins);
+        }
         this.updateSummaryCoinsLine();
       } else {
         console.warn('[Game] submitPlay failed:', result.reason);

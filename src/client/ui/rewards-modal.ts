@@ -1,4 +1,4 @@
-import { GameObjects, Scene } from 'phaser';
+import { GameObjects, Scene, Tweens } from 'phaser';
 import {
   collectRewards,
   claimQuest,
@@ -38,6 +38,9 @@ export class RewardsModal {
   private openArgs: OpenArgs | null = null;
   private isoToday = '';
   private chooser: GameObjects.Container | null = null;
+  // In-flight fly tweens — removed in close() so a mid-flight close never
+  // leaves tweens targeting destroyed game objects.
+  private flyTweens: Tweens.Tween[] = [];
 
   // Collect-card refs, rebuilt into their 0/N states by setPotState().
   private potText: GameObjects.Text | null = null;
@@ -454,7 +457,7 @@ export class RewardsModal {
   private adopt(state: PlayerState): void {
     const live = this.getPlayerState();
     if (live) Object.assign(live, state);
-    const hud = (this.scene as { topHud?: { setCoins?: (n: number) => void } }).topHud;
+    const hud = (this.scene as any).topHud ?? (this.scene as any).hud;
     hud?.setCoins?.(state.coins);
   }
 
@@ -470,8 +473,8 @@ export class RewardsModal {
       if (!this.container) return;
       if (res.ok) {
         this.adopt(res.state);
+        this.rebuild(); // rebuild first so flyCoins targets the new container
         this.flyCoins(res.claimed);
-        this.rebuild();
         return;
       }
     } catch {
@@ -488,11 +491,11 @@ export class RewardsModal {
       if (!this.container) return;
       if (res.ok) {
         this.adopt(res.state);
+        this.rebuild(); // rebuild first so fly tweens target the new container
         this.flyCoins(res.claimed);
         if ('goldenPull' in res && res.goldenPull) {
           this.flyText(`🏆 ${BOX_CATALOG[boxId!]?.displayName ?? 'Golden Box'}!`);
         }
-        this.rebuild();
         return;
       }
     } catch {
@@ -591,9 +594,9 @@ export class RewardsModal {
       if (!this.container) return;
       if (res.ok) {
         this.adopt(res.state);
+        this.rebuild(); // rebuild first so flyText targets the new container
         // No coin count-up — the reward is an item; flash the box name.
         this.flyText(`🎁 ${BOX_CATALOG[boxId].displayName}!`);
-        this.rebuild();
         return;
       }
     } catch {
@@ -689,14 +692,18 @@ export class RewardsModal {
       })
       .setOrigin(0.5);
     this.container.add(fly);
-    this.scene.tweens.add({
+    const tween = this.scene.tweens.add({
       targets: fly,
       y: this.cardCY - 30,
       alpha: 0,
       duration: 1000,
       ease: 'Cubic.easeOut',
-      onComplete: () => fly.destroy(),
+      onComplete: () => {
+        fly.destroy();
+        this.flyTweens = this.flyTweens.filter((t) => t !== tween);
+      },
     });
+    this.flyTweens.push(tween);
   }
 
   private flyCoins(amount: number): void {
@@ -739,9 +746,9 @@ export class RewardsModal {
     const live = this.getPlayerState();
     if (live) Object.assign(live, result.state);
 
-    // Best-effort HUD coin refresh — scenes expose `topHud` with
+    // Best-effort HUD coin refresh — scenes expose `topHud` or `hud` with
     // setCoins(); no-op safely on scenes that don't.
-    const hud = (this.scene as { topHud?: { setCoins?: (n: number) => void } }).topHud;
+    const hud = (this.scene as any).topHud ?? (this.scene as any).hud;
     hud?.setCoins?.(result.state.coins);
 
     // Brief "+N 🪙" count-up feel floating off the card.
@@ -755,14 +762,18 @@ export class RewardsModal {
         })
         .setOrigin(0.5);
       this.container.add(fly);
-      this.scene.tweens.add({
+      const tween = this.scene.tweens.add({
         targets: fly,
         y: this.cardCY - 30,
         alpha: 0,
         duration: 900,
         ease: 'Cubic.easeOut',
-        onComplete: () => fly.destroy(),
+        onComplete: () => {
+          fly.destroy();
+          this.flyTweens = this.flyTweens.filter((t) => t !== tween);
+        },
       });
+      this.flyTweens.push(tween);
     }
 
     this.setPotState(0);
@@ -771,6 +782,10 @@ export class RewardsModal {
 
   close(): void {
     this.closeChooser();
+    // Kill any in-flight fly tweens before the container and its children are
+    // destroyed so Phaser's tween manager doesn't hold references to dead objects.
+    this.flyTweens.forEach((t) => t.remove());
+    this.flyTweens = [];
     if (this.container) {
       this.container.destroy(true);
       this.container = null;
