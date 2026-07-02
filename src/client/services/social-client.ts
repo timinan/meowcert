@@ -10,6 +10,7 @@ import type {
   LeaderboardEntry,
   ScoreTier,
 } from '../../shared/social-loop';
+import type { Difficulty, PlayRewardBreakdown } from '../../shared/economy';
 
 interface SubmitPlayArgs {
   postId: string;
@@ -24,6 +25,16 @@ interface SubmitPlayArgs {
    *  client-side via buildCommentBody() before reaching here. */
   commentBody?: string;
   gift?: { coins: number; itemInstanceIds: string[] };
+  /** Perfect-grade hit count this round (feeds skill-bonus scoring). */
+  perfects?: number;
+  /** Missed notes this round (gates full-combo / full-perfect bonuses). */
+  misses?: number;
+  /** Chart difficulty — drives the reward multiplier server-side. */
+  difficulty?: Difficulty;
+  /** Idempotency + credit token. When present the server credits coins
+   *  once for this token and returns the reward `breakdown` + `royalty`.
+   *  Absent = legacy submit (leaderboard/inbox only, no coin credit). */
+  playToken?: string;
 }
 
 export interface SubmitPlayResult {
@@ -31,6 +42,15 @@ export interface SubmitPlayResult {
   tier: ScoreTier | 'fail';
   baseReward: number;
   passed: boolean;
+  /** Present only when a `playToken` was sent — the full coin-reward
+   *  breakdown the summary UI renders (tier base, bonuses, decay,
+   *  budget, own-show). */
+  breakdown?: PlayRewardBreakdown;
+  /** Coins routed to the host's pending-collect pot for this play. */
+  royalty?: number;
+  /** True when this token was already credited (repeat submit) — the
+   *  breakdown still reflects the original award. */
+  alreadyCredited?: boolean;
 }
 
 export async function submitPlay(args: SubmitPlayArgs): Promise<SubmitPlayResult | { ok: false; reason: string }> {

@@ -46,6 +46,7 @@ import {
   type PlaySummary,
   type GiftPayload,
 } from '@/../shared/social-loop';
+import type { PlayRewardBreakdown } from '@/../shared/economy';
 
 /**
  * Phase 5 Game scene — vertical lane rhythm gameplay.
@@ -144,6 +145,14 @@ export class Game extends Scene {
    *  the same round (the leaderboard write is PB-idempotent anyway,
    *  but the inbox event would duplicate). */
   private playSubmitted = false;
+  /** Per-round idempotency + coin-credit token. Minted fresh whenever a
+   *  round starts (init reset + Play Again). Sent with submitPlay so the
+   *  server credits coins exactly once and returns the reward breakdown. */
+  private playToken = '';
+  /** Reward breakdown from the server's play response, cached so the
+   *  summary coin line can render after the async submit resolves
+   *  (showSummary paints before recordPlay's fetch returns). */
+  private lastRewardBreakdown: PlayRewardBreakdown | null = null;
   /** True between scene boot and the round actually starting. While set,
    *  update() skips chart advance and the lane tap zones are disabled.
    *  Cleared by beginRound() once the song has been resolved + music has
@@ -229,6 +238,10 @@ export class Game extends Scene {
   /** Pass/fail blurb shown only in test mode when accuracy is below
    *  Balance.passAccuracyPct. Empty + invisible otherwise. */
   private summaryGateText!: Phaser.GameObjects.Text;
+  /** Coin-reward line under the BEST row — shows "+N COINS" plus valve
+   *  chips (replay decay / daily-limit reduction / own-show). Hidden
+   *  until the server play response lands with a reward breakdown. */
+  private summaryCoinsText!: Phaser.GameObjects.Text;
   /** Per-stat personal-best row — sits below the current stats row with
    *  a thin divider between. Mirrors the 4-col layout (accuracy / max
    *  combo / hits / misses) in smaller text. Score's best lives as a
@@ -363,6 +376,8 @@ export class Game extends Scene {
     this.hitFeedbackTexts = [];
     this.roundOver = false;
     this.playSubmitted = false;
+    this.playToken = this.mintPlayToken();
+    this.lastRewardBreakdown = null;
     this.startTimeMs = 0;
     this.cleanedUp = false;
     this.music = null;
@@ -940,8 +955,11 @@ export class Game extends Scene {
     }).setOrigin(0.5, 0);
     container.add(this.summaryMissesText);
 
-    // Buttons
-    const btnY = cy + 100;
+    // Buttons — nudged down from cy+100 to cy+110 to open a clean band
+    // below the BEST-score row for the coin-reward line (summaryCoinsText,
+    // rendered at cy+82). Button bottom stays ~11px clear of the panel
+    // floor, so the extra drop doesn't clip anything.
+    const btnY = cy + 110;
     const btnW = 110;
     const btnH = 38;
     const btnGap = 12;
@@ -1067,6 +1085,24 @@ export class Game extends Scene {
       .setOrigin(0.5, 0)
       .setVisible(false);
     container.add(this.summaryBestScoreBig);
+
+    // Coin-reward line — sits in the band opened below the BEST score
+    // (buttons pushed to cy+110). Populated by updateSummaryCoinsLine()
+    // once the server play response lands; hidden until then (and for
+    // legacy/no-breakdown responses). Single line, centered, wrap as a
+    // safety net so a long own-show string never runs past the panel.
+    this.summaryCoinsText = this.add
+      .text(cx, cy + 82, '', {
+        ...fontBase,
+        fontStyle: 'bold',
+        fontSize: '11px',
+        color: '#00e676',
+        align: 'center',
+        wordWrap: { width: panelW - 20 },
+      })
+      .setOrigin(0.5)
+      .setVisible(false);
+    container.add(this.summaryCoinsText);
 
     // Pass/fail message sits RIGHT UNDER the title (above FINAL SCORE),
     // per Tim's call: 'put that message error or great show under show
@@ -2251,6 +2287,11 @@ export class Game extends Scene {
     this.summaryComboText.setText(`x${this.score.getMaxCombo()}`);
     this.summaryHitsText.setText(String(this.score.getLanded()));
     this.summaryMissesText.setText(String(this.score.getMisses()));
+    // Coin line paints from the server play response, which lands AFTER
+    // this synchronous render (recordPlay's fetch is async). Reflect
+    // whatever breakdown we have so far — null on first paint, hidden;
+    // recordPlay calls updateSummaryCoinsLine() again once it resolves.
+    this.updateSummaryCoinsLine();
 
     // Pass / fail gate. Only test mode (editor rehearsal) enforces it.
     // Below the threshold: hide PUT ON A SHOW entirely so the
@@ -2314,6 +2355,42 @@ export class Game extends Scene {
     }
 
     this.summary.setVisible(true);
+  }
+
+  /** Render the coin-reward line from the cached server breakdown.
+   *  Called by showSummary (first paint, usually before the response
+   *  lands → hidden) and by recordPlay once the play response resolves.
+   *  No breakdown = legacy / failed / non-credited submit → line hidden.
+   *  Colors: green normal, amber when a valve reduced the payout
+   *  (replay decay or daily budget), grey for own-show (no coins). */
+  private updateSummaryCoinsLine(): void {
+    // Field may be unset if the overlay hasn't been built yet.
+    if (!this.summaryCoinsText) return;
+    const b = this.lastRewardBreakdown;
+    if (!b) {
+      this.summaryCoinsText.setVisible(false);
+      return;
+    }
+    const GREEN = '#00e676';
+    const AMBER = '#ffb74d';
+    const GREY = '#b0a0c8';
+    if (b.ownShow) {
+      this.summaryCoinsText.setText('YOUR OWN SHOW · NO COINS');
+      this.summaryCoinsText.setColor(GREY);
+      this.summaryCoinsText.setVisible(true);
+      return;
+    }
+    let text = `+${b.final} COINS`;
+    // One valve chip only — two chips wrap past the panel and collide
+    // with the buttons (verified in the render harness). Budget wins when
+    // both apply: hitting the daily cap is the actionable "come back
+    // tomorrow" signal; replay decay is the expected-mechanic secondary.
+    if (b.budgetReduced) text += ' · REDUCED (DAILY LIMIT)';
+    else if (b.decayRate < 1) text += ` · REPLAY ×${b.decayRate}`;
+    const reduced = b.decayRate < 1 || b.budgetReduced;
+    this.summaryCoinsText.setText(text);
+    this.summaryCoinsText.setColor(reduced ? AMBER : GREEN);
+    this.summaryCoinsText.setVisible(true);
   }
 
   /** Per-stat personal-best row. Visible in stage rehearsal (drawer
@@ -2473,6 +2550,10 @@ export class Game extends Scene {
     // "leaderboard still not adding creater score after planing again
     // from their own post".
     this.playSubmitted = false;
+    // Fresh token per replay so each run credits coins independently and
+    // the previous run's reward breakdown doesn't bleed into this one.
+    this.playToken = this.mintPlayToken();
+    this.lastRewardBreakdown = null;
     this.startTimeMs = 0;
     this.pendingStart = true;
     this.lastEmittedPageBoundary = 0;
@@ -2569,6 +2650,12 @@ export class Game extends Scene {
     };
   }
 
+  /** Mint a unique per-round play token. The server uses it to credit
+   *  coins exactly once (idempotent) and to key the reward breakdown. */
+  private mintPlayToken(): string {
+    return 'pt_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
+
   /** Pure play submission — no scene navigation. Used by endRound's
    *  auto-record path (player still sees the summary afterward) and by
    *  finalizePlay (which adds the scene-restart on top). Server returns
@@ -2580,6 +2667,10 @@ export class Game extends Scene {
     gift: GiftPayload | undefined,
   ): Promise<void> {
     try {
+      // Reward-scoring fields threaded straight from the live ScoreSystem
+      // + chart context (not from `summary`, which stays the shared
+      // PlaySummary shape). playToken lets the server credit coins once
+      // and return the breakdown the summary coin line renders.
       const result = await submitPlay({
         postId: summary.postId,
         owner: summary.owner,
@@ -2588,11 +2679,21 @@ export class Game extends Scene {
         notesHit: summary.notesHit,
         maxCombo: summary.maxCombo,
         accuracy: summary.accuracy,
+        perfects: this.score.getPerfects(),
+        misses: this.score.getMisses(),
+        difficulty: this.playChart?.difficulty ?? 'easy',
+        ...(this.playToken ? { playToken: this.playToken } : {}),
         ...(commentBody ? { commentBody } : {}),
         ...(gift ? { gift } : {}),
       });
       if (result.ok) {
         console.info(`[Game] play submitted — ${result.tier} (+${result.baseReward} coins)`);
+        // Cache + render the reward breakdown when the server credited
+        // coins (playToken path). Absent breakdown = legacy submit; leave
+        // the coin line hidden. showSummary already painted the rest of
+        // the panel, so we only need to refresh the coin line here.
+        this.lastRewardBreakdown = result.breakdown ?? null;
+        this.updateSummaryCoinsLine();
       } else {
         console.warn('[Game] submitPlay failed:', result.reason);
       }
