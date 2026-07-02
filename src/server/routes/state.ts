@@ -23,6 +23,10 @@ import {
   recordQuestEvent,
   touchLoginStreak,
   STREAK_TRACK,
+  WEEKLY_QUEST_POOL,
+  WEEKLY_BONUS_COINS,
+  weeklyClaimError,
+  weeklyBonusError,
   type DailyQuestId,
 } from '../../shared/quests';
 import { getUserOverride } from '../../shared/user-overrides.generated';
@@ -207,6 +211,50 @@ state.post('/quests/bonus', async (c) => {
   player.economy.daily.questBonusClaimed = true;
   await save(redis, player);
   return c.json({ ok: true, pull, state: player });
+});
+
+/** POST /api/weekly/claim — body: { questId, boxId }. Credits the weekly quest's
+ *  coin reward and performs a free golden-tier box pull when the quest is
+ *  complete and not yet claimed. Both the coin credit and the box pull land
+ *  in the same request. Returns the fresh state on success. 400 on any
+ *  validation miss. */
+state.post('/weekly/claim', async (c) => {
+  const body = await c.req.json<{ questId?: string; boxId?: BoxId }>().catch(() => null);
+  const username = await currentUsername();
+  const player = await loadOrInit(redis, username);
+  const box = body?.boxId ? BOX_CATALOG[body.boxId] : undefined;
+  const err = weeklyClaimError(player.economy.weekly, body?.questId ?? '', box?.tier);
+  if (err) return c.json({ ok: false, reason: err }, 400);
+  const quest = WEEKLY_QUEST_POOL.find(q => q.id === body!.questId)!;
+  player.coins += quest.coins;
+  player.stats.coinsEarnedLifetime += quest.coins;
+  const pull = pullBox(body!.boxId!, player);
+  applyPullToState(player, pull);
+  player.stats.boxesOpened[body!.boxId!] = (player.stats.boxesOpened[body!.boxId!] ?? 0) + 1;
+  player.economy.weekly.claimed[quest.id] = true;
+  await save(redis, player);
+  return c.json({ ok: true, claimed: quest.coins, pull, state: player });
+});
+
+/** POST /api/weekly/bonus — body: { boxId }. Grants WEEKLY_BONUS_COINS plus
+ *  a free golden-tier box pull when all weekly quests are claimed and the
+ *  weekly bonus hasn't been taken yet. No coinsSpentLifetime bump (free pull).
+ *  Returns the fresh state on success. 400 on any validation miss. */
+state.post('/weekly/bonus', async (c) => {
+  const body = await c.req.json<{ boxId?: BoxId }>().catch(() => null);
+  const username = await currentUsername();
+  const player = await loadOrInit(redis, username);
+  const box = body?.boxId ? BOX_CATALOG[body.boxId] : undefined;
+  const err = weeklyBonusError(player.economy.weekly, box?.tier);
+  if (err) return c.json({ ok: false, reason: err }, 400);
+  player.coins += WEEKLY_BONUS_COINS;
+  player.stats.coinsEarnedLifetime += WEEKLY_BONUS_COINS;
+  const pull = pullBox(body!.boxId!, player);
+  applyPullToState(player, pull);
+  player.stats.boxesOpened[body!.boxId!] = (player.stats.boxesOpened[body!.boxId!] ?? 0) + 1;
+  player.economy.weekly.bonusClaimed = true;
+  await save(redis, player);
+  return c.json({ ok: true, claimed: WEEKLY_BONUS_COINS, pull, state: player });
 });
 
 /** POST /api/streak/claim — credits the login-streak reward for the

@@ -100,6 +100,34 @@ export async function claimQuestBonus(boxId: BoxId): Promise<ClaimBonusResult> {
   return (await r.json()) as ClaimBonusResult;
 }
 
+export type ClaimWeeklyResult =
+  | { ok: true; claimed: number; pull: PullResult; state: PlayerState }
+  | { ok: false; reason: string };
+
+/** Claim a single weekly quest's coin reward plus a free golden box pull.
+ *  Server validates quest completion and claim state; 400 resolves to
+ *  { ok: false, reason } rather than throwing. */
+export async function claimWeekly(questId: string, boxId: BoxId): Promise<ClaimWeeklyResult> {
+  const r = await fetch('/api/weekly/claim', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ questId, boxId }),
+  });
+  return (await r.json()) as ClaimWeeklyResult;
+}
+
+/** Claim the all-weekly-quests bonus: WEEKLY_BONUS_COINS plus a free golden
+ *  box pull. Server validates all weekly quests are claimed and the bonus is
+ *  unclaimed; 400 resolves to { ok: false, reason } rather than throwing. */
+export async function claimWeeklyBonus(boxId: BoxId): Promise<ClaimWeeklyResult> {
+  const r = await fetch('/api/weekly/bonus', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ boxId }),
+  });
+  return (await r.json()) as ClaimWeeklyResult;
+}
+
 export type ClaimStreakResult =
   | { ok: true; claimed: number; goldenBoxDue?: boolean; goldenPull?: PullResult; state: PlayerState }
   | { ok: false; reason: string };

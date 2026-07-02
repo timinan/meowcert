@@ -32,7 +32,7 @@ import { loadOrInit, save } from '../core/player-state';
 import { ECONOMY, computePlayReward, type Difficulty, type PlayRewardBreakdown, type PlayRewardInput } from '../../shared/economy';
 import { applyPlayReward } from '../../shared/economy-apply';
 import { milestonesEarned } from '../../shared/post-milestones';
-import { recordQuestEvent } from '../../shared/quests';
+import { recordQuestEvent, isoWeekOf, recordWeeklyEvent } from '../../shared/quests';
 
 /**
  * Server routes for the social loop:
@@ -387,6 +387,17 @@ social.post('/play', async (c) => {
         { kind: 'play', maxCombo: body.maxCombo, difficulty: body.difficulty ?? 'easy' },
         isoToday,
       );
+
+      // Weekly-quest hook — fires immediately after the daily hook.
+      // Own-show plays count toward wplays15 (playing is playing).
+      // whostplays25 fires only when a visitor (non-owner) plays.
+      const weekKey = isoWeekOf(isoToday);
+      recordWeeklyEvent(v, {
+        kind: 'play',
+        passed: (body.accuracy ?? 0) * 100 >= ECONOMY.passAccuracyPct,
+        difficulty: body.difficulty ?? 'easy',
+      }, weekKey);
+      if (!isOwner && h) recordWeeklyEvent(h, { kind: 'hostplay' }, weekKey);
 
       // Save owner first, then visitor
       if (!isOwner) await save(redis, h);
