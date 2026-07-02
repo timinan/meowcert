@@ -35,6 +35,14 @@ const HIT_INTENSITY = 1.0;
 const MISS_INTENSITY = 0.3;
 const PULSE_DECAY_MS = 600;
 
+// Lane budget — production stage seats sit 80 design-px apart (scene-seats),
+// so an effect may occupy roughly ±LANE_HALF_W around its cat (× scale)
+// before it bleeds into the neighbor's lane. The smoketest designed these
+// on a full tile per cat; the wide families (aurora / weather / disco /
+// glitch / pixel rain / lightning / rays…) are clamped to this budget
+// (Tim 2026-07-01: "boxed in to the cat's lane").
+const LANE_HALF_W = 45;
+
 function footPosition(target: EffectTarget): { x: number; y: number } {
   return {
     x: target.x,
@@ -426,8 +434,10 @@ function runPulse(scene: Scene, target: EffectTarget, scale: number, p: PulsePar
   let lastSpawn = -1e9;
   const interval = p.intervalMs ?? 900;
   const life = p.lifeMs ?? 1500;
-  const maxR = (p.maxR ?? 44) * scale;
   const shape = p.shape ?? 'ring';
+  // Expansion capped to the lane. Hearts render ~0.55× their r in half-
+  // width, so they get proportionally more headroom.
+  const maxR = Math.min(p.maxR ?? 44, shape === 'heart' ? LANE_HALF_W / 0.55 : LANE_HALF_W) * scale;
   const thickness = p.thickness ?? 3;
   const alphaBase = p.alpha ?? 0.85;
   const flatness = p.flatness ?? 0.32;
@@ -548,12 +558,16 @@ function runLightning(
   type Strike = { untilT: number; main: [number, number][]; branches: [number, number][][] };
   const strikes: Strike[] = [];
 
+  // Bolts + branches stay inside the lane column.
+  const maxDrift = LANE_HALF_W * scale - 8;
   const buildBolt = (originX: number, originY: number): Strike => {
+    const clampX = (v: number): number =>
+      Math.max(originX - maxDrift, Math.min(originX + maxDrift, v));
     const main: [number, number][] = [];
     let x = originX, y = originY - 200;
     main.push([x, y]);
     while (y < originY) {
-      x += (Math.random() - 0.5) * 30;
+      x = clampX(x + (Math.random() - 0.5) * 30);
       y += 8 + Math.random() * 14;
       main.push([x, y]);
     }
@@ -566,7 +580,7 @@ function runLightning(
       const dir = Math.random() < 0.5 ? -1 : 1;
       const len = 3 + Math.floor(Math.random() * 4);
       for (let i = 0; i < len; i++) {
-        bx += dir * (8 + Math.random() * 16);
+        bx = clampX(bx + dir * (8 + Math.random() * 16));
         by += 4 + Math.random() * 10;
         branch.push([bx, by]);
       }
@@ -586,9 +600,17 @@ function runLightning(
     if (Math.random() < 0.09 && strikes.length < 4) {
       strikes.push(buildBolt(target.x, target.y));
     }
-    // dark bg — smaller footprint, over the entire scene view
-    dark.fillStyle(0x000000, 0.85);
-    dark.fillRect(-1000, -1000, 3000, 3000);
+    // Dark backdrop boxed to the cat's lane (was a full-scene 3000×3000
+    // rect that blacked out the whole stage) — soft edge via a wider,
+    // fainter outer rect.
+    const halfW = LANE_HALF_W * scale;
+    const foot = footPosition(target);
+    const colTop = target.y - 214;
+    const colH = foot.y + 6 - colTop;
+    dark.fillStyle(0x000000, 0.28);
+    dark.fillRect(target.x - halfW - 14, colTop, (halfW + 14) * 2, colH);
+    dark.fillStyle(0x000000, 0.55);
+    dark.fillRect(target.x - halfW, colTop, halfW * 2, colH);
     const hasLive = strikes.some(s => t <= s.untilT);
     const drawPath = (pts: [number, number][], gAlpha: number, gW: number, cAlpha: number): void => {
       g.lineStyle(gW, glowInt, gAlpha);
@@ -610,7 +632,7 @@ function runLightning(
     }
     if (hasLive) {
       g.fillStyle(coreInt, 0.22);
-      g.fillRect(-1000, -1000, 3000, 3000);
+      g.fillRect(target.x - halfW, colTop, halfW * 2, colH);
     }
   };
   scene.events.on(Scenes.Events.POST_UPDATE, draw);
@@ -853,7 +875,8 @@ function runSunRays(scene: Scene, target: EffectTarget, scale: number, innerRgba
     // center, mid-band, fade at tip.
     for (let i = 0; i < rays; i++) {
       const a = (i / rays) * Math.PI * 2 + rot;
-      const len = (90 + 14 * Math.sin(t / 300 + i)) * scale;
+      // Ray length capped to the lane (was 90 + 14·sin ≈ ±145px).
+      const len = (LANE_HALF_W - 6 + 8 * Math.sin(t / 300 + i)) * scale;
       const c = Math.cos(a), s = Math.sin(a);
       // Layer 1: inner bright half
       g.lineStyle(5, innerInt, ia * 0.9);
@@ -894,18 +917,20 @@ function runGodRays(scene: Scene, target: EffectTarget, scale: number, glowRgb: 
     const centerX = target.x;
     const top = target.y - target.displayHeight * target.originY - 60 * scale;
     const bot = target.y + target.displayHeight * (1 - target.originY);
+    // Shaft offsets + bottom spread tightened to the lane (was ±40 offset
+    // + 22 spread ≈ ±97px total).
     for (let i = 0; i < 5; i++) {
-      const offset = (-40 + i * 22) * scale;
+      const offset = (-26 + i * 13) * scale;
       const flick = 0.55 + 0.45 * Math.sin(t / 220 + i * 1.3);
       const x = centerX + offset;
       // Trapezoid from narrow top to wide bottom, layered alpha for gradient
       // Layer 1 outer glow (wider)
       g.fillStyle(glowInt, 0.28 * flick);
       g.beginPath();
-      g.moveTo(x - 6 * scale, top);
-      g.lineTo(x + 6 * scale, top);
-      g.lineTo(x + 22 * scale, bot);
-      g.lineTo(x - 22 * scale, bot);
+      g.moveTo(x - 5 * scale, top);
+      g.lineTo(x + 5 * scale, top);
+      g.lineTo(x + 14 * scale, bot);
+      g.lineTo(x - 14 * scale, bot);
       g.closePath();
       g.fillPath();
       // Layer 2 core (narrower, brighter)
@@ -913,8 +938,8 @@ function runGodRays(scene: Scene, target: EffectTarget, scale: number, glowRgb: 
       g.beginPath();
       g.moveTo(x - 3 * scale, top);
       g.lineTo(x + 3 * scale, top);
-      g.lineTo(x + 12 * scale, bot);
-      g.lineTo(x - 12 * scale, bot);
+      g.lineTo(x + 8 * scale, bot);
+      g.lineTo(x - 8 * scale, bot);
       g.closePath();
       g.fillPath();
     }
@@ -942,7 +967,8 @@ function runSoundBars(scene: Scene, target: EffectTarget, scale: number, hueBase
     for (let i = 0; i < bars; i++) {
       const h = (Math.sin(t / 180 + i) * 0.5 + 0.6) * maxH;
       const a = i / bars - 0.5;
-      const px = cx + a * 100 * scale;
+      // Bar spread tightened to the lane (was ±50·scale ≈ ±75px).
+      const px = cx + a * (LANE_HALF_W * 2 - 12) * scale;
       const hue = (hueBase + i * 8) / 360;
       const rgb = Phaser.Display.Color.HSVToRGB(hue, 0.85, 0.85);
       const c = (rgb as unknown as { color: number }).color;
@@ -968,9 +994,8 @@ function runAuroraRibbon(scene: Scene, target: EffectTarget, scale: number, hues
     g.clear();
     const cy = midPosition(target).y;
     const cx = target.x;
-    // Span roughly ±140 px around target center — narrow enough to stay
-    // "on the cat" rather than filling the whole scene.
-    const span = 140 * scale;
+    // Ribbons span the cat's lane, not the stage.
+    const span = LANE_HALF_W * scale;
     const x0 = cx - span, x1 = cx + span;
     for (let layer = 0; layer < 4; layer++) {
       const hueDeg = (hues[layer % hues.length] + t / 60) % 360;
@@ -1002,9 +1027,9 @@ function runAuroraRibbon(scene: Scene, target: EffectTarget, scale: number, hues
 type PixelRainColor = number | 'neon';
 function runPixelRain(scene: Scene, target: EffectTarget, scale: number, color: PixelRainColor = 'neon'): EffectHandle {
   const g = scene.add.graphics().setDepth(target.depth + 1);
-  const N = 50;
-  // Rain field spans roughly target width x2. Local coords centered on target.
-  const spanX = 120 * scale;
+  const N = 28;
+  // Rain field boxed to the cat's lane. Local coords centered on target.
+  const spanX = (LANE_HALF_W - 4) * scale;
   const spanY = 160 * scale;
   const drops = Array.from({ length: N }, () => ({
     x: (Math.random() - 0.5) * spanX * 2,
@@ -1014,7 +1039,7 @@ function runPixelRain(scene: Scene, target: EffectTarget, scale: number, color: 
   const draw = (t: number): void => {
     g.clear();
     const cx = target.x;
-    const topY = target.y - target.displayHeight * target.originY - 60 * scale;
+    const topY = target.y - target.displayHeight * target.originY - 24 * scale;
     const botY = target.y + target.displayHeight * (1 - target.originY);
     const yRange = botY - topY;
     for (const d of drops) {
@@ -1049,8 +1074,9 @@ function runDiscoLines(scene: Scene, target: EffectTarget, scale: number, hueOff
     const centerX = target.x;
     const footY = target.y + target.displayHeight * (1 - target.originY);
     const topY = target.y - target.displayHeight * target.originY - 40 * scale;
-    const span = 140 * scale;
-    const lines = 12;
+    // Lane-boxed: 8 tighter lines instead of 12 across the stage.
+    const span = LANE_HALF_W * scale;
+    const lines = 8;
     for (let i = 0; i < lines; i++) {
       const a = i / lines - 0.5;
       const px = centerX + a * span * 2;
@@ -1084,11 +1110,13 @@ function runGlitch(scene: Scene, target: EffectTarget, scale: number, hueRange: 
     g.clear();
     const cx = target.x;
     const cyMid = midPosition(target).y;
-    const spanX = 100 * scale, spanY = 90 * scale;
+    // Lane-boxed: rects spawn within the lane and are short enough that
+    // a right-edge spawn still ends inside it.
+    const spanX = (LANE_HALF_W - 12) * scale, spanY = 90 * scale;
     for (let i = 0; i < 24; i++) {
       const rx = cx + (Math.random() - 0.5) * spanX * 2;
       const ry = cyMid + (Math.random() - 0.5) * spanY;
-      const rw = 6 + Math.random() * 50 * scale;
+      const rw = 6 + Math.random() * 18 * scale;
       const rh = 1 + Math.random() * 5 * scale;
       let hue = hueRange[0] + Math.random() * (hueRange[1] - hueRange[0]);
       if (hue < 0) hue += 360;
@@ -1096,7 +1124,8 @@ function runGlitch(scene: Scene, target: EffectTarget, scale: number, hueRange: 
       const rgb = Phaser.Display.Color.HSVToRGB(hue / 360, 0.9, 0.6);
       const c = (rgb as unknown as { color: number }).color;
       g.fillStyle(c, 0.7);
-      g.fillRect(rx, ry, rw, rh);
+      // Centered on the spawn point so a right-edge spawn stays in-lane.
+      g.fillRect(rx - rw / 2, ry, rw, rh);
     }
   };
   scene.events.on(Scenes.Events.POST_UPDATE, draw);
@@ -1118,7 +1147,8 @@ function runTeleportPad(scene: Scene, target: EffectTarget, scale: number, color
     const baseAlpha = bright ? 1.0 : 0.7;
     for (let i = 0; i < 5; i++) {
       const phase = ((t / 1400 + i / 5) % 1);
-      const r = (14 + phase * 100) * scale;
+      // Expansion capped to the lane (was 14 + phase*100 ≈ ±160px).
+      const r = (12 + phase * (LANE_HALF_W - 12)) * scale;
       const alpha = (1 - phase) * baseAlpha;
       g.lineStyle(2, color, alpha);
       // Stroke a squished rect (Phaser Graphics has no scale stack). Just
@@ -1145,7 +1175,7 @@ function runTeleportMulti(scene: Scene, target: EffectTarget, scale: number, col
     const flat = 0.32;
     for (let i = 0; i < 5; i++) {
       const phase = ((t / 1400 + i / 5) % 1);
-      const r = (14 + phase * 100) * scale;
+      const r = (12 + phase * (LANE_HALF_W - 12)) * scale;
       const alpha = (1 - phase) * 0.7;
       const color = cycleColor(colors, t + i * 500, 2400);
       g.lineStyle(2, color, alpha);
@@ -1258,7 +1288,8 @@ function runPillarsMulti(scene: Scene, target: EffectTarget, scale: number, colo
     const footY = target.y + target.displayHeight * (1 - target.originY);
     const topY = target.y - target.displayHeight * target.originY - 40 * scale;
     for (let idx = 0; idx < 4; idx++) {
-      const xo = (-54 + 36 * idx) * scale;
+      // Pillar spread tightened to the lane (was -54 + 36·idx ≈ ±82px).
+      const xo = (-36 + 24 * idx) * scale;
       const flicker = 0.7 + 0.3 * Math.sin(t / 60 + xo * 0.1);
       const c = colors[idx % colors.length];
       g.fillStyle(c, 0.65 * flicker);
@@ -1314,7 +1345,8 @@ function runStarCircleMulti(scene: Scene, target: EffectTarget, scale: number, c
 // ===========================================================================
 function runConstellation(scene: Scene, target: EffectTarget, scale: number): EffectHandle {
   const POOL = 12;
-  const RANGE = 45;
+  // Star spread tightened to the lane (45 rotated + glow measured ~±88px).
+  const RANGE = 34;
   const dots = Array.from({ length: POOL }, () => ({
     dx: -RANGE + Math.random() * RANGE * 2,
     dy: -RANGE + Math.random() * RANGE * 2,
@@ -1383,10 +1415,11 @@ function runConstellation(scene: Scene, target: EffectTarget, scale: number): Ef
 function runWeather(scene: Scene, target: EffectTarget, scale: number, mode: string): EffectHandle {
   const g = scene.add.graphics().setDepth(target.depth + 1);
   const centerX = target.x;
-  const topY = target.y - target.displayHeight * target.originY - 60 * scale;
+  const topY = target.y - target.displayHeight * target.originY - 30 * scale;
   const botY = target.y + target.displayHeight * (1 - target.originY);
-  const spanX = 160 * scale;
-  const N = mode === 'rain' ? 60 : mode === 'wind' ? 44 : mode === 'dust' ? 130 : mode === 'stars' ? 120 : 48;
+  // Lane-boxed; particle counts halved to keep the density similar.
+  const spanX = LANE_HALF_W * scale;
+  const N = mode === 'rain' ? 30 : mode === 'wind' ? 22 : mode === 'dust' ? 64 : mode === 'stars' ? 60 : 24;
   type Particle = { x: number; y: number; spd: number; drift: number; sz: number };
   const items: Particle[] = Array.from({ length: N }, () => ({
     x: (Math.random() - 0.5) * spanX * 2,
@@ -1409,8 +1442,10 @@ function runWeather(scene: Scene, target: EffectTarget, scale: number, mode: str
       } else {
         it.x += 2;
         it.y += 0.8;
-        if (it.x > spanX + 20) {
-          it.x = -spanX - 20;
+        // Wrap inside the lane, minus streak length so the 12px tail
+        // never pokes past the right edge.
+        if (it.x > spanX - 12) {
+          it.x = -spanX;
           it.y = Math.random() * yRange * (Math.random() < 0.7 ? 0.55 : 1);
         }
       }
@@ -1424,7 +1459,7 @@ function runWeather(scene: Scene, target: EffectTarget, scale: number, mode: str
         g.beginPath(); g.moveTo(drawX, drawY); g.lineTo(drawX + 2, drawY + 14); g.strokePath();
       } else if (mode === 'wind') {
         g.lineStyle(1.5, 0xc8d2ff, 0.55 + 0.3 * Math.sin(t / 400 + it.x));
-        g.beginPath(); g.moveTo(drawX, drawY); g.lineTo(drawX + 26, drawY + 10); g.strokePath();
+        g.beginPath(); g.moveTo(drawX, drawY); g.lineTo(drawX + 12, drawY + 5); g.strokePath();
       } else if (mode === 'fog') {
         g.fillStyle(0xdcdcf0, 0.06 + 0.04 * Math.sin(t / 600 + it.x));
         g.fillEllipse(drawX, drawY, 28, 8);

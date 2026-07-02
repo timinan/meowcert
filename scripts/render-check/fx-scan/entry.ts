@@ -21,6 +21,7 @@ type ScanApi = {
   frames(): number;
   baseline(): void;
   pixelDelta(): number; // pixels differing from the effect-free baseline
+  bbox(): { minX: number; maxX: number; minY: number; maxY: number; w: number; h: number } | null;
   stop(): string | null;
 };
 
@@ -70,6 +71,30 @@ class ScanScene extends Phaser.Scene {
           ) delta++;
         }
         return delta;
+      },
+      // Bounding box of changed pixels — measures each effect's real
+      // rendered footprint so oversized effects can be found empirically.
+      bbox: () => {
+        if (!base) return null;
+        const now = grab();
+        const W = off.width;
+        let minX = Infinity, maxX = -1, minY = Infinity, maxY = -1;
+        for (let i = 0; i < now.length; i += 4) {
+          if (
+            Math.abs(now[i] - base[i]) > 8 ||
+            Math.abs(now[i + 1] - base[i + 1]) > 8 ||
+            Math.abs(now[i + 2] - base[i + 2]) > 8
+          ) {
+            const p = i / 4;
+            const px = p % W, py = Math.floor(p / W);
+            if (px < minX) minX = px;
+            if (px > maxX) maxX = px;
+            if (py < minY) minY = py;
+            if (py > maxY) maxY = py;
+          }
+        }
+        if (maxX < 0) return null;
+        return { minX, maxX, minY, maxY, w: maxX - minX + 1, h: maxY - minY + 1 };
       },
       start: (id: string) => {
         errors.length = 0;
