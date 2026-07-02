@@ -1021,6 +1021,7 @@ for (const meta of NEW_EFFECT_CATALOG) {
  */
 export const DELETED_EFFECT_IDS = new Set<string>([
   'effect-rainbow-glow',
+  'effect-pulse-heart-alt',   // review round 2
   'effect-halo-ring-of-dots',
   'effect-halo-ring-of-fire',
   'effect-halo-dots-blue',

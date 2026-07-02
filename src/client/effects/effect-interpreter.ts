@@ -426,20 +426,23 @@ type PulseParams = {
   flatness?: number; alpha?: number;
 };
 function runPulse(scene: Scene, target: EffectTarget, scale: number, p: PulseParams): EffectHandle {
-  // depth+1: pulses are born small at the cat's mid/feet — at depth-1 the
-  // bright young rings/hearts are fully hidden behind the sprite and only
-  // the faded tails ever peek out. The smoketest draws pulses over the cat.
-  const g = scene.add.graphics().setDepth(target.depth + 1);
+  const shape = p.shape ?? 'ring';
+  // Rings/semicircles render in front of the cat (behind = invisible while
+  // young, see 2026-07-01 parity fix). Hearts go BEHIND with an intensity
+  // bump instead — Tim (review round 2): "hearts are being shown over the
+  // cat when it should be behind. the effect can be a little more intense".
+  const g = scene.add.graphics().setDepth(shape === 'heart' ? target.depth - 1 : target.depth + 1);
   const pulses: { start: number }[] = [];
   let lastSpawn = -1e9;
   const interval = p.intervalMs ?? 900;
   const life = p.lifeMs ?? 1500;
-  const shape = p.shape ?? 'ring';
   // Expansion capped to the lane. Hearts render ~0.55× their r in half-
   // width, so they get proportionally more headroom.
   const maxR = Math.min(p.maxR ?? 44, shape === 'heart' ? LANE_HALF_W / 0.55 : LANE_HALF_W) * scale;
-  const thickness = p.thickness ?? 3;
-  const alphaBase = p.alpha ?? 0.85;
+  const thickness = (p.thickness ?? 3) + (shape === 'heart' ? 1 : 0);
+  const alphaBase = shape === 'heart'
+    ? Math.min(1, (p.alpha ?? 0.85) * 1.25)
+    : (p.alpha ?? 0.85);
   const flatness = p.flatness ?? 0.32;
 
   const draw = (t: number): void => {
