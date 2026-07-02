@@ -10,7 +10,16 @@ import {
   claimStreak,
   claimWeekly,
   claimWeeklyBonus,
+  claimAchievement,
 } from '@/services/state-client';
+import {
+  ACHIEVEMENTS,
+  ACHIEVEMENT_TIERS,
+  tierThreshold,
+  type AchievementDef,
+  type AchievementId,
+  type AchievementTier,
+} from '@/../shared/achievements';
 import {
   dailyQuestsFor,
   STREAK_TRACK,
@@ -35,6 +44,18 @@ import { BOX_CATALOG, type BoxConfig, type BoxId, type PlayerState } from '@/../
  * "coming soon" placeholder — Tasks 4 and 7 fill them in, reusing
  * `openTierChooser` and `renderTabBody`.
  */
+// TROPHIES scroll geometry. The list (one row per ACHIEVEMENTS entry) is
+// taller than the tab body, so it uses the repo's canonical Phaser-4 scroll
+// pattern (DressingRoom.ts): rows live in a far-away world band only a
+// dedicated grid camera looks at, and that camera's viewport is the tab-body
+// rect — GPU scissor clips the rows pixel-perfectly at the body edges.
+// Geometry masks are silent no-ops under Phaser-4 WebGL, hence the camera.
+const TROPHY_WORLD_OFF = 100000;
+const TROPHY_ROW_H = 60;
+const TROPHY_ROW_GAP = 8;
+const TROPHY_ROW_STRIDE = TROPHY_ROW_H + TROPHY_ROW_GAP;
+const TROPHY_TOP_PAD = 8;
+
 export class Rewards extends Scene {
   private playerState: PlayerState | null = null;
   private fromScene: SceneKey = SceneKeys.Game;
@@ -54,6 +75,27 @@ export class Rewards extends Scene {
   private cardCX = 0;
   private cardCY = 0;
   private cardW = 0;
+
+  // TROPHIES scroll state — the dedicated grid camera + its live row objects.
+  // scrollY is scene state so it survives claim rebuilds; rows are scene-level
+  // world objects (like DressingRoom cells), not children of bodyRoot.
+  private trophyCam: Phaser.Cameras.Scene2D.Camera | null = null;
+  private trophyCells: GameObjects.GameObject[] = [];
+  private trophyScrollbar: GameObjects.Rectangle | null = null;
+  private trophyScrollY = 0;
+  private trophyViewTop = 0;
+  private trophyViewH = 0;
+  private trophyDragActive = false;
+  private trophyDragLastY = 0;
+  private trophyDragMoved = 0;
+  private trophyDragVelocity = 0;
+  private trophyDragLastT = 0;
+  private trophyMomentum: Tweens.Tween | null = null;
+  private trophyInputBound = false;
+  private trophyOnDown: ((p: Phaser.Input.Pointer) => void) | null = null;
+  private trophyOnMove: ((p: Phaser.Input.Pointer) => void) | null = null;
+  private trophyOnUp: (() => void) | null = null;
+  private trophyOnWheel: ((p: unknown, o: unknown, dx: number, dy: number) => void) | null = null;
 
   // One emoji per reward category — drives the data-driven tier chooser
   // so adding a SKU changes the chooser with zero UI edits.
@@ -85,6 +127,13 @@ export class Rewards extends Scene {
     this.collectBg = null;
     this.collectLabel = null;
     this.flyTweens = [];
+    this.trophyCam = null;
+    this.trophyCells = [];
+    this.trophyScrollbar = null;
+    this.trophyScrollY = 0;
+    this.trophyMomentum = null;
+    this.trophyInputBound = false;
+    this.trophyDragActive = false;
   }
 
   create(): void {
@@ -239,22 +288,12 @@ export class Rewards extends Scene {
   private renderTabBody(): void {
     if (!this.bodyRoot) return;
     this.bodyRoot.removeAll(true);
+    // Trophies owns a dedicated camera + scene-level world objects. Any tab
+    // that isn't trophies must tear that down (camera, cells, listeners).
+    if (this.activeTab !== 'trophies') this.teardownTrophies();
     if (this.activeTab === 'daily') this.renderDaily();
     else if (this.activeTab === 'weekly') this.renderWeekly();
-    else this.renderPlaceholder('Trophies coming soon');
-  }
-
-  private renderPlaceholder(text: string): void {
-    const { width } = this.scale;
-    this.bodyRoot!.add(
-      this.add
-        .text(width / 2, this.bodyTop() + 40, text, {
-          fontFamily: 'Pixeloid Sans, sans-serif',
-          fontSize: '11px',
-          color: '#8f80b0',
-        })
-        .setOrigin(0.5),
-    );
+    else this.renderTrophies();
   }
 
   private renderDaily(): void {
@@ -754,6 +793,302 @@ export class Rewards extends Scene {
     }
   }
 
+  // -- trophies tab (camera-clipped scrolling achievement list) ---------
+
+  /** Render the whole achievement list into the far-away world band and
+   *  point the grid camera's viewport at the tab-body rect. Rebuilt on
+   *  entry and after every claim; trophyScrollY is preserved and clamped so
+   *  a claim doesn't jump the list. Rows never leave the band, so scrolling
+   *  is pure camera pan (setTrophyScroll) — no per-frame rebuild needed. */
+  private renderTrophies(): void {
+    const { width, height } = this.scale;
+    this.trophyViewTop = this.bodyTop() - 8;
+    this.trophyViewH = height - this.trophyViewTop - 12;
+
+    // Fresh camera + cells every render (claim rebuild included). Cheap: the
+    // list is small, and a fresh camera avoids any stale-viewport drift.
+    this.destroyTrophyObjects();
+    this.trophyCam = this.cameras.add(0, this.trophyViewTop, width, this.trophyViewH);
+    this.trophyScrollY = Math.max(0, Math.min(this.trophyMaxScroll(), this.trophyScrollY));
+    this.trophyCam.setScroll(0, TROPHY_WORLD_OFF + this.trophyScrollY);
+
+    const cx = width / 2;
+    const rowW = width - 24;
+    ACHIEVEMENTS.forEach((def, i) => {
+      const cy = TROPHY_WORLD_OFF + TROPHY_TOP_PAD + i * TROPHY_ROW_STRIDE + TROPHY_ROW_H / 2;
+      this.buildTrophyRow(def, cx, cy, rowW);
+    });
+
+    // Thin scroll indicator on the body's right edge (main camera object —
+    // it sits at normal world coords, so the grid camera never sees it).
+    this.trophyScrollbar = this.add
+      .rectangle(width - 6, this.trophyViewTop, 3, 40, 0xc0a0e6, 0.45)
+      .setOrigin(0.5, 0)
+      .setDepth(5);
+    this.updateTrophyScrollbar();
+
+    this.setupTrophyScrollInput();
+  }
+
+  private trophyMaxScroll(): number {
+    const total = ACHIEVEMENTS.length * TROPHY_ROW_STRIDE + TROPHY_TOP_PAD;
+    return Math.max(0, total - this.trophyViewH);
+  }
+
+  private setTrophyScroll(v: number): void {
+    this.trophyScrollY = Math.max(0, Math.min(this.trophyMaxScroll(), v));
+    this.trophyCam?.setScroll(0, TROPHY_WORLD_OFF + this.trophyScrollY);
+    this.updateTrophyScrollbar();
+  }
+
+  private updateTrophyScrollbar(): void {
+    if (!this.trophyScrollbar) return;
+    const max = this.trophyMaxScroll();
+    this.trophyScrollbar.setVisible(max > 0);
+    if (max <= 0) return;
+    const frac = this.trophyViewH / (max + this.trophyViewH);
+    const barH = Math.max(24, this.trophyViewH * frac);
+    this.trophyScrollbar.setSize(3, barH);
+    this.trophyScrollbar.y = this.trophyViewTop + (this.trophyViewH - barH) * (this.trophyScrollY / max);
+  }
+
+  /** Scene-level drag / momentum / wheel scroll, gated to the body rect.
+   *  Bound once per trophies entry; `trophyDragMoved` lets medal taps tell a
+   *  flick-scroll from a real tap (DressingRoom pattern). */
+  private setupTrophyScrollInput(): void {
+    if (this.trophyInputBound) return;
+    this.trophyOnDown = (p: Phaser.Input.Pointer) => {
+      if (
+        p.y < this.trophyViewTop - TROPHY_ROW_GAP ||
+        p.y > this.trophyViewTop + this.trophyViewH
+      )
+        return;
+      this.trophyMomentum?.stop();
+      this.trophyMomentum = null;
+      this.trophyDragActive = true;
+      this.trophyDragLastY = p.y;
+      this.trophyDragMoved = 0;
+      this.trophyDragVelocity = 0;
+      this.trophyDragLastT = this.time.now;
+    };
+    this.trophyOnMove = (p: Phaser.Input.Pointer) => {
+      if (!this.trophyDragActive) return;
+      const dy = p.y - this.trophyDragLastY;
+      if (dy === 0) return;
+      const now = this.time.now;
+      const dt = Math.max(1, now - this.trophyDragLastT);
+      this.trophyDragVelocity = dy / dt;
+      this.trophyDragLastY = p.y;
+      this.trophyDragLastT = now;
+      this.trophyDragMoved += Math.abs(dy);
+      this.setTrophyScroll(this.trophyScrollY - dy);
+    };
+    this.trophyOnUp = () => {
+      if (!this.trophyDragActive) return;
+      this.trophyDragActive = false;
+      const v = this.trophyDragVelocity;
+      if (Math.abs(v) > 0.25 && this.trophyMaxScroll() > 0) {
+        const proxy = { v: this.trophyScrollY };
+        this.trophyMomentum = this.tweens.add({
+          targets: proxy,
+          v: this.trophyScrollY - v * 260,
+          duration: 480,
+          ease: 'Quad.easeOut',
+          onUpdate: () => this.setTrophyScroll(proxy.v),
+        });
+      }
+    };
+    this.trophyOnWheel = (_p: unknown, _o: unknown, _dx: number, dy: number) => {
+      if (this.trophyMaxScroll() > 0) this.setTrophyScroll(this.trophyScrollY + dy * 0.6);
+    };
+    this.input.on('pointerdown', this.trophyOnDown);
+    this.input.on('pointermove', this.trophyOnMove);
+    this.input.on('pointerup', this.trophyOnUp);
+    this.input.on('wheel', this.trophyOnWheel);
+    this.trophyInputBound = true;
+  }
+
+  /** One achievement row in grid-camera world space: name · 🥉🥈🥇 medal
+   *  chips (filled = claimed, hollow gold ring = reached-unclaimed/tappable,
+   *  grey = unreached) · progress bar + `value / next-threshold` label. */
+  private buildTrophyRow(def: AchievementDef, cx: number, cy: number, w: number): void {
+    const p = this.playerState;
+    const value = p ? def.progress(p) : 0;
+    const claimedTiers = p?.economy?.achievementsClaimed?.[def.id] ?? [];
+    const goldClaimed = claimedTiers.includes('gold');
+    const anyClaimable = ACHIEVEMENT_TIERS.some(
+      (t) => value >= tierThreshold(def, t) && !claimedTiers.includes(t),
+    );
+
+    const bg = this.add
+      .rectangle(cx, cy, w, TROPHY_ROW_H, 0x120726, 1)
+      .setStrokeStyle(1, anyClaimable ? 0xffd34d : 0xc0a0e6, anyClaimable ? 0.7 : 0.35);
+    this.trophyCells.push(bg);
+
+    // Name (top-left).
+    this.trophyCells.push(
+      this.add
+        .text(cx - w / 2 + 12, cy - 15, def.name, {
+          fontFamily: 'Pixeloid Sans, sans-serif',
+          fontStyle: 'bold',
+          fontSize: '11px',
+          color: anyClaimable ? '#ffd34d' : '#ffffff',
+        })
+        .setOrigin(0, 0.5),
+    );
+
+    // Medal chips (top-right), one per tier.
+    const emojis: Record<AchievementTier, string> = { bronze: '🥉', silver: '🥈', gold: '🥇' };
+    const medalY = cy - 14;
+    ACHIEVEMENT_TIERS.forEach((tier, ti) => {
+      const mx = cx + w / 2 - 16 - (ACHIEVEMENT_TIERS.length - 1 - ti) * 24;
+      const reached = value >= tierThreshold(def, tier);
+      const claimed = claimedTiers.includes(tier);
+      const claimable = reached && !claimed;
+
+      if (claimed) {
+        // Filled: solid gold disc behind a full-strength medal.
+        this.trophyCells.push(this.add.circle(mx, medalY, 11, 0xffd34d, 0.85));
+      } else if (claimable) {
+        // Hollow: gold ring stroke only, medal at full strength + tappable.
+        const ring = this.add
+          .circle(mx, medalY, 11, 0x000000, 0)
+          .setStrokeStyle(2, 0xffd34d, 1)
+          .setInteractive({ useHandCursor: true });
+        ring.on('pointerup', () => {
+          if (this.trophyDragMoved >= 8) return;
+          this.startAchievementClaim(def, tier);
+        });
+        this.trophyCells.push(ring);
+      }
+
+      const medal = this.add
+        .text(mx, medalY, emojis[tier], { fontSize: '15px' })
+        .setOrigin(0.5)
+        .setAlpha(reached ? 1 : 0.22);
+      if (claimable) {
+        medal.setInteractive({ useHandCursor: true });
+        medal.on('pointerup', () => {
+          if (this.trophyDragMoved >= 8) return;
+          this.startAchievementClaim(def, tier);
+        });
+      }
+      this.trophyCells.push(medal);
+    });
+
+    // Progress bar toward the next unreached tier; full + MAXED once gold
+    // is claimed. Graphics rounded-rect, DressingRoom stroke conventions.
+    let nextThreshold: number | null = null;
+    for (const tier of ACHIEVEMENT_TIERS) {
+      const th = tierThreshold(def, tier);
+      if (value < th) {
+        nextThreshold = th;
+        break;
+      }
+    }
+    const barX0 = cx - w / 2 + 12;
+    const labelX = cx + w / 2 - 12;
+    const barW = w - 24 - 88;
+    const barY = cy + 15;
+    const barH = 8;
+    const frac = nextThreshold === null ? 1 : Math.min(1, value / nextThreshold);
+
+    const g = this.add.graphics();
+    g.fillStyle(0x0b041a, 1);
+    g.fillRoundedRect(barX0, barY - barH / 2, barW, barH, 4);
+    g.lineStyle(1, 0xc0a0e6, 0.4);
+    g.strokeRoundedRect(barX0, barY - barH / 2, barW, barH, 4);
+    if (frac > 0) {
+      g.fillStyle(goldClaimed ? 0xffd34d : 0x7ee08a, 1);
+      g.fillRoundedRect(barX0, barY - barH / 2, Math.max(4, barW * frac), barH, 4);
+    }
+    this.trophyCells.push(g);
+
+    const targetForLabel = nextThreshold ?? tierThreshold(def, 'gold');
+    const label = goldClaimed
+      ? 'MAXED'
+      : `${value.toLocaleString('en-US')} / ${targetForLabel.toLocaleString('en-US')}`;
+    this.trophyCells.push(
+      this.add
+        .text(labelX, barY, label, {
+          fontFamily: 'Pixeloid Sans, sans-serif',
+          fontStyle: 'bold',
+          fontSize: '9px',
+          color: goldClaimed ? '#ffd34d' : '#c0a0e6',
+        })
+        .setOrigin(1, 0.5),
+    );
+  }
+
+  /** Bronze claims coins directly; silver/gold open the box chooser first
+   *  (golden for silver, mythic for gold), matching ACHIEVEMENT_TIER_REWARDS. */
+  private startAchievementClaim(def: AchievementDef, tier: AchievementTier): void {
+    if (this.busy || this.chooser) return;
+    if (tier === 'bronze') {
+      void this.onClaimAchievement(def.id, 'bronze');
+    } else if (tier === 'silver') {
+      this.openTierChooser('golden', 'PICK YOUR GOLDEN BOX', (boxId) =>
+        void this.onClaimAchievement(def.id, 'silver', boxId),
+      );
+    } else {
+      this.openTierChooser('mythic', 'PICK YOUR MYTHIC BOX', (boxId) =>
+        void this.onClaimAchievement(def.id, 'gold', boxId),
+      );
+    }
+  }
+
+  private async onClaimAchievement(
+    id: AchievementId,
+    tier: AchievementTier,
+    boxId?: BoxId,
+  ): Promise<void> {
+    if (this.busy) return;
+    this.busy = true;
+    this.closeChooser();
+    try {
+      const res = await claimAchievement(id, tier, boxId);
+      if (!this.scene.isActive()) return;
+      if (res.ok) {
+        this.adopt(res.state); // rebuild first so flyCoins targets the fresh banner
+        if (res.coins > 0) this.flyCoins(res.coins);
+        if (res.pull) this.flyText(`+ ${res.pull.itemId}`);
+      }
+    } catch {
+      /* leave the tab as-is on network error */
+    }
+    this.busy = false;
+  }
+
+  /** Destroy the live trophy row objects + scrollbar + camera (but keep the
+   *  bound scroll listeners — cheap, and re-render reuses them). */
+  private destroyTrophyObjects(): void {
+    this.trophyMomentum?.stop();
+    this.trophyMomentum = null;
+    for (const obj of this.trophyCells) obj.destroy();
+    this.trophyCells.length = 0;
+    this.trophyScrollbar?.destroy();
+    this.trophyScrollbar = null;
+    if (this.trophyCam) {
+      this.cameras.remove(this.trophyCam);
+      this.trophyCam = null;
+    }
+  }
+
+  /** Full trophies teardown — objects + camera + scroll listeners. Called
+   *  when switching away from the tab and on shutdown (DressingRoom pattern). */
+  private teardownTrophies(): void {
+    this.destroyTrophyObjects();
+    if (this.trophyInputBound) {
+      if (this.trophyOnDown) this.input.off('pointerdown', this.trophyOnDown);
+      if (this.trophyOnMove) this.input.off('pointermove', this.trophyOnMove);
+      if (this.trophyOnUp) this.input.off('pointerup', this.trophyOnUp);
+      if (this.trophyOnWheel) this.input.off('wheel', this.trophyOnWheel);
+      this.trophyInputBound = false;
+    }
+    this.trophyDragActive = false;
+    this.trophyScrollY = 0;
+  }
+
   // -- claim handlers (await-and-adopt, then rebuild) -------------------
 
   private adopt(state: PlayerState): void {
@@ -887,6 +1222,10 @@ export class Rewards extends Scene {
     onPick: (boxId: BoxId) => void,
   ): void {
     if (this.busy || this.chooser) return;
+    // The trophies grid camera renders AFTER the main camera, so its rows
+    // would draw on top of a depth-470 chooser inside the body rect. Hide it
+    // while the modal is open (scrollY is preserved on the camera).
+    this.trophyCam?.setVisible(false);
     const options = (Object.values(BOX_CATALOG) as BoxConfig[]).filter((b) => b.tier === tier);
 
     const { width, height } = this.scale;
@@ -955,6 +1294,8 @@ export class Rewards extends Scene {
       this.chooser.destroy(true);
       this.chooser = null;
     }
+    // Restore the trophies rows once the modal is gone.
+    this.trophyCam?.setVisible(true);
   }
 
   // -- collect banner state + fly tweens --------------------------------
@@ -1008,6 +1349,7 @@ export class Rewards extends Scene {
     this.flyTweens.forEach((t) => t.remove());
     this.flyTweens = [];
     this.closeChooser();
+    this.teardownTrophies();
     this.tweens.killAll();
     this.topHud?.destroy();
     this.uiRoot?.destroy();

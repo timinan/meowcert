@@ -174,6 +174,59 @@ function sceneState(name: string): PlayerState {
   return st as unknown as PlayerState;
 }
 
+// -- trophies scenarios -------------------------------------------------
+// The TROPHIES tab reads p.stats.* + p.ownedCats.length + the persisted
+// economy.achievementsClaimed map, so trophy states need those fields (the
+// daily/weekly fakeState omits them).
+
+type TrophyPin = {
+  stats: Record<string, number>;
+  ownedCatsCount: number;
+  boxesOpened?: Record<string, number>;
+  claimed: Record<string, ('bronze' | 'silver' | 'gold')[]>;
+};
+
+const TROPHY_SCENES: Record<string, TrophyPin> = {
+  // Everything zeroed but the 3 starter cats — all medals grey.
+  'trophies-fresh': { stats: {}, ownedCatsCount: 3, claimed: {} },
+  // Mixed: filled (claimed), hollow (reached-unclaimed) + grey all visible,
+  // and a comma-formatted label (Deep Pockets 14,203 / 100,000).
+  'trophies-mixed': {
+    stats: { songsFinished: 150, longestCombo: 200, coinsEarnedLifetime: 14203 },
+    ownedCatsCount: 50,
+    claimed: { songs: ['bronze'], cats: ['bronze', 'silver'] },
+  },
+  // One row gold-claimed → MAXED gold label + all three medals filled.
+  'trophies-maxed': {
+    stats: { songsFinished: 1000, longestCombo: 200, coinsEarnedLifetime: 14203 },
+    ownedCatsCount: 50,
+    claimed: { songs: ['bronze', 'silver', 'gold'], cats: ['bronze', 'silver'] },
+  },
+};
+
+function trophyState(pin: TrophyPin): PlayerState {
+  const st = fakeState(0) as unknown as {
+    stats: Record<string, unknown>;
+    ownedCats: unknown[];
+    economy: { achievementsClaimed: Record<string, string[]> };
+  };
+  st.stats = {
+    songsFinished: 0,
+    totalPerfects: 0,
+    longestDailyStreak: 0,
+    playsReceived: 0,
+    playsOnOthers: 0,
+    longestCombo: 0,
+    coinsEarnedLifetime: 0,
+    holdsCompleted: 0,
+    boxesOpened: pin.boxesOpened ?? {},
+    ...pin.stats,
+  };
+  st.ownedCats = Array.from({ length: pin.ownedCatsCount }, (_, i) => ({ id: `cat${i}` }));
+  st.economy.achievementsClaimed = pin.claimed;
+  return st as unknown as PlayerState;
+}
+
 // -- fetch stub: serve the four reward endpoints with real shapes -------
 
 // The current playerState reference the scene is rendering, so the collect
@@ -231,6 +284,16 @@ window.fetch = ((input: RequestInfo | URL) => {
       }),
     );
   }
+  if (url.includes('/api/achievements/claim')) {
+    return Promise.resolve(
+      jsonRes({
+        ok: true,
+        coins: 100,
+        pull: { kind: 'cat', itemId: 'mythic-cat', rarity: 'mythic', duplicate: false, refundCoins: 0 },
+        state: current,
+      }),
+    );
+  }
   return Promise.resolve(jsonRes({ ok: true, state: current }));
 }) as typeof window.fetch;
 
@@ -270,15 +333,25 @@ function start(state: PlayerState, iso: string): void {
 const w = window as unknown as {
   __open: (n: number) => void;
   __scene: (name: string) => void;
+  __trophyScene: (name: string) => void;
   __tab: (tab: 'daily' | 'weekly' | 'trophies') => void;
   __openChooser: () => void;
   __openGoldenChooser: () => void;
+  __openMythicChooser: () => void;
+  __scrollTrophies: (px: number) => void;
   __collectNow: () => Promise<void>;
   __ready: boolean;
 };
 
 w.__open = (n: number) => start(fakeState(n), DAY);
 w.__scene = (name: string) => start(sceneState(name), SCENES[name]!.isoToday);
+w.__trophyScene = (name: string) => start(trophyState(TROPHY_SCENES[name]!), DAY);
+w.__scrollTrophies = (px: number) => {
+  const s = reach() as unknown as { setTrophyScroll(v: number): void };
+  s.setTrophyScroll(px);
+};
+w.__openMythicChooser = () =>
+  reach().openTierChooser('mythic', 'PICK YOUR MYTHIC BOX', () => {});
 w.__tab = (tab) => {
   // Mirror the real chip-tap path: switch tab, then rebuild chrome (so the
   // chip highlight moves) + the body.

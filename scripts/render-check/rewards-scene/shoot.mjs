@@ -93,11 +93,30 @@ await new Promise((r) => setTimeout(r, 120));
 await page.evaluate(() => window.__openGoldenChooser());
 await shoot('weekly-chooser');
 
-// TROPHIES placeholder
-await page.evaluate(() => window.__open(0));
+// TROPHIES tab — scrolling achievement list.
+for (const name of ['trophies-fresh', 'trophies-mixed', 'trophies-maxed']) {
+  await page.evaluate((n) => window.__trophyScene(n), name);
+  await new Promise((r) => setTimeout(r, 150));
+  await page.evaluate(() => window.__tab('trophies'));
+  await shoot(name);
+}
+
+// trophies scrolled — drives the __scrollTrophies hook to prove rows clip
+// cleanly at the tab-body rect (the exact bug the grid-camera pattern fixes).
+await page.evaluate((n) => window.__trophyScene(n), 'trophies-mixed');
 await new Promise((r) => setTimeout(r, 150));
 await page.evaluate(() => window.__tab('trophies'));
-await shoot('tab-trophies-placeholder');
+await new Promise((r) => setTimeout(r, 120));
+await page.evaluate(() => window.__scrollTrophies(400));
+await shoot('trophies-scrolled');
+
+// trophies mythic chooser — gold-tier claim opens the mythic box picker.
+await page.evaluate((n) => window.__trophyScene(n), 'trophies-mixed');
+await new Promise((r) => setTimeout(r, 150));
+await page.evaluate(() => window.__tab('trophies'));
+await new Promise((r) => setTimeout(r, 120));
+await page.evaluate(() => window.__openMythicChooser());
+await shoot('trophies-mythic-chooser');
 
 await browser.close();
 server.close();
