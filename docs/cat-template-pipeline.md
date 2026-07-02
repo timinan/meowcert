@@ -93,6 +93,12 @@ Rules:
 - `"split": {"left": {...}, "right": {...}}` = two-face cat. Each side
   is a full palette (base config + side overrides); the divide is the
   body's vertical midline, recomputed per frame from non-fx pixels.
+  `{"top": {...}, "bottom": {...}}` = head/body split at the chin-safe
+  neck waist.
+- `"pattern": {"type": "checker", "size": 5, "a": {...}, "b": {...}}` =
+  alternating grid of two full palettes. The grid anchors per ANIMATION
+  (mean eye-x / body-top-y across the loop's frames) — a per-frame
+  anchor strobes with the idle bob.
 - Eyes are a three-part model: `eyeOuter` (iris ring), `eyeMid` (dark
   middle — stays cat2 navy unless set, never tinted by the coat),
   `eyeInner` (white glints). The meow star-eyes and glimmer stay yellow

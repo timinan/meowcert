@@ -141,9 +141,20 @@ def generate(cfg_path):
     # at the chin-safe neck waist (ported from gen-cat-variants.py:
     # narrowest silhouette row in y=36..50, split one row below, so the
     # chin always stays head-colored).
+    # "pattern": {"type": "checker", "size": 5, "a": {...}, "b": {...}} —
+    # alternating grid of two full palettes over the fur. The grid is
+    # anchored to the body per frame (eye-anchor x, body-top y) so the
+    # checkers ride with the cat instead of swimming in screen space.
+    pattern = cfg.get('pattern')
     split = cfg.get('split')
     horizontal = bool(split) and 'top' in split
-    if split:
+    if pattern:
+        if pattern.get('type') != 'checker':
+            raise SystemExit(f"unknown pattern type: {pattern.get('type')}")
+        base_cfg = {k: v for k, v in cfg.items() if k != 'pattern'}
+        pal = build_palette({**base_cfg, **pattern.get('a', {})})
+        pal_right = build_palette({**base_cfg, **pattern.get('b', {})})
+    elif split:
         base_cfg = {k: v for k, v in cfg.items() if k != 'split'}
         first = split.get('top', split.get('left', {}))
         second = split.get('bottom', split.get('right', {}))
@@ -179,8 +190,27 @@ def generate(cfg_path):
     # Split midline per frame: midpoint of the eye bbox (stable even when
     # one eye squints). Blink frames have no eye pixels — they inherit
     # the mean anchor of their own animation so the line never jumps.
+    # Per-anim checker anchor: mean of each frame's (eye-anchor x, body
+    # top y), rounded once — stable across the whole loop.
+    checker_anchor = {}
+    if pattern:
+        sums = {}
+        for f in frames:
+            tp = Image.open(f).load()
+            xs = [x for y in range(H) for x in range(W) if tp[x, y] and ridx[tp[x, y]] != 'fx']
+            ys = [y for y in range(H) for x in range(W) if tp[x, y] and ridx[tp[x, y]] != 'fx']
+            if not xs:
+                continue
+            anim = f.stem.rsplit('_', 1)[0]
+            sums.setdefault(anim, []).append(((min(xs) + max(xs)) // 2, min(ys)))
+        for anim, pts in sums.items():
+            checker_anchor[anim] = (
+                round(sum(p[0] for p in pts) / len(pts)),
+                round(sum(p[1] for p in pts) / len(pts)),
+            )
+
     split_cx = {}
-    if split and not horizontal:
+    if pattern or (split and not horizontal):
         eye_ids = {v for k, v in json.loads((TPL / 'regions.json').read_text())['palette_index'].items()
                    if k in ('iris', 'irisHi1', 'irisHi2', 'glint')}
         by_anim = {}
@@ -203,13 +233,22 @@ def generate(cfg_path):
         op = out.load()
         cx = split_cx.get(f.stem, W // 2)
         sy = waist_y(tp) if (split and horizontal) else None
+        cell = int(pattern.get('size', 5)) if pattern else 0
+        top_y = 0
+        if pattern:
+            # Anchor the grid per ANIMATION, not per frame — a per-frame
+            # anchor snaps with the idle bob and the cells strobe at
+            # playback. checker_anchor is precomputed below.
+            cx, top_y = checker_anchor[f.stem.rsplit('_', 1)[0]]
         for y in range(H):
             for x in range(W):
                 idx = tp[x, y]
                 if idx == 0:
                     continue
                 region = ridx[idx]
-                if horizontal:
+                if pattern:
+                    side = pal if ((x - cx) // cell + (y - top_y) // cell) % 2 == 0 else pal_right
+                elif horizontal:
                     side = pal if y < sy else pal_right
                 else:
                     side = pal if x <= cx else pal_right

@@ -264,6 +264,12 @@
     "preview": "previews/cat79.png"
   },
   {
+    "id": "cat80",
+    "name": "Checkers",
+    "config": "cat80-checkers.json",
+    "preview": "previews/cat80.png"
+  },
+  {
     "id": "cat999",
     "name": "IdentityTest",
     "config": "cat999-identity-test.json",
